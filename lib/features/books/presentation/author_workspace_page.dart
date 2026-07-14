@@ -70,6 +70,7 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
                   section: section,
                   pageFormat: project.layoutSettings.pageFormat,
                   showToolbar: isTablet,
+                  saveState: widget.controller.saveState,
                   onTitleChanged: widget.controller.updateSectionTitle,
                   onContentChanged: widget.controller.updateSectionContent,
                   onControllerReady: (controller) =>

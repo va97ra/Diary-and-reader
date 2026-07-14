@@ -76,6 +76,14 @@ class AppStrings {
   String get orientation => _text('orientation');
   String get portrait => _text('portrait');
   String get landscape => _text('landscape');
+  String get words => _text('words');
+  String get characters => _text('characters');
+  String get paragraphs => _text('paragraphs');
+  String get writingGoal => _text('writingGoal');
+  String get writingGoalHint => _text('writingGoalHint');
+  String get saved => _text('saved');
+  String get saving => _text('saving');
+  String get saveError => _text('saveError');
 
   static const _values = <String, Map<String, String>>{
     'ru': {
@@ -142,6 +150,14 @@ class AppStrings {
       'orientation': 'Ориентация',
       'portrait': 'Книжная',
       'landscape': 'Альбомная',
+      'words': 'Слов',
+      'characters': 'Знаков',
+      'paragraphs': 'Абзацев',
+      'writingGoal': 'Цель раздела, слов',
+      'writingGoalHint': 'Оставьте пустым, если цель не нужна',
+      'saved': 'Сохранено',
+      'saving': 'Сохранение…',
+      'saveError': 'Не сохранено',
     },
     'en': {
       'appTitle': 'My diary',
@@ -207,6 +223,14 @@ class AppStrings {
       'orientation': 'Orientation',
       'portrait': 'Portrait',
       'landscape': 'Landscape',
+      'words': 'Words',
+      'characters': 'Characters',
+      'paragraphs': 'Paragraphs',
+      'writingGoal': 'Section goal, words',
+      'writingGoalHint': 'Leave empty if no goal is needed',
+      'saved': 'Saved',
+      'saving': 'Saving…',
+      'saveError': 'Not saved',
     },
   };
 }

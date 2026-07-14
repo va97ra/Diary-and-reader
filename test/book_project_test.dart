@@ -17,7 +17,7 @@ void main() {
       type: BookSectionType.scene,
       parentId: chapter.id,
       now: now,
-    );
+    ).copyWith(targetWords: 1200);
     final withScene = project.copyWith(
       sections: [...project.sections, scene],
       activeSectionId: scene.id,
@@ -28,6 +28,7 @@ void main() {
     expect(restored.metadata.title, 'Тестовая книга');
     expect(restored.activeSection?.id, scene.id);
     expect(restored.childrenOf(chapter.id).single.title, 'Сцена 1');
+    expect(restored.activeSection?.targetWords, 1200);
   });
 
   test('invalid active section falls back to the first section', () {

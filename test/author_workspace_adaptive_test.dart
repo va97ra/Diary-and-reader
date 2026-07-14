@@ -24,6 +24,8 @@ void main() {
     expect(find.textContaining('A4 210×297 мм'), findsOneWidget);
     expect(find.text('Книжная'), findsOneWidget);
     expect(find.text('Альбомная'), findsOneWidget);
+    expect(find.text('Слов: 0'), findsOneWidget);
+    expect(find.text('Сохранено'), findsOneWidget);
     final editor = tester.widget<QuillEditor>(find.byType(QuillEditor));
     expect(editor.config.textSelectionThemeData?.cursorColor, AppTheme.ink);
 

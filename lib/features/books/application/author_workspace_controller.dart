@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 
 import 'package:dnevnik/features/books/application/section_tree_editor.dart';
+import 'package:dnevnik/features/books/application/workspace_save_state.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_repository.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_snapshot.dart';
 import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
@@ -16,13 +17,18 @@ class AuthorWorkspaceController extends ChangeNotifier {
 
   final AuthorWorkspaceRepository _repository;
   final List<BookProject> _projects = [];
+  Future<void> _saveQueue = Future.value();
   Timer? _saveTimer;
   String? _activeProjectId;
   String _languageCode = 'ru';
+  WorkspaceSaveState _saveState = WorkspaceSaveState.saved;
+  int _changeRevision = 0;
+  bool _isDisposed = false;
 
   UnmodifiableListView<BookProject> get projects =>
       UnmodifiableListView(_projects);
   String get languageCode => _languageCode;
+  WorkspaceSaveState get saveState => _saveState;
 
   BookProject? get activeProject {
     if (_projects.isEmpty) return null;
@@ -151,6 +157,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
       (section) =>
           section.copyWith(content: content, updatedAt: DateTime.now()),
     );
+    _markDirty();
     notifyListeners();
     _scheduleSave();
   }
@@ -158,6 +165,14 @@ class AuthorWorkspaceController extends ChangeNotifier {
   void updateSectionStatus(DraftStatus status) {
     _updateActiveSection(
       (section) => section.copyWith(status: status, updatedAt: DateTime.now()),
+    );
+    _changed();
+  }
+
+  void updateSectionTargetWords(int targetWords) {
+    _updateActiveSection(
+      (section) =>
+          section.copyWith(targetWords: targetWords, updatedAt: DateTime.now()),
     );
     _changed();
   }
@@ -187,7 +202,16 @@ class AuthorWorkspaceController extends ChangeNotifier {
 
   Future<void> flush() async {
     _saveTimer?.cancel();
-    await _repository.save(_snapshot);
+    final revision = _changeRevision;
+    final snapshot = _snapshot;
+    try {
+      await _enqueueSave(snapshot);
+      if (_isDisposed || revision != _changeRevision) return;
+      _setSaveState(WorkspaceSaveState.saved);
+    } catch (_) {
+      if (_isDisposed || revision != _changeRevision) return;
+      _setSaveState(WorkspaceSaveState.error);
+    }
   }
 
   BookProject _newProject() => BookProject.create(
@@ -238,8 +262,20 @@ class AuthorWorkspaceController extends ChangeNotifier {
   }
 
   void _changed() {
+    _markDirty();
     notifyListeners();
     _scheduleSave();
+  }
+
+  void _markDirty() {
+    _changeRevision++;
+    _saveState = WorkspaceSaveState.saving;
+  }
+
+  void _setSaveState(WorkspaceSaveState state) {
+    if (_saveState == state) return;
+    _saveState = state;
+    notifyListeners();
   }
 
   void _scheduleSave() {
@@ -250,6 +286,12 @@ class AuthorWorkspaceController extends ChangeNotifier {
     );
   }
 
+  Future<void> _enqueueSave(AuthorWorkspaceSnapshot snapshot) {
+    final save = _saveQueue.then((_) => _repository.save(snapshot));
+    _saveQueue = save.catchError((_) {});
+    return save;
+  }
+
   AuthorWorkspaceSnapshot get _snapshot => AuthorWorkspaceSnapshot(
     projects: List.unmodifiable(_projects),
     activeProjectId: _activeProjectId,
@@ -258,8 +300,9 @@ class AuthorWorkspaceController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _isDisposed = true;
     _saveTimer?.cancel();
-    unawaited(_repository.save(_snapshot));
+    unawaited(_enqueueSave(_snapshot).catchError((_) {}));
     super.dispose();
   }
 }

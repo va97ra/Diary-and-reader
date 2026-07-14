@@ -5,6 +5,7 @@ import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class BookPropertiesPanel extends StatelessWidget {
   const BookPropertiesPanel({required this.controller, super.key});
@@ -73,6 +74,25 @@ class BookPropertiesPanel extends StatelessWidget {
               onChanged: (status) {
                 if (status != null) controller.updateSectionStatus(status);
               },
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              key: ValueKey('${section.id}-word-target'),
+              initialValue: section.targetWords == 0
+                  ? ''
+                  : section.targetWords.toString(),
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(8),
+              ],
+              decoration: InputDecoration(
+                labelText: strings.writingGoal,
+                helperText: strings.writingGoalHint,
+                border: const OutlineInputBorder(),
+              ),
+              onChanged: (value) =>
+                  controller.updateSectionTargetWords(int.tryParse(value) ?? 0),
             ),
             const SizedBox(height: 24),
             const Divider(),

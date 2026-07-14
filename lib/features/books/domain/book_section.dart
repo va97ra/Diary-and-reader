@@ -14,6 +14,7 @@ class BookSection {
     required this.createdAt,
     required this.updatedAt,
     this.parentId,
+    this.targetWords = 0,
   });
 
   factory BookSection.create({
@@ -31,6 +32,7 @@ class BookSection {
       status: DraftStatus.draft,
       content: emptyRichDocument(),
       parentId: parentId,
+      targetWords: 0,
       createdAt: timestamp,
       updatedAt: timestamp,
     );
@@ -57,6 +59,7 @@ class BookSection {
       ),
       content: richDocumentFromJson(json['content']),
       parentId: json['parentId']?.toString(),
+      targetWords: _nonNegativeInt(json['targetWords']),
       createdAt: createdAt,
       updatedAt:
           DateTime.tryParse(json['updatedAt']?.toString() ?? '') ?? createdAt,
@@ -69,6 +72,7 @@ class BookSection {
   final DraftStatus status;
   final RichDocument content;
   final String? parentId;
+  final int targetWords;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -79,6 +83,7 @@ class BookSection {
     RichDocument? content,
     String? parentId,
     bool clearParent = false,
+    int? targetWords,
     DateTime? updatedAt,
   }) => BookSection(
     id: id,
@@ -87,6 +92,9 @@ class BookSection {
     status: status ?? this.status,
     content: content ?? this.content,
     parentId: clearParent ? null : parentId ?? this.parentId,
+    targetWords: targetWords == null
+        ? this.targetWords
+        : targetWords.clamp(0, 10000000),
     createdAt: createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -98,6 +106,7 @@ class BookSection {
     'status': status.name,
     'content': content,
     'parentId': parentId,
+    'targetWords': targetWords,
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
   };
@@ -105,3 +114,8 @@ class BookSection {
 
 T _enumValue<T extends Enum>(List<T> values, String? name, T fallback) =>
     values.where((value) => value.name == name).firstOrNull ?? fallback;
+
+int _nonNegativeInt(Object? value) {
+  final parsed = value is num ? value.toInt() : int.tryParse('$value');
+  return (parsed ?? 0).clamp(0, 10000000);
+}

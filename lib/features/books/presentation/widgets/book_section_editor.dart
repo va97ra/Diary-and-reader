@@ -1,7 +1,10 @@
 import 'package:dnevnik/features/books/application/book_page_paginator.dart';
+import 'package:dnevnik/features/books/application/workspace_save_state.dart';
 import 'package:dnevnik/features/books/domain/book_page_format.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
+import 'package:dnevnik/features/books/domain/manuscript_statistics.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_editor_status_bar.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_formatting_toolbar.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_mobile_editor.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_page_canvas.dart';
@@ -15,6 +18,7 @@ class BookSectionEditor extends StatefulWidget {
     required this.onTitleChanged,
     required this.onContentChanged,
     required this.showToolbar,
+    required this.saveState,
     this.onControllerReady,
     super.key,
   });
@@ -24,6 +28,7 @@ class BookSectionEditor extends StatefulWidget {
   final ValueChanged<String> onTitleChanged;
   final ValueChanged<RichDocument> onContentChanged;
   final bool showToolbar;
+  final WorkspaceSaveState saveState;
   final ValueChanged<QuillController>? onControllerReady;
 
   @override
@@ -37,6 +42,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
   final _editorKeys = <GlobalKey<EditorState>>[];
   final _viewportKeys = <GlobalKey>[];
   late final TextEditingController _titleController;
+  late ManuscriptStatistics _statistics;
 
   int _activePage = 0;
   bool _paginationInProgress = false;
@@ -50,6 +56,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.section.title);
+    _statistics = ManuscriptStatistics.fromDocument(widget.section.content);
     _createPageControllers([widget.section.content]);
     widget.onControllerReady?.call(controller);
   }
@@ -115,7 +122,9 @@ class BookSectionEditorState extends State<BookSectionEditor> {
   void _handleDocumentChanged(QuillController changedController) {
     final index = _controllers.indexOf(changedController);
     if (index < 0) return;
-    widget.onContentChanged(BookPagePaginator.merge(_pageDocuments));
+    final manuscript = BookPagePaginator.merge(_pageDocuments);
+    _statistics = ManuscriptStatistics.fromDocument(manuscript);
+    widget.onContentChanged(manuscript);
     if (_usesPagedLayout) _schedulePagination(pageIndex: index);
   }
 
@@ -241,6 +250,13 @@ class BookSectionEditorState extends State<BookSectionEditor> {
                       ? () => _selectMobilePage(_activePage + 1)
                       : null,
                 ),
+        ),
+        BookEditorStatusBar(
+          statistics: _statistics,
+          activePage: _activePage + 1,
+          pageCount: _controllers.length,
+          targetWords: widget.section.targetWords,
+          saveState: widget.saveState,
         ),
       ],
     );
