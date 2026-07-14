@@ -1,5 +1,6 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_page.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_formatting_toolbar.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_navigator.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_properties_panel.dart';
@@ -42,6 +43,12 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
               ],
             ),
             actions: [
+              IconButton(
+                key: const ValueKey('open-book-reader'),
+                tooltip: strings.reader,
+                onPressed: _openReader,
+                icon: const Icon(Icons.chrome_reader_mode_outlined),
+              ),
               IconButton(
                 tooltip: strings.language,
                 onPressed: () => widget.controller.setLanguage(
@@ -149,5 +156,22 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
         paragraphSettings: widget.controller.activeProject!.paragraphSettings,
       ),
     );
+  }
+
+  Future<void> _openReader() async {
+    await widget.controller.flush();
+    if (!mounted) return;
+    final project = widget.controller.activeProject;
+    if (project == null || project.sections.isEmpty) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => BookReaderPage(
+          project: project,
+          onSettingsChanged: widget.controller.updateReaderSettings,
+          onProgressChanged: widget.controller.updateReaderProgress,
+        ),
+      ),
+    );
+    await widget.controller.flush();
   }
 }

@@ -9,6 +9,8 @@ import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
+import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
+import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 import 'package:flutter/foundation.dart';
@@ -200,6 +202,26 @@ class AuthorWorkspaceController extends ChangeNotifier {
     _replaceActiveProject(
       (project) => project.copyWith(
         paragraphSettings: paragraphSettings,
+        updatedAt: DateTime.now(),
+      ),
+    );
+    _changed();
+  }
+
+  void updateReaderSettings(BookReaderSettings readerSettings) {
+    _replaceActiveProject(
+      (project) => project.copyWith(
+        readerSettings: readerSettings,
+        updatedAt: DateTime.now(),
+      ),
+    );
+    _changed();
+  }
+
+  void updateReaderProgress(BookReaderProgress readerProgress) {
+    _replaceActiveProject(
+      (project) => project.copyWith(
+        readerProgress: readerProgress,
         updatedAt: DateTime.now(),
       ),
     );

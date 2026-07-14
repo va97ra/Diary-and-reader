@@ -111,6 +111,21 @@ class AppStrings {
   String get quoteStyle => _text('quoteStyle');
   String get epigraph => _text('epigraph');
   String get sceneBreak => _text('sceneBreak');
+  String get reader => _text('reader');
+  String get tableOfContents => _text('tableOfContents');
+  String get readingSettings => _text('readingSettings');
+  String get readerTheme => _text('readerTheme');
+  String get lightTheme => _text('lightTheme');
+  String get sepiaTheme => _text('sepiaTheme');
+  String get darkTheme => _text('darkTheme');
+  String get readerFont => _text('readerFont');
+  String get readerFontSize => _text('readerFontSize');
+  String get textWidth => _text('textWidth');
+  String get previousSection => _text('previousSection');
+  String get nextSection => _text('nextSection');
+  String get readingProgress => _text('readingProgress');
+  String sectionOf(int current, int count) =>
+      '${_text('section')} $current ${_text('ofPages')} $count';
 
   static const _values = <String, Map<String, String>>{
     'ru': {
@@ -212,6 +227,20 @@ class AppStrings {
       'quoteStyle': 'Цитата',
       'epigraph': 'Эпиграф',
       'sceneBreak': 'Разделитель сцены',
+      'reader': 'Читать книгу',
+      'tableOfContents': 'Оглавление',
+      'readingSettings': 'Настройки чтения',
+      'readerTheme': 'Тема',
+      'lightTheme': 'Светлая',
+      'sepiaTheme': 'Сепия',
+      'darkTheme': 'Тёмная',
+      'readerFont': 'Шрифт читалки',
+      'readerFontSize': 'Размер текста',
+      'textWidth': 'Ширина текста',
+      'previousSection': 'Предыдущий раздел',
+      'nextSection': 'Следующий раздел',
+      'readingProgress': 'Прогресс чтения',
+      'section': 'Раздел',
     },
     'en': {
       'appTitle': 'My diary',
@@ -312,6 +341,20 @@ class AppStrings {
       'quoteStyle': 'Quote',
       'epigraph': 'Epigraph',
       'sceneBreak': 'Scene break',
+      'reader': 'Read book',
+      'tableOfContents': 'Table of contents',
+      'readingSettings': 'Reading settings',
+      'readerTheme': 'Theme',
+      'lightTheme': 'Light',
+      'sepiaTheme': 'Sepia',
+      'darkTheme': 'Dark',
+      'readerFont': 'Reader font',
+      'readerFontSize': 'Text size',
+      'textWidth': 'Text width',
+      'previousSection': 'Previous section',
+      'nextSection': 'Next section',
+      'readingProgress': 'Reading progress',
+      'section': 'Section',
     },
   };
 }

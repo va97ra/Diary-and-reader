@@ -1,5 +1,7 @@
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
+import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
+import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -25,6 +27,14 @@ void main() {
       paragraphSettings: BookParagraphSettings.forPreset(
         BookParagraphPreset.manuscript,
       ),
+      readerSettings: const BookReaderSettings(
+        theme: BookReaderTheme.dark,
+        fontSize: 21,
+      ),
+      readerProgress: const BookReaderProgress(
+        sectionId: 'scene-1',
+        sectionProgress: 0.4,
+      ),
     );
 
     final restored = BookProject.fromJson(withScene.toJson());
@@ -35,6 +45,10 @@ void main() {
     expect(restored.activeSection?.targetWords, 1200);
     expect(restored.paragraphSettings.preset, BookParagraphPreset.manuscript);
     expect(restored.paragraphSettings.lineHeight, 2);
+    expect(restored.readerSettings.theme, BookReaderTheme.dark);
+    expect(restored.readerSettings.fontSize, 21);
+    expect(restored.readerProgress.sectionId, 'scene-1');
+    expect(restored.readerProgress.sectionProgress, 0.4);
   });
 
   test('invalid active section falls back to the first section', () {

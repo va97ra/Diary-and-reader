@@ -3,6 +3,8 @@ import 'dart:collection';
 import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
+import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
+import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 
@@ -16,6 +18,8 @@ class BookProject {
     required this.updatedAt,
     this.layoutSettings = const BookLayoutSettings(),
     this.paragraphSettings = const BookParagraphSettings(),
+    this.readerSettings = const BookReaderSettings(),
+    this.readerProgress = const BookReaderProgress(),
   }) : _sections = List.unmodifiable(sections);
 
   factory BookProject.create({
@@ -43,6 +47,8 @@ class BookProject {
       paragraphSettings: BookParagraphSettings.forPreset(
         BookParagraphPreset.modern,
       ),
+      readerSettings: const BookReaderSettings(),
+      readerProgress: BookReaderProgress(sectionId: chapter.id),
     );
   }
 
@@ -96,6 +102,16 @@ class BookProject {
               Map<String, dynamic>.from(json['paragraphSettings'] as Map),
             )
           : const BookParagraphSettings(),
+      readerSettings: json['readerSettings'] is Map
+          ? BookReaderSettings.fromJson(
+              Map<String, dynamic>.from(json['readerSettings'] as Map),
+            )
+          : const BookReaderSettings(),
+      readerProgress: json['readerProgress'] is Map
+          ? BookReaderProgress.fromJson(
+              Map<String, dynamic>.from(json['readerProgress'] as Map),
+            )
+          : BookReaderProgress(sectionId: sections.firstOrNull?.id),
     );
   }
 
@@ -107,6 +123,8 @@ class BookProject {
   final DateTime updatedAt;
   final BookLayoutSettings layoutSettings;
   final BookParagraphSettings paragraphSettings;
+  final BookReaderSettings readerSettings;
+  final BookReaderProgress readerProgress;
 
   UnmodifiableListView<BookSection> get sections =>
       UnmodifiableListView(_sections);
@@ -125,6 +143,8 @@ class BookProject {
     DateTime? updatedAt,
     BookLayoutSettings? layoutSettings,
     BookParagraphSettings? paragraphSettings,
+    BookReaderSettings? readerSettings,
+    BookReaderProgress? readerProgress,
   }) => BookProject(
     id: id,
     metadata: metadata ?? this.metadata,
@@ -136,6 +156,8 @@ class BookProject {
     updatedAt: updatedAt ?? this.updatedAt,
     layoutSettings: layoutSettings ?? this.layoutSettings,
     paragraphSettings: paragraphSettings ?? this.paragraphSettings,
+    readerSettings: readerSettings ?? this.readerSettings,
+    readerProgress: readerProgress ?? this.readerProgress,
   );
 
   Map<String, dynamic> toJson() => {
@@ -147,6 +169,8 @@ class BookProject {
     'updatedAt': updatedAt.toIso8601String(),
     'layoutSettings': layoutSettings.toJson(),
     'paragraphSettings': paragraphSettings.toJson(),
+    'readerSettings': readerSettings.toJson(),
+    'readerProgress': readerProgress.toJson(),
     'documentFormatVersion': _currentDocumentFormatVersion,
   };
 }
