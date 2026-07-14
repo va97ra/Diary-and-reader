@@ -45,6 +45,24 @@ class AppStrings {
   String get importFailed => _text('importFailed');
   String get confirmImport => _text('confirmImport');
   String get millimeters => _text('millimeters');
+  String get studioTitle => _text('studioTitle');
+  String get library => _text('library');
+  String get manuscript => _text('manuscript');
+  String get properties => _text('properties');
+  String get newBook => _text('newBook');
+  String get newPart => _text('newPart');
+  String get newChapter => _text('newChapter');
+  String get newScene => _text('newScene');
+  String get bookTitle => _text('bookTitle');
+  String get author => _text('author');
+  String get subtitle => _text('subtitle');
+  String get description => _text('description');
+  String get draftStatus => _text('draftStatus');
+  String get planned => _text('planned');
+  String get draft => _text('draft');
+  String get revision => _text('revision');
+  String get complete => _text('complete');
+  String get editor => _text('editor');
 
   static const _values = <String, Map<String, String>>{
     'ru': {
@@ -79,6 +97,24 @@ class AppStrings {
       'importFailed': 'Не удалось прочитать файл дневника',
       'confirmImport': 'Текущие записи будут заменены данными из файла.',
       'millimeters': 'мм',
+      'studioTitle': 'Авторская студия',
+      'library': 'Библиотека',
+      'manuscript': 'Рукопись',
+      'properties': 'Свойства',
+      'newBook': 'Новая книга',
+      'newPart': 'Новая часть',
+      'newChapter': 'Новая глава',
+      'newScene': 'Новая сцена',
+      'bookTitle': 'Название книги',
+      'author': 'Автор',
+      'subtitle': 'Подзаголовок',
+      'description': 'Аннотация',
+      'draftStatus': 'Статус текста',
+      'planned': 'Запланировано',
+      'draft': 'Черновик',
+      'revision': 'Редактура',
+      'complete': 'Готово',
+      'editor': 'Редактор',
     },
     'en': {
       'appTitle': 'My diary',
@@ -112,6 +148,24 @@ class AppStrings {
       'importFailed': 'The diary file could not be read',
       'confirmImport': 'Current entries will be replaced by the imported file.',
       'millimeters': 'mm',
+      'studioTitle': 'Author studio',
+      'library': 'Library',
+      'manuscript': 'Manuscript',
+      'properties': 'Properties',
+      'newBook': 'New book',
+      'newPart': 'New part',
+      'newChapter': 'New chapter',
+      'newScene': 'New scene',
+      'bookTitle': 'Book title',
+      'author': 'Author',
+      'subtitle': 'Subtitle',
+      'description': 'Description',
+      'draftStatus': 'Draft status',
+      'planned': 'Planned',
+      'draft': 'Draft',
+      'revision': 'Revision',
+      'complete': 'Complete',
+      'editor': 'Editor',
     },
   };
 }
