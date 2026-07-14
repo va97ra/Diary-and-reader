@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
+import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/book_page_paginator.dart';
 import 'package:dnevnik/features/books/application/workspace_save_state.dart';
 import 'package:dnevnik/features/books/domain/book_page_format.dart';
+import 'package:dnevnik/features/books/domain/book_page_view_mode.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/manuscript_statistics.dart';
@@ -24,6 +27,8 @@ class BookSectionEditor extends StatefulWidget {
     required this.onContentChanged,
     required this.showToolbar,
     required this.saveState,
+    required this.viewMode,
+    required this.onViewModeChanged,
     this.onControllerReady,
     super.key,
   });
@@ -35,6 +40,8 @@ class BookSectionEditor extends StatefulWidget {
   final ValueChanged<RichDocument> onContentChanged;
   final bool showToolbar;
   final WorkspaceSaveState saveState;
+  final BookPageViewMode viewMode;
+  final ValueChanged<BookPageViewMode> onViewModeChanged;
   final ValueChanged<QuillController>? onControllerReady;
 
   @override
@@ -283,7 +290,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     widget.onControllerReady?.call(controller);
   }
 
-  void _selectMobilePage(int page) {
+  void _selectPage(int page) {
     if (page < 0 || page >= _controllers.length || page == _activePage) return;
     setState(() => _activePage = page);
     widget.onControllerReady?.call(controller);
@@ -407,10 +414,10 @@ class BookSectionEditorState extends State<BookSectionEditor> {
                   pageFormat: widget.pageFormat,
                   paragraphSettings: widget.paragraphSettings,
                   onPreviousPage: _activePage > 0
-                      ? () => _selectMobilePage(_activePage - 1)
+                      ? () => _selectPage(_activePage - 1)
                       : null,
                   onNextPage: _activePage < _controllers.length - 1
-                      ? () => _selectMobilePage(_activePage + 1)
+                      ? () => _selectPage(_activePage + 1)
                       : null,
                 ),
         ),
@@ -420,6 +427,9 @@ class BookSectionEditorState extends State<BookSectionEditor> {
           pageCount: _controllers.length,
           targetWords: widget.section.targetWords,
           saveState: widget.saveState,
+          viewMode: widget.viewMode,
+          onViewModeChanged: widget.onViewModeChanged,
+          showViewModeSelector: widget.showToolbar,
         ),
       ],
     );
@@ -461,38 +471,136 @@ class BookSectionEditorState extends State<BookSectionEditor> {
   Widget _buildPagedEditor() => ColoredBox(
     color: const Color(0xFF141824),
     child: LayoutBuilder(
-      builder: (context, constraints) {
-        const horizontalPadding = 32.0;
-        final scale = widget.pageFormat.scaleForWidth(
-          constraints.maxWidth - horizontalPadding * 2,
-        );
-        return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(
-            horizontalPadding,
-            24,
-            horizontalPadding,
-            96,
-          ),
-          itemCount: _controllers.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 24),
-          itemBuilder: (context, index) => Center(
-            child: BookPageCanvas(
-              pageNumber: index + 1,
-              scale: scale,
-              pageFormat: widget.pageFormat,
-              paragraphSettings: widget.paragraphSettings,
-              controller: _controllers[index],
-              focusNode: _focusNodes[index],
-              scrollController: _scrollControllers[index],
-              editorKey: _editorKeys[index],
-              viewportKey: _viewportKeys[index],
-              titleController: _titleController,
-              onTitleChanged: widget.onTitleChanged,
-            ),
-          ),
-        );
+      builder: (context, constraints) => switch (widget.viewMode) {
+        BookPageViewMode.continuous => _buildContinuousPages(constraints),
+        BookPageViewMode.singlePage => _buildSinglePage(constraints),
+        BookPageViewMode.spread => _buildPageSpread(constraints),
       },
     ),
+  );
+
+  Widget _buildContinuousPages(BoxConstraints constraints) {
+    const horizontalPadding = 32.0;
+    final scale = widget.pageFormat.scaleForWidth(
+      constraints.maxWidth - horizontalPadding * 2,
+    );
+    return ListView.separated(
+      key: const ValueKey('continuous-page-view'),
+      padding: const EdgeInsets.fromLTRB(
+        horizontalPadding,
+        24,
+        horizontalPadding,
+        96,
+      ),
+      itemCount: _controllers.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 24),
+      itemBuilder: (context, index) => Center(child: _buildPage(index, scale)),
+    );
+  }
+
+  Widget _buildSinglePage(BoxConstraints constraints) => _buildPageStage(
+    key: const ValueKey('single-page-view'),
+    constraints: constraints,
+    pageIndices: [_activePage],
+    previousPage: _activePage > 0 ? _activePage - 1 : null,
+    nextPage: _activePage < _controllers.length - 1 ? _activePage + 1 : null,
+  );
+
+  Widget _buildPageSpread(BoxConstraints constraints) {
+    final firstPage = (_activePage ~/ 2) * 2;
+    return _buildPageStage(
+      key: const ValueKey('two-page-spread-view'),
+      constraints: constraints,
+      pageIndices: [
+        firstPage,
+        if (firstPage + 1 < _controllers.length) firstPage + 1,
+      ],
+      previousPage: firstPage > 0 ? firstPage - 2 : null,
+      nextPage: firstPage + 2 < _controllers.length ? firstPage + 2 : null,
+    );
+  }
+
+  Widget _buildPageStage({
+    required Key key,
+    required BoxConstraints constraints,
+    required List<int> pageIndices,
+    required int? previousPage,
+    required int? nextPage,
+  }) {
+    const horizontalPadding = 76.0;
+    const verticalPadding = 36.0;
+    const pageGap = 18.0;
+    final naturalWidth =
+        widget.pageFormat.width * pageIndices.length +
+        pageGap * (pageIndices.length - 1);
+    final widthScale =
+        (constraints.maxWidth - horizontalPadding) / naturalWidth;
+    final heightScale =
+        (constraints.maxHeight - verticalPadding) / widget.pageFormat.height;
+    final scale = math
+        .min(1, math.min(widthScale, heightScale))
+        .clamp(0.1, 1.0)
+        .toDouble();
+    final strings = AppStrings.of(context);
+
+    return Stack(
+      key: key,
+      children: [
+        Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var index = 0; index < pageIndices.length; index++) ...[
+                if (index > 0) const SizedBox(width: pageGap),
+                _buildPage(pageIndices[index], scale),
+              ],
+            ],
+          ),
+        ),
+        Positioned(
+          left: 12,
+          top: 0,
+          bottom: 0,
+          child: Center(
+            child: IconButton.filledTonal(
+              key: const ValueKey('book-page-previous'),
+              tooltip: strings.previousPage,
+              onPressed: previousPage == null
+                  ? null
+                  : () => _selectPage(previousPage),
+              icon: const Icon(Icons.chevron_left),
+            ),
+          ),
+        ),
+        Positioned(
+          right: 12,
+          top: 0,
+          bottom: 0,
+          child: Center(
+            child: IconButton.filledTonal(
+              key: const ValueKey('book-page-next'),
+              tooltip: strings.nextPage,
+              onPressed: nextPage == null ? null : () => _selectPage(nextPage),
+              icon: const Icon(Icons.chevron_right),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPage(int index, double scale) => BookPageCanvas(
+    pageNumber: index + 1,
+    scale: scale,
+    pageFormat: widget.pageFormat,
+    paragraphSettings: widget.paragraphSettings,
+    controller: _controllers[index],
+    focusNode: _focusNodes[index],
+    scrollController: _scrollControllers[index],
+    editorKey: _editorKeys[index],
+    viewportKey: _viewportKeys[index],
+    titleController: _titleController,
+    onTitleChanged: widget.onTitleChanged,
   );
 
   @override

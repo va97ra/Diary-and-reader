@@ -1,6 +1,7 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_page_view_mode_selector.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_setting_number_field.dart';
 import 'package:flutter/material.dart';
 
@@ -24,6 +25,12 @@ class BookPageSettingsSection extends StatelessWidget {
         const SizedBox(height: 12),
         Text('${strings.paperFormat}: A4'),
         const SizedBox(height: 14),
+        BookPageViewModeSelector(
+          value: settings.viewMode,
+          onChanged: (viewMode) =>
+              _update(settings.copyWith(viewMode: viewMode)),
+        ),
+        const SizedBox(height: 18),
         Text(
           strings.orientation,
           style: Theme.of(context).textTheme.labelLarge,

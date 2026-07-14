@@ -4,6 +4,7 @@ import 'package:dnevnik/app/author_studio_app.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_snapshot.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
+import 'package:dnevnik/features/books/domain/book_page_view_mode.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_section_editor.dart';
@@ -61,6 +62,31 @@ void main() {
       jsonEncode(controller.activeSection!.content),
       jsonEncode(originalContent),
     );
+
+    controller.updateLayoutSettings(
+      controller.activeProject!.layoutSettings.copyWith(
+        viewMode: BookPageViewMode.spread,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('two-page-spread-view')), findsOneWidget);
+    expect(find.byKey(const ValueKey('book-page-1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('book-page-2')), findsOneWidget);
+
+    controller.updateLayoutSettings(
+      controller.activeProject!.layoutSettings.copyWith(
+        viewMode: BookPageViewMode.singlePage,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('single-page-view')), findsOneWidget);
+    expect(find.byKey(const ValueKey('book-page-1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('book-page-2')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('book-page-next')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('book-page-1')), findsNothing);
+    expect(find.byKey(const ValueKey('book-page-2')), findsOneWidget);
 
     await tester.binding.setSurfaceSize(null);
   });

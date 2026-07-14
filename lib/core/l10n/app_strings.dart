@@ -97,6 +97,12 @@ class AppStrings {
   String get lineSpacing => _text('lineSpacing');
   String get spacingBefore => _text('spacingBefore');
   String get spacingAfter => _text('spacingAfter');
+  String get viewMode => _text('viewMode');
+  String get continuousPages => _text('continuousPages');
+  String get singlePage => _text('singlePage');
+  String get twoPageSpread => _text('twoPageSpread');
+  String get previousPage => _text('previousPage');
+  String get nextPage => _text('nextPage');
 
   static const _values = <String, Map<String, String>>{
     'ru': {
@@ -184,6 +190,12 @@ class AppStrings {
       'lineSpacing': 'Межстрочный интервал',
       'spacingBefore': 'Перед абзацем',
       'spacingAfter': 'После абзаца',
+      'viewMode': 'Режим просмотра',
+      'continuousPages': 'Лента страниц',
+      'singlePage': 'Одна страница',
+      'twoPageSpread': 'Разворот',
+      'previousPage': 'Предыдущая страница',
+      'nextPage': 'Следующая страница',
     },
     'en': {
       'appTitle': 'My diary',
@@ -270,6 +282,12 @@ class AppStrings {
       'lineSpacing': 'Line spacing',
       'spacingBefore': 'Before paragraph',
       'spacingAfter': 'After paragraph',
+      'viewMode': 'View mode',
+      'continuousPages': 'Continuous pages',
+      'singlePage': 'Single page',
+      'twoPageSpread': 'Two-page spread',
+      'previousPage': 'Previous page',
+      'nextPage': 'Next page',
     },
   };
 }

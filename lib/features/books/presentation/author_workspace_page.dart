@@ -26,7 +26,7 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
     final section = project.activeSection!;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isDesktop = constraints.maxWidth >= 1200;
+        final isDesktop = constraints.maxWidth >= 1500;
         final isTablet = constraints.maxWidth >= 700;
         return Scaffold(
           appBar: AppBar(
@@ -72,6 +72,11 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
                   paragraphSettings: project.paragraphSettings,
                   showToolbar: isTablet,
                   saveState: widget.controller.saveState,
+                  viewMode: project.layoutSettings.viewMode,
+                  onViewModeChanged: (viewMode) =>
+                      widget.controller.updateLayoutSettings(
+                        project.layoutSettings.copyWith(viewMode: viewMode),
+                      ),
                   onTitleChanged: widget.controller.updateSectionTitle,
                   onContentChanged: widget.controller.updateSectionContent,
                   onControllerReady: (controller) =>

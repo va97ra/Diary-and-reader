@@ -1,4 +1,5 @@
 import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
+import 'package:dnevnik/features/books/domain/book_page_view_mode.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -7,6 +8,7 @@ void main() {
 
     expect(settings.paperSize, BookPaperSize.a4);
     expect(settings.orientation, BookPageOrientation.portrait);
+    expect(settings.viewMode, BookPageViewMode.continuous);
     expect(settings.pageFormat.widthMm, 210);
     expect(settings.pageFormat.heightMm, 297);
   });
@@ -15,23 +17,27 @@ void main() {
     const source = BookLayoutSettings(
       orientation: BookPageOrientation.landscape,
       marginLeftMm: 25,
+      viewMode: BookPageViewMode.spread,
     );
 
     final restored = BookLayoutSettings.fromJson(source.toJson());
 
     expect(restored.orientation, BookPageOrientation.landscape);
     expect(restored.marginLeftMm, 25);
+    expect(restored.viewMode, BookPageViewMode.spread);
     expect(restored.pageFormat.widthMm, 297);
   });
 
   test('applies a uniform margin preset without changing orientation', () {
     const source = BookLayoutSettings(
       orientation: BookPageOrientation.landscape,
+      viewMode: BookPageViewMode.singlePage,
     );
 
     final updated = source.withUniformMargins(12.7);
 
     expect(updated.orientation, BookPageOrientation.landscape);
+    expect(updated.viewMode, BookPageViewMode.singlePage);
     expect(updated.marginTopMm, 12.7);
     expect(updated.marginRightMm, 12.7);
     expect(updated.marginBottomMm, 12.7);

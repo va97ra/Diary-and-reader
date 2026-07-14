@@ -1,7 +1,9 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/core/theme/app_theme.dart';
 import 'package:dnevnik/features/books/application/workspace_save_state.dart';
+import 'package:dnevnik/features/books/domain/book_page_view_mode.dart';
 import 'package:dnevnik/features/books/domain/manuscript_statistics.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_page_view_mode_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -12,6 +14,9 @@ class BookEditorStatusBar extends StatelessWidget {
     required this.pageCount,
     required this.targetWords,
     required this.saveState,
+    required this.viewMode,
+    required this.onViewModeChanged,
+    required this.showViewModeSelector,
     super.key,
   });
 
@@ -20,6 +25,9 @@ class BookEditorStatusBar extends StatelessWidget {
   final int pageCount;
   final int targetWords;
   final WorkspaceSaveState saveState;
+  final BookPageViewMode viewMode;
+  final ValueChanged<BookPageViewMode> onViewModeChanged;
+  final bool showViewModeSelector;
 
   @override
   Widget build(BuildContext context) {
@@ -72,6 +80,17 @@ class BookEditorStatusBar extends StatelessWidget {
                     ),
                   ] else
                     const Spacer(),
+                  if (showViewModeSelector) ...[
+                    SizedBox.square(
+                      dimension: 36,
+                      child: BookPageViewModeSelector(
+                        value: viewMode,
+                        onChanged: onViewModeChanged,
+                        compact: true,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   const SizedBox(width: 14),
                   Text(
                     '${strings.page} $activePage/$pageCount',

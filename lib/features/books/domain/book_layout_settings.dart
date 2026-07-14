@@ -1,4 +1,5 @@
 import 'package:dnevnik/features/books/domain/book_page_format.dart';
+import 'package:dnevnik/features/books/domain/book_page_view_mode.dart';
 
 enum BookPaperSize { a4 }
 
@@ -12,6 +13,7 @@ class BookLayoutSettings {
     this.marginRightMm = 20,
     this.marginBottomMm = 20,
     this.marginLeftMm = 20,
+    this.viewMode = BookPageViewMode.continuous,
   });
 
   factory BookLayoutSettings.fromJson(Map<String, dynamic> json) =>
@@ -30,6 +32,11 @@ class BookLayoutSettings {
         marginRightMm: _margin(json['marginRightMm']),
         marginBottomMm: _margin(json['marginBottomMm']),
         marginLeftMm: _margin(json['marginLeftMm']),
+        viewMode: _enumValue(
+          BookPageViewMode.values,
+          json['viewMode']?.toString(),
+          BookPageViewMode.continuous,
+        ),
       );
 
   final BookPaperSize paperSize;
@@ -38,6 +45,7 @@ class BookLayoutSettings {
   final double marginRightMm;
   final double marginBottomMm;
   final double marginLeftMm;
+  final BookPageViewMode viewMode;
 
   BookPageFormat get pageFormat {
     final (widthMm, heightMm) = switch ((paperSize, orientation)) {
@@ -61,6 +69,7 @@ class BookLayoutSettings {
     double? marginRightMm,
     double? marginBottomMm,
     double? marginLeftMm,
+    BookPageViewMode? viewMode,
   }) => BookLayoutSettings(
     paperSize: paperSize ?? this.paperSize,
     orientation: orientation ?? this.orientation,
@@ -68,6 +77,7 @@ class BookLayoutSettings {
     marginRightMm: marginRightMm ?? this.marginRightMm,
     marginBottomMm: marginBottomMm ?? this.marginBottomMm,
     marginLeftMm: marginLeftMm ?? this.marginLeftMm,
+    viewMode: viewMode ?? this.viewMode,
   );
 
   BookLayoutSettings withUniformMargins(double millimeters) => copyWith(
@@ -84,6 +94,7 @@ class BookLayoutSettings {
     'marginRightMm': marginRightMm,
     'marginBottomMm': marginBottomMm,
     'marginLeftMm': marginLeftMm,
+    'viewMode': viewMode.name,
   };
 
   static double _margin(Object? value) {

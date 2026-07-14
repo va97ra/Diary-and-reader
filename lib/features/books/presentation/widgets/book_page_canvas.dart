@@ -137,10 +137,17 @@ class BookPageCanvas extends StatelessWidget {
       ),
       width: pageFormat.width * scale,
       height: pageFormat.height * scale,
-      child: Transform.scale(
+      child: OverflowBox(
         alignment: Alignment.topLeft,
-        scale: scale,
-        child: page,
+        minWidth: pageFormat.width,
+        maxWidth: pageFormat.width,
+        minHeight: pageFormat.height,
+        maxHeight: pageFormat.height,
+        child: Transform.scale(
+          alignment: Alignment.topLeft,
+          scale: scale,
+          child: page,
+        ),
       ),
     );
   }
