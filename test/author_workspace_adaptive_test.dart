@@ -26,6 +26,7 @@ void main() {
     expect(find.text('Альбомная'), findsOneWidget);
     expect(find.text('Слов: 0'), findsOneWidget);
     expect(find.text('Сохранено'), findsOneWidget);
+    expect(find.text('Основной текст'), findsOneWidget);
     final editor = tester.widget<QuillEditor>(find.byType(QuillEditor));
     expect(editor.config.textSelectionThemeData?.cursorColor, AppTheme.ink);
 

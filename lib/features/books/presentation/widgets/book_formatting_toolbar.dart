@@ -1,6 +1,7 @@
 import 'package:dnevnik/core/theme/app_theme.dart';
 import 'package:dnevnik/features/books/domain/book_page_format.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_paragraph_style_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
@@ -17,9 +18,23 @@ class BookFormattingToolbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Material(
     color: AppTheme.surface,
-    child: QuillSimpleToolbar(
-      controller: controller,
-      config: _bookToolbarConfig(paragraphSettings),
+    child: Row(
+      children: [
+        SizedBox(
+          width: 210,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
+            child: BookParagraphStyleSelector(controller: controller),
+          ),
+        ),
+        const SizedBox(height: 34, child: VerticalDivider(width: 12)),
+        Expanded(
+          child: QuillSimpleToolbar(
+            controller: controller,
+            config: _bookToolbarConfig(paragraphSettings),
+          ),
+        ),
+      ],
     ),
   );
 }
@@ -38,9 +53,16 @@ class BookFormattingSheet extends StatelessWidget {
   Widget build(BuildContext context) => SafeArea(
     child: Padding(
       padding: const EdgeInsets.all(12),
-      child: QuillSimpleToolbar(
-        controller: controller,
-        config: _bookToolbarConfig(paragraphSettings),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          BookParagraphStyleSelector(controller: controller),
+          const SizedBox(height: 10),
+          QuillSimpleToolbar(
+            controller: controller,
+            config: _bookToolbarConfig(paragraphSettings),
+          ),
+        ],
       ),
     ),
   );

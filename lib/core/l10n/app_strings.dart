@@ -103,6 +103,14 @@ class AppStrings {
   String get twoPageSpread => _text('twoPageSpread');
   String get previousPage => _text('previousPage');
   String get nextPage => _text('nextPage');
+  String get paragraphType => _text('paragraphType');
+  String get bodyText => _text('bodyText');
+  String get heading1 => _text('heading1');
+  String get heading2 => _text('heading2');
+  String get heading3 => _text('heading3');
+  String get quoteStyle => _text('quoteStyle');
+  String get epigraph => _text('epigraph');
+  String get sceneBreak => _text('sceneBreak');
 
   static const _values = <String, Map<String, String>>{
     'ru': {
@@ -196,6 +204,14 @@ class AppStrings {
       'twoPageSpread': 'Разворот',
       'previousPage': 'Предыдущая страница',
       'nextPage': 'Следующая страница',
+      'paragraphType': 'Стиль абзаца',
+      'bodyText': 'Основной текст',
+      'heading1': 'Заголовок 1',
+      'heading2': 'Заголовок 2',
+      'heading3': 'Заголовок 3',
+      'quoteStyle': 'Цитата',
+      'epigraph': 'Эпиграф',
+      'sceneBreak': 'Разделитель сцены',
     },
     'en': {
       'appTitle': 'My diary',
@@ -288,6 +304,14 @@ class AppStrings {
       'twoPageSpread': 'Two-page spread',
       'previousPage': 'Previous page',
       'nextPage': 'Next page',
+      'paragraphType': 'Paragraph style',
+      'bodyText': 'Body text',
+      'heading1': 'Heading 1',
+      'heading2': 'Heading 2',
+      'heading3': 'Heading 3',
+      'quoteStyle': 'Quote',
+      'epigraph': 'Epigraph',
+      'sceneBreak': 'Scene break',
     },
   };
 }
