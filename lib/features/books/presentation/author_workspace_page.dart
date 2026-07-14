@@ -69,6 +69,7 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
                   key: ValueKey(section.id),
                   section: section,
                   pageFormat: project.layoutSettings.pageFormat,
+                  paragraphSettings: project.paragraphSettings,
                   showToolbar: isTablet,
                   saveState: widget.controller.saveState,
                   onTitleChanged: widget.controller.updateSectionTitle,
@@ -138,7 +139,10 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
     if (controller == null) return;
     await showModalBottomSheet<void>(
       context: context,
-      builder: (_) => BookFormattingSheet(controller: controller),
+      builder: (_) => BookFormattingSheet(
+        controller: controller,
+        paragraphSettings: widget.controller.activeProject!.paragraphSettings,
+      ),
     );
   }
 }

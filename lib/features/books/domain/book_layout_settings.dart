@@ -70,6 +70,13 @@ class BookLayoutSettings {
     marginLeftMm: marginLeftMm ?? this.marginLeftMm,
   );
 
+  BookLayoutSettings withUniformMargins(double millimeters) => copyWith(
+    marginTopMm: millimeters,
+    marginRightMm: millimeters,
+    marginBottomMm: millimeters,
+    marginLeftMm: millimeters,
+  );
+
   Map<String, Object> toJson() => {
     'paperSize': paperSize.name,
     'orientation': orientation.name,

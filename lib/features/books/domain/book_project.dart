@@ -2,7 +2,9 @@ import 'dart:collection';
 
 import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
+import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
+import 'package:dnevnik/features/books/domain/rich_document.dart';
 
 class BookProject {
   BookProject({
@@ -13,6 +15,7 @@ class BookProject {
     required this.createdAt,
     required this.updatedAt,
     this.layoutSettings = const BookLayoutSettings(),
+    this.paragraphSettings = const BookParagraphSettings(),
   }) : _sections = List.unmodifiable(sections);
 
   factory BookProject.create({
@@ -37,16 +40,31 @@ class BookProject {
       createdAt: timestamp,
       updatedAt: timestamp,
       layoutSettings: const BookLayoutSettings(),
+      paragraphSettings: BookParagraphSettings.forPreset(
+        BookParagraphPreset.modern,
+      ),
     );
   }
 
   factory BookProject.fromJson(Map<String, dynamic> json) {
-    final sections = (json['sections'] as List<dynamic>? ?? const [])
+    var sections = (json['sections'] as List<dynamic>? ?? const [])
         .whereType<Map>()
         .map(
           (section) => BookSection.fromJson(Map<String, dynamic>.from(section)),
         )
         .toList();
+    final documentFormatVersion = json['documentFormatVersion'] is num
+        ? (json['documentFormatVersion'] as num).toInt()
+        : 1;
+    if (documentFormatVersion < _currentDocumentFormatVersion) {
+      sections = sections
+          .map(
+            (section) => section.copyWith(
+              content: withoutLegacyDefaultLineHeight(section.content),
+            ),
+          )
+          .toList();
+    }
     final createdAt =
         DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
         DateTime.now();
@@ -73,6 +91,11 @@ class BookProject {
               Map<String, dynamic>.from(json['layoutSettings'] as Map),
             )
           : const BookLayoutSettings(),
+      paragraphSettings: json['paragraphSettings'] is Map
+          ? BookParagraphSettings.fromJson(
+              Map<String, dynamic>.from(json['paragraphSettings'] as Map),
+            )
+          : const BookParagraphSettings(),
     );
   }
 
@@ -83,6 +106,7 @@ class BookProject {
   final DateTime createdAt;
   final DateTime updatedAt;
   final BookLayoutSettings layoutSettings;
+  final BookParagraphSettings paragraphSettings;
 
   UnmodifiableListView<BookSection> get sections =>
       UnmodifiableListView(_sections);
@@ -100,6 +124,7 @@ class BookProject {
     bool clearActiveSection = false,
     DateTime? updatedAt,
     BookLayoutSettings? layoutSettings,
+    BookParagraphSettings? paragraphSettings,
   }) => BookProject(
     id: id,
     metadata: metadata ?? this.metadata,
@@ -110,6 +135,7 @@ class BookProject {
     createdAt: createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     layoutSettings: layoutSettings ?? this.layoutSettings,
+    paragraphSettings: paragraphSettings ?? this.paragraphSettings,
   );
 
   Map<String, dynamic> toJson() => {
@@ -120,5 +146,9 @@ class BookProject {
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
     'layoutSettings': layoutSettings.toJson(),
+    'paragraphSettings': paragraphSettings.toJson(),
+    'documentFormatVersion': _currentDocumentFormatVersion,
   };
 }
+
+const _currentDocumentFormatVersion = 2;

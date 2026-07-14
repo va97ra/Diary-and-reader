@@ -84,6 +84,19 @@ class AppStrings {
   String get saved => _text('saved');
   String get saving => _text('saving');
   String get saveError => _text('saveError');
+  String get paragraphStyle => _text('paragraphStyle');
+  String get stylePreset => _text('stylePreset');
+  String get modernStyle => _text('modernStyle');
+  String get classicStyle => _text('classicStyle');
+  String get manuscriptStyle => _text('manuscriptStyle');
+  String get customStyle => _text('customStyle');
+  String get defaultFont => _text('defaultFont');
+  String get fontSize => _text('fontSize');
+  String get points => _text('points');
+  String get paragraphIndent => _text('paragraphIndent');
+  String get lineSpacing => _text('lineSpacing');
+  String get spacingBefore => _text('spacingBefore');
+  String get spacingAfter => _text('spacingAfter');
 
   static const _values = <String, Map<String, String>>{
     'ru': {
@@ -158,6 +171,19 @@ class AppStrings {
       'saved': 'Сохранено',
       'saving': 'Сохранение…',
       'saveError': 'Не сохранено',
+      'paragraphStyle': 'Стиль основного текста',
+      'stylePreset': 'Готовый стиль',
+      'modernStyle': 'Современный',
+      'classicStyle': 'Классическая книга',
+      'manuscriptStyle': 'Рукопись для редактора',
+      'customStyle': 'Пользовательский',
+      'defaultFont': 'Основной шрифт',
+      'fontSize': 'Размер',
+      'points': 'пт',
+      'paragraphIndent': 'Отступ абзаца',
+      'lineSpacing': 'Межстрочный интервал',
+      'spacingBefore': 'Перед абзацем',
+      'spacingAfter': 'После абзаца',
     },
     'en': {
       'appTitle': 'My diary',
@@ -231,6 +257,19 @@ class AppStrings {
       'saved': 'Saved',
       'saving': 'Saving…',
       'saveError': 'Not saved',
+      'paragraphStyle': 'Body text style',
+      'stylePreset': 'Style preset',
+      'modernStyle': 'Modern',
+      'classicStyle': 'Classic book',
+      'manuscriptStyle': 'Editor manuscript',
+      'customStyle': 'Custom',
+      'defaultFont': 'Default font',
+      'fontSize': 'Size',
+      'points': 'pt',
+      'paragraphIndent': 'Paragraph indent',
+      'lineSpacing': 'Line spacing',
+      'spacingBefore': 'Before paragraph',
+      'spacingAfter': 'After paragraph',
     },
   };
 }

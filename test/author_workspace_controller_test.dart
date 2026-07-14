@@ -5,6 +5,7 @@ import 'package:dnevnik/features/books/application/workspace_save_state.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_repository.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_snapshot.dart';
 import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
+import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -61,6 +62,21 @@ void main() {
       2500,
     );
     expect(controller.saveState, WorkspaceSaveState.saved);
+  });
+
+  test('persists project paragraph settings', () async {
+    final repository = MemoryAuthorWorkspaceRepository();
+    final controller = AuthorWorkspaceController(repository);
+    await controller.load(preferredLanguage: 'ru');
+
+    controller.updateParagraphSettings(
+      BookParagraphSettings.forPreset(BookParagraphPreset.classic),
+    );
+    await controller.flush();
+
+    final saved = repository.snapshot!.activeProject!.paragraphSettings;
+    expect(saved.preset, BookParagraphPreset.classic);
+    expect(saved.paragraphIndentMm, 5);
   });
 
   test('serializes saves so an older write cannot win a race', () async {

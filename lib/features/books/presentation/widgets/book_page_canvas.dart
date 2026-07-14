@@ -1,6 +1,7 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/core/theme/app_theme.dart';
 import 'package:dnevnik/features/books/domain/book_page_format.dart';
+import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/presentation/book_typography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -10,6 +11,7 @@ class BookPageCanvas extends StatelessWidget {
     required this.pageNumber,
     required this.scale,
     required this.pageFormat,
+    required this.paragraphSettings,
     required this.controller,
     required this.focusNode,
     required this.scrollController,
@@ -23,6 +25,7 @@ class BookPageCanvas extends StatelessWidget {
   final int pageNumber;
   final double scale;
   final BookPageFormat pageFormat;
+  final BookParagraphSettings paragraphSettings;
   final QuillController controller;
   final FocusNode focusNode;
   final ScrollController scrollController;
@@ -40,12 +43,6 @@ class BookPageCanvas extends StatelessWidget {
       child: Container(
         width: pageFormat.width,
         height: pageFormat.height,
-        padding: EdgeInsets.fromLTRB(
-          pageFormat.marginLeft,
-          pageFormat.marginTop,
-          pageFormat.marginRight,
-          pageFormat.marginBottom / 2,
-        ),
         decoration: BoxDecoration(
           color: AppTheme.paper,
           borderRadius: BorderRadius.circular(4),
@@ -57,57 +54,73 @@ class BookPageCanvas extends StatelessWidget {
             ),
           ],
         ),
-        child: Column(
+        child: Stack(
           children: [
-            if (_isFirstPage) ...[
-              TextField(
-                controller: titleController,
-                cursorColor: AppTheme.ink,
-                onChanged: onTitleChanged,
-                maxLines: 2,
-                style: TextStyle(
-                  color: AppTheme.ink,
-                  fontFamily: 'Georgia',
-                  fontSize: BookTypography.titleSize,
-                  height: 1.2,
-                  fontWeight: FontWeight.w600,
-                ),
-                decoration: InputDecoration(
-                  hintText: AppStrings.of(context).newChapter,
-                  hintStyle: const TextStyle(color: Colors.blueGrey),
-                  isDense: true,
-                ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                pageFormat.marginLeft,
+                pageFormat.marginTop,
+                pageFormat.marginRight,
+                pageFormat.marginBottom,
               ),
-              const SizedBox(height: 12),
-              const Divider(color: Color(0xFFE2E8F0), height: 1),
-              const SizedBox(height: 16),
-            ],
-            Expanded(
-              child: ClipRect(
-                key: viewportKey,
-                child: QuillEditor(
-                  controller: controller,
-                  focusNode: focusNode,
-                  scrollController: scrollController,
-                  config: QuillEditorConfig(
-                    editorKey: editorKey,
-                    placeholder: AppStrings.of(context).startWriting,
-                    padding: EdgeInsets.zero,
-                    customStyles: BookTypography.editorStyles,
-                    textSelectionThemeData: BookTypography.selectionTheme,
-                    scrollable: false,
-                    autoFocus: false,
+              child: Column(
+                children: [
+                  if (_isFirstPage) ...[
+                    TextField(
+                      controller: titleController,
+                      cursorColor: AppTheme.ink,
+                      onChanged: onTitleChanged,
+                      maxLines: 2,
+                      style: TextStyle(
+                        color: AppTheme.ink,
+                        fontFamily: paragraphSettings.fontFamily,
+                        fontSize: BookTypography.titleSize,
+                        height: 1.2,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: AppStrings.of(context).newChapter,
+                        hintStyle: const TextStyle(color: Colors.blueGrey),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Divider(color: Color(0xFFE2E8F0), height: 1),
+                    const SizedBox(height: 16),
+                  ],
+                  Expanded(
+                    child: ClipRect(
+                      key: viewportKey,
+                      child: QuillEditor(
+                        controller: controller,
+                        focusNode: focusNode,
+                        scrollController: scrollController,
+                        config: QuillEditorConfig(
+                          editorKey: editorKey,
+                          placeholder: AppStrings.of(context).startWriting,
+                          padding: EdgeInsets.zero,
+                          customStyles: BookTypography.editorStyles(
+                            paragraphSettings,
+                          ),
+                          textSelectionThemeData: BookTypography.selectionTheme,
+                          scrollable: false,
+                          autoFocus: false,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.center,
+            Positioned(
+              left: pageFormat.marginLeft,
+              right: pageFormat.marginRight,
+              bottom: (pageFormat.marginBottom / 2 - 7).clamp(4, 32),
               child: Text(
                 '${AppStrings.of(context).page} $pageNumber · '
                 'A4 ${pageFormat.widthMm.toInt()}×'
                 '${pageFormat.heightMm.toInt()} мм',
+                textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.blueGrey, fontSize: 11),
               ),
             ),

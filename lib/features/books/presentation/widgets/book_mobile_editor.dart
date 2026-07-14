@@ -1,6 +1,7 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/core/theme/app_theme.dart';
 import 'package:dnevnik/features/books/domain/book_page_format.dart';
+import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/presentation/book_typography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -15,6 +16,7 @@ class BookMobileEditor extends StatelessWidget {
     required this.pageNumber,
     required this.pageCount,
     required this.pageFormat,
+    required this.paragraphSettings,
     required this.onPreviousPage,
     required this.onNextPage,
     super.key,
@@ -28,6 +30,7 @@ class BookMobileEditor extends StatelessWidget {
   final int pageNumber;
   final int pageCount;
   final BookPageFormat pageFormat;
+  final BookParagraphSettings paragraphSettings;
   final VoidCallback? onPreviousPage;
   final VoidCallback? onNextPage;
 
@@ -48,9 +51,9 @@ class BookMobileEditor extends StatelessWidget {
             cursorColor: AppTheme.ink,
             onChanged: onTitleChanged,
             maxLines: 2,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppTheme.ink,
-              fontFamily: 'Georgia',
+              fontFamily: paragraphSettings.fontFamily,
               fontSize: 28,
               height: 1.2,
               fontWeight: FontWeight.w600,
@@ -70,7 +73,7 @@ class BookMobileEditor extends StatelessWidget {
               config: QuillEditorConfig(
                 placeholder: AppStrings.of(context).startWriting,
                 padding: EdgeInsets.zero,
-                customStyles: BookTypography.editorStyles,
+                customStyles: BookTypography.editorStyles(paragraphSettings),
                 textSelectionThemeData: BookTypography.selectionTheme,
                 scrollable: true,
                 autoFocus: false,

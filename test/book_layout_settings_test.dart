@@ -23,4 +23,18 @@ void main() {
     expect(restored.marginLeftMm, 25);
     expect(restored.pageFormat.widthMm, 297);
   });
+
+  test('applies a uniform margin preset without changing orientation', () {
+    const source = BookLayoutSettings(
+      orientation: BookPageOrientation.landscape,
+    );
+
+    final updated = source.withUniformMargins(12.7);
+
+    expect(updated.orientation, BookPageOrientation.landscape);
+    expect(updated.marginTopMm, 12.7);
+    expect(updated.marginRightMm, 12.7);
+    expect(updated.marginBottomMm, 12.7);
+    expect(updated.marginLeftMm, 12.7);
+  });
 }

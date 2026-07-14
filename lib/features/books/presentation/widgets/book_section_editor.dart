@@ -1,6 +1,7 @@
 import 'package:dnevnik/features/books/application/book_page_paginator.dart';
 import 'package:dnevnik/features/books/application/workspace_save_state.dart';
 import 'package:dnevnik/features/books/domain/book_page_format.dart';
+import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/manuscript_statistics.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
@@ -15,6 +16,7 @@ class BookSectionEditor extends StatefulWidget {
   const BookSectionEditor({
     required this.section,
     required this.pageFormat,
+    required this.paragraphSettings,
     required this.onTitleChanged,
     required this.onContentChanged,
     required this.showToolbar,
@@ -25,6 +27,7 @@ class BookSectionEditor extends StatefulWidget {
 
   final BookSection section;
   final BookPageFormat pageFormat;
+  final BookParagraphSettings paragraphSettings;
   final ValueChanged<String> onTitleChanged;
   final ValueChanged<RichDocument> onContentChanged;
   final bool showToolbar;
@@ -64,7 +67,10 @@ class BookSectionEditorState extends State<BookSectionEditor> {
   @override
   void didUpdateWidget(covariant BookSectionEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.pageFormat == widget.pageFormat) return;
+    if (oldWidget.pageFormat == widget.pageFormat &&
+        oldWidget.paragraphSettings == widget.paragraphSettings) {
+      return;
+    }
     final manuscript = BookPagePaginator.merge(_pageDocuments);
     _paginationInProgress = true;
     _disposePageControllers();
@@ -81,7 +87,6 @@ class BookSectionEditorState extends State<BookSectionEditor> {
         document: Document.fromJson(document),
         selection: const TextSelection.collapsed(offset: 0),
       );
-      _applyDefaultLineHeight(controller, document);
       controller.addListener(() => _handleDocumentChanged(controller));
       _controllers.add(controller);
 
@@ -91,31 +96,6 @@ class BookSectionEditorState extends State<BookSectionEditor> {
       _scrollControllers.add(ScrollController());
       _editorKeys.add(GlobalKey<EditorState>());
       _viewportKeys.add(GlobalKey());
-    }
-  }
-
-  void _applyDefaultLineHeight(
-    QuillController controller,
-    RichDocument document,
-  ) {
-    var operationOffset = 0;
-    for (final operation in document) {
-      final insert = operation['insert'];
-      final attributes = operation['attributes'];
-      final hasLineHeight =
-          attributes is Map && attributes.containsKey('line-height');
-      if (insert is String && !hasLineHeight) {
-        for (var index = 0; index < insert.length; index++) {
-          if (insert[index] == '\n') {
-            controller.formatText(
-              operationOffset + index,
-              1,
-              LineHeightAttribute.lineHeightOneAndHalf,
-            );
-          }
-        }
-      }
-      operationOffset += insert is String ? insert.length : 1;
     }
   }
 
@@ -230,7 +210,11 @@ class BookSectionEditorState extends State<BookSectionEditor> {
 
     return Column(
       children: [
-        if (widget.showToolbar) BookFormattingToolbar(controller: controller),
+        if (widget.showToolbar)
+          BookFormattingToolbar(
+            controller: controller,
+            paragraphSettings: widget.paragraphSettings,
+          ),
         Expanded(
           child: widget.showToolbar
               ? _buildPagedEditor()
@@ -243,6 +227,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
                   pageNumber: _activePage + 1,
                   pageCount: _controllers.length,
                   pageFormat: widget.pageFormat,
+                  paragraphSettings: widget.paragraphSettings,
                   onPreviousPage: _activePage > 0
                       ? () => _selectMobilePage(_activePage - 1)
                       : null,
@@ -284,6 +269,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
               pageNumber: index + 1,
               scale: scale,
               pageFormat: widget.pageFormat,
+              paragraphSettings: widget.paragraphSettings,
               controller: _controllers[index],
               focusNode: _focusNodes[index],
               scrollController: _scrollControllers[index],

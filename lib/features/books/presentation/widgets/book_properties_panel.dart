@@ -1,9 +1,10 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/core/theme/app_theme.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
-import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_page_settings_section.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_paragraph_settings_section.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -97,47 +98,12 @@ class BookPropertiesPanel extends StatelessWidget {
             const SizedBox(height: 24),
             const Divider(),
             const SizedBox(height: 12),
-            Text(
-              strings.pageLayout,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            BookPageSettingsSection(controller: controller),
+            const SizedBox(height: 24),
+            const Divider(),
             const SizedBox(height: 12),
-            Text('${strings.paperFormat}: A4'),
-            const SizedBox(height: 4),
-            Text(
-              '${strings.margins}: 20 ${strings.millimeters}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 14),
-            Text(
-              strings.orientation,
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
-            const SizedBox(height: 8),
-            SegmentedButton<BookPageOrientation>(
-              key: ValueKey('${project.id}-page-orientation'),
-              showSelectedIcon: false,
-              segments: [
-                ButtonSegment(
-                  value: BookPageOrientation.portrait,
-                  icon: const Icon(Icons.stay_current_portrait),
-                  label: Text(strings.portrait),
-                ),
-                ButtonSegment(
-                  value: BookPageOrientation.landscape,
-                  icon: const Icon(Icons.stay_current_landscape),
-                  label: Text(strings.landscape),
-                ),
-              ],
-              selected: {project.layoutSettings.orientation},
-              onSelectionChanged: (selection) {
-                controller.updateLayoutSettings(
-                  project.layoutSettings.copyWith(
-                    orientation: selection.single,
-                  ),
-                );
-              },
-            ),
+            BookParagraphSettingsSection(controller: controller),
+            const SizedBox(height: 24),
           ],
         ),
       ),
