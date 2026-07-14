@@ -9,6 +9,7 @@ import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
+import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
 import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
@@ -138,15 +139,23 @@ class AuthorWorkspaceController extends ChangeNotifier {
     final activeStillExists = sections.any(
       (section) => section.id == project.activeSectionId,
     );
-    _replaceActiveProject(
-      (current) => current.copyWith(
+    _replaceActiveProject((current) {
+      final sectionIds = sections.map((section) => section.id).toSet();
+      final readerSectionExists = sectionIds.contains(
+        current.readerProgress.sectionId,
+      );
+      return current.copyWith(
         sections: sections,
         activeSectionId: activeStillExists
             ? current.activeSectionId
             : sections.first.id,
+        readerProgress: readerSectionExists
+            ? current.readerProgress
+            : BookReaderProgress(sectionId: sections.first.id),
+        readerAnnotations: current.readerAnnotations.retainSections(sectionIds),
         updatedAt: DateTime.now(),
-      ),
-    );
+      );
+    });
     _changed();
   }
 
@@ -222,6 +231,16 @@ class AuthorWorkspaceController extends ChangeNotifier {
     _replaceActiveProject(
       (project) => project.copyWith(
         readerProgress: readerProgress,
+        updatedAt: DateTime.now(),
+      ),
+    );
+    _changed();
+  }
+
+  void updateReaderAnnotations(BookReaderAnnotations readerAnnotations) {
+    _replaceActiveProject(
+      (project) => project.copyWith(
+        readerAnnotations: readerAnnotations,
         updatedAt: DateTime.now(),
       ),
     );

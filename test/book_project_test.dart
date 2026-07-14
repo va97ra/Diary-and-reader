@@ -1,5 +1,6 @@
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
+import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
 import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
@@ -35,6 +36,25 @@ void main() {
         sectionId: 'scene-1',
         sectionProgress: 0.4,
       ),
+      readerAnnotations: BookReaderAnnotations(
+        bookmarks: [
+          BookReaderBookmark.create(
+            sectionId: scene.id,
+            sectionProgress: 0.25,
+            excerpt: 'Фрагмент сцены',
+            now: now,
+          ),
+        ],
+        notes: [
+          BookReaderNote.create(
+            sectionId: scene.id,
+            sectionProgress: 0.25,
+            excerpt: 'Фрагмент сцены',
+            text: 'Проверить диалог',
+            now: now,
+          ),
+        ],
+      ),
     );
 
     final restored = BookProject.fromJson(withScene.toJson());
@@ -49,6 +69,11 @@ void main() {
     expect(restored.readerSettings.fontSize, 21);
     expect(restored.readerProgress.sectionId, 'scene-1');
     expect(restored.readerProgress.sectionProgress, 0.4);
+    expect(
+      restored.readerAnnotations.bookmarks.single.excerpt,
+      'Фрагмент сцены',
+    );
+    expect(restored.readerAnnotations.notes.single.text, 'Проверить диалог');
   });
 
   test('invalid active section falls back to the first section', () {

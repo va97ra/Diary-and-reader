@@ -1,12 +1,17 @@
 import 'dart:async';
 
 import 'package:dnevnik/core/l10n/app_strings.dart';
+import 'package:dnevnik/features/books/application/book_reader_search.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
+import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
 import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
-import 'package:dnevnik/features/books/presentation/reader/book_reader_contents.dart';
+import 'package:dnevnik/features/books/domain/rich_document.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_navigation_panel.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_note_dialog.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_search_sheet.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_settings_sheet.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_typography.dart';
 import 'package:flutter/material.dart';
@@ -17,12 +22,14 @@ class BookReaderPage extends StatefulWidget {
     required this.project,
     required this.onSettingsChanged,
     required this.onProgressChanged,
+    required this.onAnnotationsChanged,
     super.key,
   });
 
   final BookProject project;
   final ValueChanged<BookReaderSettings> onSettingsChanged;
   final ValueChanged<BookReaderProgress> onProgressChanged;
+  final ValueChanged<BookReaderAnnotations> onAnnotationsChanged;
 
   @override
   State<BookReaderPage> createState() => _BookReaderPageState();
@@ -30,6 +37,7 @@ class BookReaderPage extends StatefulWidget {
 
 class _BookReaderPageState extends State<BookReaderPage> {
   late BookReaderSettings _settings;
+  late BookReaderAnnotations _annotations;
   late int _activeIndex;
   late QuillController _controller;
   late FocusNode _focusNode;
@@ -44,6 +52,7 @@ class _BookReaderPageState extends State<BookReaderPage> {
   void initState() {
     super.initState();
     _settings = widget.project.readerSettings;
+    _annotations = widget.project.readerAnnotations;
     final savedId = widget.project.readerProgress.sectionId;
     final savedIndex = _sections.indexWhere((section) => section.id == savedId);
     _activeIndex = savedIndex < 0 ? 0 : savedIndex;
@@ -76,15 +85,23 @@ class _BookReaderPageState extends State<BookReaderPage> {
     });
   }
 
-  void _selectSection(BookSection selected) {
-    final index = _sections.indexWhere((section) => section.id == selected.id);
-    if (index < 0 || index == _activeIndex) return;
+  void _goToLocation(String sectionId, double sectionProgress) {
+    final index = _sections.indexWhere((section) => section.id == sectionId);
+    if (index < 0) return;
+    final normalizedProgress = sectionProgress.clamp(0, 1).toDouble();
+    if (index == _activeIndex) {
+      setState(() => _sectionProgress = normalizedProgress);
+      _restoreScrollPosition();
+      _saveProgress();
+      return;
+    }
     _saveProgress();
     setState(() {
       _activeIndex = index;
-      _sectionProgress = 0;
+      _sectionProgress = normalizedProgress;
       _replaceDocumentController();
     });
+    _restoreScrollPosition();
     _saveProgress();
   }
 
@@ -108,7 +125,6 @@ class _BookReaderPageState extends State<BookReaderPage> {
   );
 
   void _restoreScrollPosition() {
-    if (_sectionProgress <= 0) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future<void>.delayed(const Duration(milliseconds: 80), () {
         if (!mounted || !_scrollController.hasClients) return;
@@ -155,22 +171,9 @@ class _BookReaderPageState extends State<BookReaderPage> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Padding(
-                                      padding: const EdgeInsets.fromLTRB(
-                                        20,
-                                        18,
-                                        20,
-                                        8,
-                                      ),
-                                      child: Text(
-                                        AppStrings.of(context).tableOfContents,
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.titleMedium,
-                                      ),
-                                    ),
                                     Expanded(
-                                      child: _contents(
+                                      child: _navigationPanel(
+                                        context,
                                         closeAfterSelection: false,
                                       ),
                                     ),
@@ -216,6 +219,12 @@ class _BookReaderPageState extends State<BookReaderPage> {
         ],
       ),
       actions: [
+        IconButton(
+          key: const ValueKey('reader-search-button'),
+          tooltip: strings.searchInBook,
+          onPressed: () => _showSearch(context),
+          icon: const Icon(Icons.search),
+        ),
         if (!showContents)
           IconButton(
             key: const ValueKey('reader-contents-button'),
@@ -223,6 +232,16 @@ class _BookReaderPageState extends State<BookReaderPage> {
             onPressed: () => _showContents(context),
             icon: const Icon(Icons.toc),
           ),
+        IconButton(
+          key: const ValueKey('reader-bookmark-button'),
+          tooltip: _currentBookmark == null
+              ? strings.addBookmark
+              : strings.removeBookmark,
+          onPressed: _toggleBookmark,
+          icon: Icon(
+            _currentBookmark == null ? Icons.bookmark_border : Icons.bookmark,
+          ),
+        ),
         IconButton(
           key: const ValueKey('reader-settings-button'),
           tooltip: strings.readingSettings,
@@ -330,24 +349,59 @@ class _BookReaderPageState extends State<BookReaderPage> {
     );
   }
 
-  Widget _contents({required bool closeAfterSelection}) => BookReaderContents(
+  BookReaderBookmark? get _currentBookmark => _annotations.bookmarks
+      .where(
+        (bookmark) =>
+            bookmark.sectionId == _section.id &&
+            (bookmark.sectionProgress - _sectionProgress).abs() < 0.02,
+      )
+      .firstOrNull;
+
+  Widget _navigationPanel(
+    BuildContext panelContext, {
+    required bool closeAfterSelection,
+  }) => BookReaderNavigationPanel(
     sections: _sections,
     activeSectionId: _section.id,
-    onSelected: (section) {
-      _selectSection(section);
-      if (closeAfterSelection) Navigator.of(context).pop();
+    annotations: _annotations,
+    onLocationSelected: (sectionId, progress) {
+      _goToLocation(sectionId, progress);
+      if (closeAfterSelection) Navigator.of(panelContext).pop();
     },
+    onAddNote: () => _addNote(panelContext),
+    onEditNote: (note) => _editNote(panelContext, note),
+    onDeleteBookmark: (bookmark) =>
+        _updateAnnotations(_annotations.removeBookmark(bookmark.id)),
+    onDeleteNote: (note) =>
+        _updateAnnotations(_annotations.removeNote(note.id)),
   );
 
-  void _goToIndex(int index) => _selectSection(_sections[index]);
+  void _goToIndex(int index) => _goToLocation(_sections[index].id, 0);
 
   Future<void> _showContents(BuildContext themedContext) =>
       showModalBottomSheet<void>(
         context: themedContext,
         isScrollControlled: true,
-        builder: (_) => FractionallySizedBox(
+        builder: (sheetContext) => FractionallySizedBox(
           heightFactor: 0.82,
-          child: _contents(closeAfterSelection: true),
+          child: _navigationPanel(sheetContext, closeAfterSelection: true),
+        ),
+      );
+
+  Future<void> _showSearch(BuildContext themedContext) =>
+      showModalBottomSheet<void>(
+        context: themedContext,
+        isScrollControlled: true,
+        showDragHandle: true,
+        builder: (sheetContext) => FractionallySizedBox(
+          heightFactor: 0.88,
+          child: BookReaderSearchSheet(
+            sections: _sections,
+            onSelected: (result) {
+              Navigator.of(sheetContext).pop();
+              _goToSearchResult(result);
+            },
+          ),
         ),
       );
 
@@ -364,6 +418,79 @@ class _BookReaderPageState extends State<BookReaderPage> {
           },
         ),
       );
+
+  void _goToSearchResult(BookReaderSearchResult result) =>
+      _goToLocation(result.sectionId, result.sectionProgress);
+
+  void _toggleBookmark() {
+    final current = _currentBookmark;
+    if (current != null) {
+      _updateAnnotations(_annotations.removeBookmark(current.id));
+      return;
+    }
+    _updateAnnotations(
+      _annotations.addBookmark(
+        BookReaderBookmark.create(
+          sectionId: _section.id,
+          sectionProgress: _sectionProgress,
+          excerpt: _currentExcerpt(),
+        ),
+      ),
+    );
+  }
+
+  void _updateAnnotations(BookReaderAnnotations annotations) {
+    setState(() => _annotations = annotations);
+    widget.onAnnotationsChanged(annotations);
+  }
+
+  String _currentExcerpt() {
+    final text = richDocumentPlainText(
+      _section.content,
+    ).replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (text.isEmpty) return _section.title;
+    const length = 72;
+    final center = (text.length * _sectionProgress).round();
+    final start = (center - length ~/ 2).clamp(0, text.length);
+    final end = (start + length).clamp(0, text.length);
+    return '${start > 0 ? '…' : ''}${text.substring(start, end)}${end < text.length ? '…' : ''}';
+  }
+
+  Future<void> _addNote(BuildContext themedContext) async {
+    final text = await _showNoteEditor(themedContext);
+    if (text == null) return;
+    _updateAnnotations(
+      _annotations.addNote(
+        BookReaderNote.create(
+          sectionId: _section.id,
+          sectionProgress: _sectionProgress,
+          excerpt: _currentExcerpt(),
+          text: text,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _editNote(
+    BuildContext themedContext,
+    BookReaderNote note,
+  ) async {
+    final text = await _showNoteEditor(themedContext, note: note);
+    if (text == null) return;
+    _updateAnnotations(
+      _annotations.updateNote(
+        note.copyWith(text: text, updatedAt: DateTime.now()),
+      ),
+    );
+  }
+
+  Future<String?> _showNoteEditor(
+    BuildContext themedContext, {
+    BookReaderNote? note,
+  }) => showDialog<String>(
+    context: themedContext,
+    builder: (_) => BookReaderNoteDialog(initialText: note?.text ?? ''),
+  );
 
   @override
   void dispose() {

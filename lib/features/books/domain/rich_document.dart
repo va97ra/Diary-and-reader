@@ -21,6 +21,9 @@ RichDocument mergeRichDocuments(Iterable<RichDocument> documents) {
   return merged.isEmpty ? emptyRichDocument() : merged;
 }
 
+String richDocumentPlainText(RichDocument document) =>
+    document.map((operation) => operation['insert']).whereType<String>().join();
+
 /// Removes the line height that older builds wrote into every paragraph.
 /// Explicit values other than the former 1.5 default remain untouched.
 RichDocument withoutLegacyDefaultLineHeight(RichDocument document) =>

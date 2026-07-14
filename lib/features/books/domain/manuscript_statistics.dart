@@ -8,10 +8,7 @@ class ManuscriptStatistics {
   });
 
   factory ManuscriptStatistics.fromDocument(RichDocument document) {
-    final text = document
-        .map((operation) => operation['insert'])
-        .whereType<String>()
-        .join();
+    final text = richDocumentPlainText(document);
     final words = _wordPattern.allMatches(text).length;
     final characters = text.runes
         .where(

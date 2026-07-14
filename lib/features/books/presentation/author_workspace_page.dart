@@ -169,6 +169,7 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
           project: project,
           onSettingsChanged: widget.controller.updateReaderSettings,
           onProgressChanged: widget.controller.updateReaderProgress,
+          onAnnotationsChanged: widget.controller.updateReaderAnnotations,
         ),
       ),
     );

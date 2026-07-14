@@ -58,6 +58,19 @@ class BookReaderPalette {
       foregroundColor: ink,
       surfaceTintColor: Colors.transparent,
     ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: surface,
+      surfaceTintColor: Colors.transparent,
+    ),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: surface,
+      modalBackgroundColor: surface,
+      surfaceTintColor: Colors.transparent,
+    ),
+    popupMenuTheme: PopupMenuThemeData(
+      color: surface,
+      surfaceTintColor: Colors.transparent,
+    ),
     dividerColor: divider,
     textTheme: base.textTheme.apply(bodyColor: ink, displayColor: ink),
     sliderTheme: base.sliderTheme.copyWith(

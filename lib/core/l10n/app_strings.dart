@@ -124,6 +124,25 @@ class AppStrings {
   String get previousSection => _text('previousSection');
   String get nextSection => _text('nextSection');
   String get readingProgress => _text('readingProgress');
+  String get contentsShort => _text('contentsShort');
+  String get bookmarks => _text('bookmarks');
+  String get notes => _text('notes');
+  String get noBookmarks => _text('noBookmarks');
+  String get noNotes => _text('noNotes');
+  String get bookmark => _text('bookmark');
+  String get addBookmark => _text('addBookmark');
+  String get removeBookmark => _text('removeBookmark');
+  String get deleteBookmark => _text('deleteBookmark');
+  String get addNoteHere => _text('addNoteHere');
+  String get newNote => _text('newNote');
+  String get editNote => _text('editNote');
+  String get deleteNote => _text('deleteNote');
+  String get noteText => _text('noteText');
+  String get save => _text('save');
+  String get searchInBook => _text('searchInBook');
+  String get clearSearch => _text('clearSearch');
+  String get searchHint => _text('searchHint');
+  String get nothingFound => _text('nothingFound');
   String sectionOf(int current, int count) =>
       '${_text('section')} $current ${_text('ofPages')} $count';
 
@@ -241,6 +260,25 @@ class AppStrings {
       'nextSection': 'Следующий раздел',
       'readingProgress': 'Прогресс чтения',
       'section': 'Раздел',
+      'contentsShort': 'Главы',
+      'bookmarks': 'Закладки',
+      'notes': 'Заметки',
+      'noBookmarks': 'Здесь появятся сохранённые места книги',
+      'noNotes': 'Добавьте заметку к текущему месту чтения',
+      'bookmark': 'Закладка',
+      'addBookmark': 'Добавить закладку',
+      'removeBookmark': 'Убрать закладку',
+      'deleteBookmark': 'Удалить закладку',
+      'addNoteHere': 'Заметка к этому месту',
+      'newNote': 'Новая заметка',
+      'editNote': 'Изменить заметку',
+      'deleteNote': 'Удалить заметку',
+      'noteText': 'Текст заметки',
+      'save': 'Сохранить',
+      'searchInBook': 'Поиск по книге',
+      'clearSearch': 'Очистить поиск',
+      'searchHint': 'Введите минимум два символа для поиска по всей книге',
+      'nothingFound': 'Совпадений не найдено',
     },
     'en': {
       'appTitle': 'My diary',
@@ -355,6 +393,25 @@ class AppStrings {
       'nextSection': 'Next section',
       'readingProgress': 'Reading progress',
       'section': 'Section',
+      'contentsShort': 'Contents',
+      'bookmarks': 'Bookmarks',
+      'notes': 'Notes',
+      'noBookmarks': 'Saved places will appear here',
+      'noNotes': 'Add a note to the current reading position',
+      'bookmark': 'Bookmark',
+      'addBookmark': 'Add bookmark',
+      'removeBookmark': 'Remove bookmark',
+      'deleteBookmark': 'Delete bookmark',
+      'addNoteHere': 'Note at this place',
+      'newNote': 'New note',
+      'editNote': 'Edit note',
+      'deleteNote': 'Delete note',
+      'noteText': 'Note text',
+      'save': 'Save',
+      'searchInBook': 'Search in book',
+      'clearSearch': 'Clear search',
+      'searchHint': 'Enter at least two characters to search the whole book',
+      'nothingFound': 'No matches found',
     },
   };
 }

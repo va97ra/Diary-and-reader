@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
+import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
 import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
@@ -20,7 +21,9 @@ class BookProject {
     this.paragraphSettings = const BookParagraphSettings(),
     this.readerSettings = const BookReaderSettings(),
     this.readerProgress = const BookReaderProgress(),
-  }) : _sections = List.unmodifiable(sections);
+    BookReaderAnnotations? readerAnnotations,
+  }) : readerAnnotations = readerAnnotations ?? BookReaderAnnotations(),
+       _sections = List.unmodifiable(sections);
 
   factory BookProject.create({
     required String title,
@@ -49,6 +52,7 @@ class BookProject {
       ),
       readerSettings: const BookReaderSettings(),
       readerProgress: BookReaderProgress(sectionId: chapter.id),
+      readerAnnotations: BookReaderAnnotations(),
     );
   }
 
@@ -75,6 +79,23 @@ class BookProject {
         DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
         DateTime.now();
     final requestedActiveId = json['activeSectionId']?.toString();
+    final sectionIds = sections.map((section) => section.id).toSet();
+    final requestedReaderProgress = json['readerProgress'] is Map
+        ? BookReaderProgress.fromJson(
+            Map<String, dynamic>.from(json['readerProgress'] as Map),
+          )
+        : BookReaderProgress(sectionId: sections.firstOrNull?.id);
+    final readerProgress =
+        sectionIds.contains(requestedReaderProgress.sectionId)
+        ? requestedReaderProgress
+        : BookReaderProgress(sectionId: sections.firstOrNull?.id);
+    final readerAnnotations =
+        (json['readerAnnotations'] is Map
+                ? BookReaderAnnotations.fromJson(
+                    Map<String, dynamic>.from(json['readerAnnotations'] as Map),
+                  )
+                : BookReaderAnnotations())
+            .retainSections(sectionIds);
     return BookProject(
       id:
           json['id']?.toString() ??
@@ -107,11 +128,8 @@ class BookProject {
               Map<String, dynamic>.from(json['readerSettings'] as Map),
             )
           : const BookReaderSettings(),
-      readerProgress: json['readerProgress'] is Map
-          ? BookReaderProgress.fromJson(
-              Map<String, dynamic>.from(json['readerProgress'] as Map),
-            )
-          : BookReaderProgress(sectionId: sections.firstOrNull?.id),
+      readerProgress: readerProgress,
+      readerAnnotations: readerAnnotations,
     );
   }
 
@@ -125,6 +143,7 @@ class BookProject {
   final BookParagraphSettings paragraphSettings;
   final BookReaderSettings readerSettings;
   final BookReaderProgress readerProgress;
+  final BookReaderAnnotations readerAnnotations;
 
   UnmodifiableListView<BookSection> get sections =>
       UnmodifiableListView(_sections);
@@ -145,6 +164,7 @@ class BookProject {
     BookParagraphSettings? paragraphSettings,
     BookReaderSettings? readerSettings,
     BookReaderProgress? readerProgress,
+    BookReaderAnnotations? readerAnnotations,
   }) => BookProject(
     id: id,
     metadata: metadata ?? this.metadata,
@@ -158,6 +178,7 @@ class BookProject {
     paragraphSettings: paragraphSettings ?? this.paragraphSettings,
     readerSettings: readerSettings ?? this.readerSettings,
     readerProgress: readerProgress ?? this.readerProgress,
+    readerAnnotations: readerAnnotations ?? this.readerAnnotations,
   );
 
   Map<String, dynamic> toJson() => {
@@ -171,6 +192,7 @@ class BookProject {
     'paragraphSettings': paragraphSettings.toJson(),
     'readerSettings': readerSettings.toJson(),
     'readerProgress': readerProgress.toJson(),
+    'readerAnnotations': readerAnnotations.toJson(),
     'documentFormatVersion': _currentDocumentFormatVersion,
   };
 }

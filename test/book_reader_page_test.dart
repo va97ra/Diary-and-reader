@@ -2,6 +2,7 @@ import 'package:dnevnik/app/author_studio_app.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -41,6 +42,10 @@ void main() {
     );
     expect(find.text('Раздел 1 из 2 · 0%'), findsOneWidget);
 
+    await tester.tap(find.byKey(const ValueKey('reader-bookmark-button')));
+    await tester.pumpAndSettle();
+    expect(controller.activeProject!.readerAnnotations.bookmarks, hasLength(1));
+
     await tester.tap(find.byKey(const ValueKey('reader-next-section')));
     await tester.pumpAndSettle();
     readerEditor = tester.widget<QuillEditor>(find.byType(QuillEditor));
@@ -51,6 +56,46 @@ void main() {
     expect(
       controller.activeProject!.readerProgress.sectionId,
       controller.activeProject!.sections.last.id,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('reader-search-button')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('reader-search-field')),
+      'Первый текст',
+    );
+    await tester.pumpAndSettle();
+    final results = find.byKey(const ValueKey('reader-search-results'));
+    expect(results, findsOneWidget);
+    final firstChapterResult = find.descendant(
+      of: results,
+      matching: find.text('Первая глава'),
+    );
+    expect(firstChapterResult, findsOneWidget);
+    await tester.tap(firstChapterResult);
+    await tester.pumpAndSettle();
+    expect(find.text('Раздел 1 из 2 · 0%'), findsOneWidget);
+
+    await tester.tap(find.text('Заметки'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('reader-add-note')));
+    await tester.pumpAndSettle();
+    final noteDialogContext = tester.element(
+      find.byKey(const ValueKey('reader-note-field')),
+    );
+    expect(
+      Theme.of(noteDialogContext).dialogTheme.backgroundColor,
+      BookReaderPalette.forTheme(BookReaderTheme.sepia).surface,
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('reader-note-field')),
+      'Проверить начало главы',
+    );
+    await tester.tap(find.byKey(const ValueKey('reader-save-note')));
+    await tester.pumpAndSettle();
+    expect(
+      controller.activeProject!.readerAnnotations.notes.single.text,
+      'Проверить начало главы',
     );
 
     await tester.tap(find.byKey(const ValueKey('reader-settings-button')));

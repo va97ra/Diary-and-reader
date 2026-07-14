@@ -6,6 +6,8 @@ import 'package:dnevnik/features/books/domain/author_workspace_repository.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_snapshot.dart';
 import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
+import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
+import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -77,6 +79,35 @@ void main() {
     final saved = repository.snapshot!.activeProject!.paragraphSettings;
     expect(saved.preset, BookParagraphPreset.classic);
     expect(saved.paragraphIndentMm, 5);
+  });
+
+  test('removes reader locations that belong to a deleted section', () async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(),
+    );
+    await controller.load(preferredLanguage: 'ru');
+    final firstSectionId = controller.activeSection!.id;
+    controller.addSection(BookSectionType.chapter);
+    final deletedSectionId = controller.activeSection!.id;
+    controller.updateReaderProgress(
+      BookReaderProgress(sectionId: deletedSectionId, sectionProgress: 0.5),
+    );
+    controller.updateReaderAnnotations(
+      BookReaderAnnotations(
+        bookmarks: [
+          BookReaderBookmark.create(
+            sectionId: deletedSectionId,
+            sectionProgress: 0.5,
+            excerpt: 'Удаляемая глава',
+          ),
+        ],
+      ),
+    );
+
+    controller.deleteSection(deletedSectionId);
+
+    expect(controller.activeProject!.readerProgress.sectionId, firstSectionId);
+    expect(controller.activeProject!.readerAnnotations.bookmarks, isEmpty);
   });
 
   test('serializes saves so an older write cannot win a race', () async {
