@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 
+import 'package:dnevnik/features/books/application/section_tree_editor.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_repository.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_snapshot.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
@@ -54,6 +55,17 @@ class AuthorWorkspaceController extends ChangeNotifier {
     _changed();
   }
 
+  void deleteProject(String id) {
+    final index = _projects.indexWhere((project) => project.id == id);
+    if (index < 0) return;
+    _projects.removeAt(index);
+    if (_projects.isEmpty) _projects.add(_newProject());
+    if (_activeProjectId == id) {
+      _activeProjectId = _projects[index.clamp(0, _projects.length - 1)].id;
+    }
+    _changed();
+  }
+
   void selectProject(String id) {
     if (_activeProjectId == id) return;
     _activeProjectId = id;
@@ -76,8 +88,52 @@ class AuthorWorkspaceController extends ChangeNotifier {
     );
     _replaceActiveProject(
       (current) => current.copyWith(
-        sections: [...current.sections, section],
+        sections: SectionTreeEditor.insertAtEndOfParent(
+          current.sections,
+          section,
+        ),
         activeSectionId: section.id,
+        updatedAt: DateTime.now(),
+      ),
+    );
+    _changed();
+  }
+
+  void moveSection(String id, TreeMoveDirection direction) {
+    _replaceActiveProject(
+      (project) => project.copyWith(
+        sections: SectionTreeEditor.moveSubtree(
+          project.sections,
+          id,
+          direction,
+        ),
+        updatedAt: DateTime.now(),
+      ),
+    );
+    _changed();
+  }
+
+  void deleteSection(String id) {
+    final project = activeProject;
+    if (project == null) return;
+    var sections = SectionTreeEditor.removeSubtree(project.sections, id);
+    if (sections.isEmpty) {
+      sections = [
+        BookSection.create(
+          title: _languageCode == 'en' ? 'Chapter 1' : 'Глава 1',
+          type: BookSectionType.chapter,
+        ),
+      ];
+    }
+    final activeStillExists = sections.any(
+      (section) => section.id == project.activeSectionId,
+    );
+    _replaceActiveProject(
+      (current) => current.copyWith(
+        sections: sections,
+        activeSectionId: activeStillExists
+            ? current.activeSectionId
+            : sections.first.id,
         updatedAt: DateTime.now(),
       ),
     );
@@ -141,7 +197,12 @@ class AuthorWorkspaceController extends ChangeNotifier {
     final active = project.activeSection;
     if (active == null || type == BookSectionType.part) return null;
     if (type == BookSectionType.chapter) {
-      return active.type == BookSectionType.part ? active.id : active.parentId;
+      if (active.type == BookSectionType.part) return active.id;
+      if (active.type == BookSectionType.chapter) return active.parentId;
+      final parentChapter = project.sections
+          .where((section) => section.id == active.parentId)
+          .firstOrNull;
+      return parentChapter?.parentId;
     }
     if (active.type == BookSectionType.chapter) return active.id;
     return active.type == BookSectionType.scene ? active.parentId : null;

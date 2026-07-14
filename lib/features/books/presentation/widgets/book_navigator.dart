@@ -1,6 +1,7 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/core/theme/app_theme.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
+import 'package:dnevnik/features/books/application/section_tree_editor.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:flutter/material.dart';
 
@@ -24,34 +25,62 @@ class BookNavigator extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ListTile(
-              title: Text(
-                strings.manuscript,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              subtitle: Text(
-                project.metadata.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              trailing: PopupMenuButton<BookSectionType>(
-                tooltip: strings.addPage,
-                onSelected: controller.addSection,
-                itemBuilder: (_) => [
-                  PopupMenuItem(
-                    value: BookSectionType.part,
-                    child: Text(strings.newPart),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          strings.manuscript,
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: project.id,
+                            isExpanded: true,
+                            items: controller.projects
+                                .map(
+                                  (item) => DropdownMenuItem(
+                                    value: item.id,
+                                    child: Text(
+                                      item.metadata.title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (id) {
+                              if (id != null) controller.selectProject(id);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  PopupMenuItem(
-                    value: BookSectionType.chapter,
-                    child: Text(strings.newChapter),
-                  ),
-                  PopupMenuItem(
-                    value: BookSectionType.scene,
-                    child: Text(strings.newScene),
+                  PopupMenuButton<BookSectionType>(
+                    tooltip: strings.addPage,
+                    onSelected: controller.addSection,
+                    itemBuilder: (_) => [
+                      PopupMenuItem(
+                        value: BookSectionType.part,
+                        child: Text(strings.newPart),
+                      ),
+                      PopupMenuItem(
+                        value: BookSectionType.chapter,
+                        child: Text(strings.newChapter),
+                      ),
+                      PopupMenuItem(
+                        value: BookSectionType.scene,
+                        child: Text(strings.newScene),
+                      ),
+                    ],
+                    icon: const Icon(Icons.add),
                   ),
                 ],
-                icon: const Icon(Icons.add),
               ),
             ),
             const Divider(height: 1),
@@ -69,6 +98,8 @@ class BookNavigator extends StatelessWidget {
                       controller.selectSection(section.id);
                       if (closeAfterSelection) Navigator.of(context).pop();
                     },
+                    onAction: (action) =>
+                        _handleSectionAction(context, section, action),
                   );
                 },
               ),
@@ -77,10 +108,18 @@ class BookNavigator extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.library_books_outlined),
               title: Text(strings.library),
-              trailing: IconButton(
-                tooltip: strings.newBook,
-                onPressed: controller.addProject,
-                icon: const Icon(Icons.add_box_outlined),
+              trailing: PopupMenuButton<_BookAction>(
+                onSelected: (action) => _handleBookAction(context, action),
+                itemBuilder: (_) => [
+                  PopupMenuItem(
+                    value: _BookAction.add,
+                    child: Text(strings.newBook),
+                  ),
+                  PopupMenuItem(
+                    value: _BookAction.delete,
+                    child: Text(strings.deleteBook),
+                  ),
+                ],
               ),
             ),
           ],
@@ -88,6 +127,67 @@ class BookNavigator extends StatelessWidget {
       ),
     );
   }
+
+  Future<void> _handleSectionAction(
+    BuildContext context,
+    BookSection section,
+    _SectionAction action,
+  ) async {
+    if (action == _SectionAction.up) {
+      controller.moveSection(section.id, TreeMoveDirection.up);
+      return;
+    }
+    if (action == _SectionAction.down) {
+      controller.moveSection(section.id, TreeMoveDirection.down);
+      return;
+    }
+    final confirmed = await _confirmDelete(
+      context,
+      AppStrings.of(context).deleteSection,
+      AppStrings.of(context).deleteSectionQuestion,
+    );
+    if (confirmed) controller.deleteSection(section.id);
+  }
+
+  Future<void> _handleBookAction(
+    BuildContext context,
+    _BookAction action,
+  ) async {
+    if (action == _BookAction.add) {
+      controller.addProject();
+      return;
+    }
+    final confirmed = await _confirmDelete(
+      context,
+      AppStrings.of(context).deleteBook,
+      AppStrings.of(context).deleteBookQuestion,
+    );
+    if (confirmed) controller.deleteProject(controller.activeProject!.id);
+  }
+
+  Future<bool> _confirmDelete(
+    BuildContext context,
+    String title,
+    String message,
+  ) async =>
+      await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(AppStrings.of(context).cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(title),
+            ),
+          ],
+        ),
+      ) ??
+      false;
 
   int _depthOf(List<BookSection> sections, BookSection section) {
     var depth = 0;
@@ -110,12 +210,14 @@ class _SectionTile extends StatelessWidget {
     required this.isActive,
     required this.depth,
     required this.onTap,
+    required this.onAction,
   });
 
   final BookSection section;
   final bool isActive;
   final int depth;
   final VoidCallback onTap;
+  final ValueChanged<_SectionAction> onAction;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -130,7 +232,28 @@ class _SectionTile extends StatelessWidget {
         BookSectionType.scene => Icons.short_text,
       }, color: isActive ? AppTheme.accent : Colors.blueGrey),
       title: Text(section.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+      trailing: PopupMenuButton<_SectionAction>(
+        onSelected: onAction,
+        itemBuilder: (context) => [
+          PopupMenuItem(
+            value: _SectionAction.up,
+            child: Text(AppStrings.of(context).moveUp),
+          ),
+          PopupMenuItem(
+            value: _SectionAction.down,
+            child: Text(AppStrings.of(context).moveDown),
+          ),
+          PopupMenuItem(
+            value: _SectionAction.delete,
+            child: Text(AppStrings.of(context).deleteSection),
+          ),
+        ],
+      ),
       onTap: onTap,
     ),
   );
 }
+
+enum _SectionAction { up, down, delete }
+
+enum _BookAction { add, delete }

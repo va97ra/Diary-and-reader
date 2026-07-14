@@ -63,6 +63,12 @@ class AppStrings {
   String get revision => _text('revision');
   String get complete => _text('complete');
   String get editor => _text('editor');
+  String get moveUp => _text('moveUp');
+  String get moveDown => _text('moveDown');
+  String get deleteSection => _text('deleteSection');
+  String get deleteBook => _text('deleteBook');
+  String get deleteSectionQuestion => _text('deleteSectionQuestion');
+  String get deleteBookQuestion => _text('deleteBookQuestion');
 
   static const _values = <String, Map<String, String>>{
     'ru': {
@@ -115,6 +121,13 @@ class AppStrings {
       'revision': 'Редактура',
       'complete': 'Готово',
       'editor': 'Редактор',
+      'moveUp': 'Переместить выше',
+      'moveDown': 'Переместить ниже',
+      'deleteSection': 'Удалить раздел',
+      'deleteBook': 'Удалить книгу',
+      'deleteSectionQuestion':
+          'Раздел и все его вложенные сцены будут удалены.',
+      'deleteBookQuestion': 'Книга и все её главы будут удалены.',
     },
     'en': {
       'appTitle': 'My diary',
@@ -166,6 +179,13 @@ class AppStrings {
       'revision': 'Revision',
       'complete': 'Complete',
       'editor': 'Editor',
+      'moveUp': 'Move up',
+      'moveDown': 'Move down',
+      'deleteSection': 'Delete section',
+      'deleteBook': 'Delete book',
+      'deleteSectionQuestion':
+          'The section and all of its nested scenes will be deleted.',
+      'deleteBookQuestion': 'The book and all of its chapters will be deleted.',
     },
   };
 }
