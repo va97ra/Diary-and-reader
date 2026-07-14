@@ -28,6 +28,8 @@ class AppStrings {
   String get startWriting => _text('startWriting');
   String get addPage => _text('addPage');
   String get page => _text('page');
+  String a4Sheet(int pageNumber, int pageCount) =>
+      '${_text('a4Sheet')} $pageNumber ${_text('ofPages')} $pageCount';
   String get normal => _text('normal');
   String get narrow => _text('narrow');
   String get wide => _text('wide');
@@ -86,6 +88,8 @@ class AppStrings {
       'startWriting': 'Начните писать…',
       'addPage': 'Добавить страницу',
       'page': 'Страница',
+      'a4Sheet': 'Лист A4',
+      'ofPages': 'из',
       'normal': 'Обычные',
       'narrow': 'Узкие',
       'wide': 'Широкие',
@@ -144,6 +148,8 @@ class AppStrings {
       'startWriting': 'Start writing…',
       'addPage': 'Add page',
       'page': 'Page',
+      'a4Sheet': 'A4 sheet',
+      'ofPages': 'of',
       'normal': 'Normal',
       'narrow': 'Narrow',
       'wide': 'Wide',

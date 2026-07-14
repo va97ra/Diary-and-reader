@@ -1,0 +1,100 @@
+import 'package:dnevnik/core/l10n/app_strings.dart';
+import 'package:dnevnik/core/theme/app_theme.dart';
+import 'package:dnevnik/features/books/presentation/book_typography.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_quill/flutter_quill.dart';
+
+class BookMobileEditor extends StatelessWidget {
+  const BookMobileEditor({
+    required this.controller,
+    required this.focusNode,
+    required this.scrollController,
+    required this.titleController,
+    required this.onTitleChanged,
+    required this.pageNumber,
+    required this.pageCount,
+    required this.onPreviousPage,
+    required this.onNextPage,
+    super.key,
+  });
+
+  final QuillController controller;
+  final FocusNode focusNode;
+  final ScrollController scrollController;
+  final TextEditingController titleController;
+  final ValueChanged<String> onTitleChanged;
+  final int pageNumber;
+  final int pageCount;
+  final VoidCallback? onPreviousPage;
+  final VoidCallback? onNextPage;
+
+  @override
+  Widget build(BuildContext context) => ColoredBox(
+    color: const Color(0xFF141824),
+    child: Container(
+      margin: const EdgeInsets.all(8),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+      decoration: BoxDecoration(
+        color: AppTheme.paper,
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: Column(
+        children: [
+          TextField(
+            controller: titleController,
+            onChanged: onTitleChanged,
+            maxLines: 2,
+            style: const TextStyle(
+              color: AppTheme.ink,
+              fontFamily: 'Georgia',
+              fontSize: 28,
+              height: 1.2,
+              fontWeight: FontWeight.w600,
+            ),
+            decoration: InputDecoration(
+              hintText: AppStrings.of(context).newChapter,
+              hintStyle: const TextStyle(color: Colors.blueGrey),
+              isDense: true,
+            ),
+          ),
+          const Divider(color: Color(0xFFE2E8F0), height: 28),
+          Expanded(
+            child: QuillEditor(
+              controller: controller,
+              focusNode: focusNode,
+              scrollController: scrollController,
+              config: QuillEditorConfig(
+                placeholder: AppStrings.of(context).startWriting,
+                padding: EdgeInsets.zero,
+                customStyles: BookTypography.editorStyles,
+                scrollable: true,
+                autoFocus: false,
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                onPressed: onPreviousPage,
+                icon: const Icon(Icons.chevron_left),
+              ),
+              Expanded(
+                child: Text(
+                  AppStrings.of(context).a4Sheet(pageNumber, pageCount),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.blueGrey, fontSize: 12),
+                ),
+              ),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                onPressed: onNextPage,
+                icon: const Icon(Icons.chevron_right),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+}

@@ -12,11 +12,13 @@ void main() {
     );
     await controller.load(preferredLanguage: 'ru');
 
-    await tester.binding.setSurfaceSize(const Size(1400, 900));
+    await tester.binding.setSurfaceSize(const Size(1920, 1080));
     await tester.pumpWidget(AuthorStudioApp(controller: controller));
     await tester.pumpAndSettle();
     expect(find.text('Рукопись'), findsOneWidget);
     expect(find.text('Свойства'), findsOneWidget);
+    expect(find.byKey(const ValueKey('book-page-1')), findsOneWidget);
+    expect(find.textContaining('A4 297×210 мм'), findsOneWidget);
 
     await tester.binding.setSurfaceSize(null);
   });
@@ -32,6 +34,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('Редактор'), findsOneWidget);
+    expect(find.text('Лист A4 1 из 1'), findsOneWidget);
 
     await tester.binding.setSurfaceSize(null);
   });
