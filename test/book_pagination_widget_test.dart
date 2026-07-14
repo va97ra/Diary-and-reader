@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dnevnik/app/author_studio_app.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_snapshot.dart';
@@ -11,18 +13,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'support/memory_author_workspace_repository.dart';
 
 void main() {
-  testWidgets('flows an overflowing chapter onto another A4 page', (
+  testWidgets('flows a chapter across A4 pages without losing content', (
     tester,
   ) async {
     final now = DateTime(2026);
+    final originalContent = [
+      {'insert': '${'Длинный текст рукописи. ' * 500}\n'},
+    ];
     final section = BookSection(
       id: 'chapter-1',
       title: 'Глава 1',
       type: BookSectionType.chapter,
       status: DraftStatus.draft,
-      content: [
-        {'insert': '${'Длинный текст рукописи. ' * 500}\n'},
-      ],
+      content: originalContent,
       createdAt: now,
       updatedAt: now,
     );
@@ -53,7 +56,11 @@ void main() {
     final editorState = tester.state<BookSectionEditorState>(
       find.byType(BookSectionEditor),
     );
-    expect(editorState.pageCount, greaterThan(1));
+    expect(editorState.pageCount, greaterThanOrEqualTo(3));
+    expect(
+      jsonEncode(controller.activeSection!.content),
+      jsonEncode(originalContent),
+    );
 
     await tester.binding.setSurfaceSize(null);
   });

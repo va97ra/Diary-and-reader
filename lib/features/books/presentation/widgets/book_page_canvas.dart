@@ -19,6 +19,7 @@ class BookPageCanvas extends StatelessWidget {
     required this.viewportKey,
     required this.titleController,
     required this.onTitleChanged,
+    this.isMeasurement = false,
     super.key,
   });
 
@@ -33,6 +34,7 @@ class BookPageCanvas extends StatelessWidget {
   final GlobalKey viewportKey;
   final TextEditingController titleController;
   final ValueChanged<String> onTitleChanged;
+  final bool isMeasurement;
 
   bool get _isFirstPage => pageNumber == 1;
 
@@ -130,7 +132,9 @@ class BookPageCanvas extends StatelessWidget {
     );
 
     return SizedBox(
-      key: ValueKey('book-page-$pageNumber'),
+      key: ValueKey(
+        isMeasurement ? 'book-page-measurement' : 'book-page-$pageNumber',
+      ),
       width: pageFormat.width * scale,
       height: pageFormat.height * scale,
       child: Transform.scale(

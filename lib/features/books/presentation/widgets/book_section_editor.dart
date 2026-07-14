@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:dnevnik/features/books/application/book_page_paginator.dart';
 import 'package:dnevnik/features/books/application/workspace_save_state.dart';
 import 'package:dnevnik/features/books/domain/book_page_format.dart';
@@ -45,12 +48,23 @@ class BookSectionEditorState extends State<BookSectionEditor> {
   final _editorKeys = <GlobalKey<EditorState>>[];
   final _viewportKeys = <GlobalKey>[];
   late final TextEditingController _titleController;
+  late final TextEditingController _measurementTitleController;
   late ManuscriptStatistics _statistics;
+  late String _lastManuscriptSignature;
 
   int _activePage = 0;
-  bool _paginationInProgress = false;
   bool _usesPagedLayout = false;
-  int _paginationLayoutRetries = 0;
+  Timer? _paginationTimer;
+  int _paginationRequest = 0;
+  int _measurementRetries = 0;
+  int _measurementPageNumber = 1;
+  final _measuredPages = <RichDocument>[];
+  RichDocument? _measurementDocument;
+  QuillController? _measurementController;
+  FocusNode? _measurementFocusNode;
+  ScrollController? _measurementScrollController;
+  GlobalKey<EditorState>? _measurementEditorKey;
+  GlobalKey? _measurementViewportKey;
 
   QuillController get controller => _controllers[_activePage];
   int get pageCount => _controllers.length;
@@ -59,7 +73,11 @@ class BookSectionEditorState extends State<BookSectionEditor> {
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.section.title);
+    _measurementTitleController = TextEditingController(
+      text: widget.section.title,
+    );
     _statistics = ManuscriptStatistics.fromDocument(widget.section.content);
+    _lastManuscriptSignature = jsonEncode(widget.section.content);
     _createPageControllers([widget.section.content]);
     widget.onControllerReady?.call(controller);
   }
@@ -72,20 +90,30 @@ class BookSectionEditorState extends State<BookSectionEditor> {
       return;
     }
     final manuscript = BookPagePaginator.merge(_pageDocuments);
-    _paginationInProgress = true;
+    _cancelPaginationMeasurement(rebuild: false);
     _disposePageControllers();
     _createPageControllers([manuscript]);
     _activePage = 0;
-    _paginationInProgress = false;
+    _lastManuscriptSignature = jsonEncode(manuscript);
     widget.onControllerReady?.call(controller);
     _schedulePagination();
   }
 
-  void _createPageControllers(List<RichDocument> documents) {
-    for (final document in documents) {
+  void _createPageControllers(
+    List<RichDocument> documents, {
+    int selectionPage = 0,
+    int selectionOffset = 0,
+  }) {
+    for (var index = 0; index < documents.length; index++) {
+      final document = documents[index];
+      final documentLength = _documentLength(document);
       final controller = QuillController(
         document: Document.fromJson(document),
-        selection: const TextSelection.collapsed(offset: 0),
+        selection: TextSelection.collapsed(
+          offset: index == selectionPage
+              ? selectionOffset.clamp(0, documentLength - 1)
+              : 0,
+        ),
       );
       controller.addListener(() => _handleDocumentChanged(controller));
       _controllers.add(controller);
@@ -103,9 +131,12 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     final index = _controllers.indexOf(changedController);
     if (index < 0) return;
     final manuscript = BookPagePaginator.merge(_pageDocuments);
+    final signature = jsonEncode(manuscript);
+    if (signature == _lastManuscriptSignature) return;
+    _lastManuscriptSignature = signature;
     _statistics = ManuscriptStatistics.fromDocument(manuscript);
     widget.onContentChanged(manuscript);
-    if (_usesPagedLayout) _schedulePagination(pageIndex: index);
+    if (_usesPagedLayout) _schedulePagination();
   }
 
   void _activatePage(FocusNode changedNode) {
@@ -125,81 +156,228 @@ class BookSectionEditorState extends State<BookSectionEditor> {
       )
       .toList();
 
-  void _schedulePagination({int? pageIndex}) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_usesPagedLayout || _paginationInProgress) return;
-      if (pageIndex != null) {
-        final result = _checkPageOverflow(pageIndex);
-        if (result == null) _retryPagination(pageIndex: pageIndex);
+  void _schedulePagination() {
+    final request = ++_paginationRequest;
+    _paginationTimer?.cancel();
+    _paginationTimer = Timer(const Duration(milliseconds: 120), () {
+      if (!mounted || !_usesPagedLayout || request != _paginationRequest) {
         return;
       }
-      for (var index = 0; index < _controllers.length; index++) {
-        final result = _checkPageOverflow(index);
-        if (result == null) {
-          _retryPagination();
-          break;
-        }
-        if (result) break;
-      }
+      _beginPaginationMeasurement(request);
     });
   }
 
-  void _retryPagination({int? pageIndex}) {
-    if (_paginationLayoutRetries >= 4) return;
-    _paginationLayoutRetries++;
-    _schedulePagination(pageIndex: pageIndex);
+  void _beginPaginationMeasurement(int request) {
+    final manuscript = BookPagePaginator.merge(_pageDocuments);
+    _measuredPages.clear();
+    _measurementPageNumber = 1;
+    _measurementRetries = 0;
+    _installMeasurementDocument(manuscript, request);
   }
 
-  bool? _checkPageOverflow(int index) {
-    if (index >= _controllers.length) return false;
-    final editorState = _editorKeys[index].currentState;
-    final viewportContext = _viewportKeys[index].currentContext;
+  void _installMeasurementDocument(RichDocument document, int request) {
+    final oldController = _measurementController;
+    final oldFocusNode = _measurementFocusNode;
+    final oldScrollController = _measurementScrollController;
+    final controller = QuillController(
+      document: Document.fromJson(document),
+      selection: const TextSelection.collapsed(offset: 0),
+    );
+    setState(() {
+      _measurementDocument = document;
+      _measurementController = controller;
+      _measurementFocusNode = FocusNode();
+      _measurementScrollController = ScrollController();
+      _measurementEditorKey = GlobalKey<EditorState>();
+      _measurementViewportKey = GlobalKey();
+    });
+    _disposeMeasurementResourcesAfterFrame(
+      oldController,
+      oldFocusNode,
+      oldScrollController,
+    );
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _measureCurrentDocument(request),
+    );
+  }
+
+  void _measureCurrentDocument(int request) {
+    if (!mounted || request != _paginationRequest) return;
+    final editorState = _measurementEditorKey?.currentState;
+    final viewportContext = _measurementViewportKey?.currentContext;
     final viewport = viewportContext?.findRenderObject();
     if (editorState == null || viewport is! RenderBox || !viewport.hasSize) {
-      return null;
+      if (_measurementRetries++ < 6) {
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _measureCurrentDocument(request),
+        );
+      }
+      return;
     }
-    _paginationLayoutRetries = 0;
+    _measurementRetries = 0;
 
+    final lineHeight =
+        BookPageFormat.pointsToLogicalPixels(
+          widget.paragraphSettings.fontSizePt,
+        ) *
+        widget.paragraphSettings.lineHeight;
+    final paragraphSpacing = BookPageFormat.pointsToLogicalPixels(
+      widget.paragraphSettings.spacingAfterPt,
+    );
+    final bottomSafety = (lineHeight * 2 + paragraphSpacing).clamp(
+      32,
+      viewport.size.height / 3,
+    );
     final probe = viewport.localToGlobal(
-      Offset(viewport.size.width - 8, viewport.size.height - 24),
+      Offset(viewport.size.width - 8, viewport.size.height - bottomSafety),
     );
     final splitOffset = editorState.renderEditor
         .getPositionForOffset(probe)
         .offset;
-    final lastContentOffset = _controllers[index].document.length - 1;
-    if (splitOffset <= 0 || splitOffset >= lastContentOffset) return false;
-
-    final documents = _pageDocuments;
-    final split = BookPagePaginator.split(documents[index], splitOffset);
-    documents[index] = split.visible;
-    final nextIndex = index + 1;
-    if (nextIndex < documents.length) {
-      documents[nextIndex] = BookPagePaginator.prependOverflow(
-        split.overflow,
-        documents[nextIndex],
-      );
-    } else {
-      documents.add(split.overflow);
+    final controller = _measurementController;
+    final document = _measurementDocument;
+    if (controller == null || document == null) return;
+    final lastContentOffset = controller.document.length - 1;
+    if (splitOffset <= 0) {
+      if (_measurementRetries++ < 6) {
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _measureCurrentDocument(request),
+        );
+      }
+      return;
     }
-    _replacePages(documents, nextIndex);
-    return true;
+
+    if (splitOffset >= lastContentOffset) {
+      _finishPaginationMeasurement([..._measuredPages, document], request);
+      return;
+    }
+
+    final split = BookPagePaginator.split(document, splitOffset);
+    _measuredPages.add(split.visible);
+    _measurementPageNumber++;
+    _installMeasurementDocument(split.overflow, request);
   }
 
-  void _replacePages(List<RichDocument> documents, int activePage) {
-    _paginationInProgress = true;
+  void _finishPaginationMeasurement(List<RichDocument> documents, int request) {
+    if (!mounted || request != _paginationRequest) return;
+    final currentDocuments = _pageDocuments;
+    final unchanged = jsonEncode(currentDocuments) == jsonEncode(documents);
+    if (unchanged) {
+      _clearMeasurementWidget();
+      return;
+    }
+
+    final globalSelection = _globalSelectionOffset(currentDocuments);
+    final target = _selectionForDocuments(documents, globalSelection);
+    _clearMeasurementWidget(rebuild: false);
     _disposePageControllers();
-    _createPageControllers(documents);
-    setState(() => _activePage = activePage.clamp(0, documents.length - 1));
-    widget.onContentChanged(BookPagePaginator.merge(documents));
+    _createPageControllers(
+      documents,
+      selectionPage: target.page,
+      selectionOffset: target.offset,
+    );
+    setState(() => _activePage = target.page);
+    final manuscript = BookPagePaginator.merge(documents);
+    _lastManuscriptSignature = jsonEncode(manuscript);
+    widget.onContentChanged(manuscript);
     widget.onControllerReady?.call(controller);
-    _paginationInProgress = false;
-    _schedulePagination();
   }
 
   void _selectMobilePage(int page) {
     if (page < 0 || page >= _controllers.length || page == _activePage) return;
     setState(() => _activePage = page);
     widget.onControllerReady?.call(controller);
+  }
+
+  int _globalSelectionOffset(List<RichDocument> documents) {
+    var offset = 0;
+    for (var index = 0; index < _activePage; index++) {
+      offset += _pageContentLength(documents[index]);
+    }
+    return offset + controller.selection.extentOffset;
+  }
+
+  ({int page, int offset}) _selectionForDocuments(
+    List<RichDocument> documents,
+    int globalOffset,
+  ) {
+    var remaining = globalOffset;
+    for (var index = 0; index < documents.length; index++) {
+      final contentLength = _pageContentLength(documents[index]);
+      final isLast = index == documents.length - 1;
+      if (remaining < contentLength || isLast) {
+        return (
+          page: index,
+          offset: remaining.clamp(0, _documentLength(documents[index]) - 1),
+        );
+      }
+      remaining -= contentLength;
+    }
+    return (page: 0, offset: 0);
+  }
+
+  int _pageContentLength(RichDocument document) =>
+      _documentLength(document) - (_hasSoftPageBreak(document) ? 1 : 0);
+
+  int _documentLength(RichDocument document) => document.fold(
+    0,
+    (length, operation) =>
+        length +
+        (operation['insert'] is String
+            ? (operation['insert'] as String).length
+            : 1),
+  );
+
+  bool _hasSoftPageBreak(RichDocument document) {
+    if (document.isEmpty || document.last['insert'] != '\n') return false;
+    final attributes = document.last['attributes'];
+    return attributes is Map && attributes['_bookSoftPageBreak'] == true;
+  }
+
+  void _cancelPaginationMeasurement({bool rebuild = true}) {
+    _paginationTimer?.cancel();
+    _paginationRequest++;
+    _clearMeasurementWidget(rebuild: rebuild);
+  }
+
+  void _clearMeasurementWidget({bool rebuild = true}) {
+    final oldController = _measurementController;
+    final oldFocusNode = _measurementFocusNode;
+    final oldScrollController = _measurementScrollController;
+    void clear() {
+      _measurementDocument = null;
+      _measurementController = null;
+      _measurementFocusNode = null;
+      _measurementScrollController = null;
+      _measurementEditorKey = null;
+      _measurementViewportKey = null;
+    }
+
+    if (rebuild && mounted) {
+      setState(clear);
+    } else {
+      clear();
+    }
+    _disposeMeasurementResourcesAfterFrame(
+      oldController,
+      oldFocusNode,
+      oldScrollController,
+    );
+  }
+
+  void _disposeMeasurementResourcesAfterFrame(
+    QuillController? controller,
+    FocusNode? focusNode,
+    ScrollController? scrollController,
+  ) {
+    if (controller == null && focusNode == null && scrollController == null) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller?.dispose();
+      focusNode?.dispose();
+      scrollController?.dispose();
+    });
   }
 
   @override
@@ -217,7 +395,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
           ),
         Expanded(
           child: widget.showToolbar
-              ? _buildPagedEditor()
+              ? _buildPagedEditorWithMeasurement()
               : BookMobileEditor(
                   controller: controller,
                   focusNode: _focusNodes[_activePage],
@@ -246,6 +424,39 @@ class BookSectionEditorState extends State<BookSectionEditor> {
       ],
     );
   }
+
+  Widget _buildPagedEditorWithMeasurement() => Stack(
+    clipBehavior: Clip.none,
+    children: [
+      Positioned.fill(child: _buildPagedEditor()),
+      if (_measurementController != null)
+        Positioned(
+          left: -widget.pageFormat.width * 2,
+          top: 0,
+          child: ExcludeSemantics(
+            child: IgnorePointer(
+              child: Opacity(
+                opacity: 0,
+                child: BookPageCanvas(
+                  pageNumber: _measurementPageNumber,
+                  scale: 1,
+                  pageFormat: widget.pageFormat,
+                  paragraphSettings: widget.paragraphSettings,
+                  controller: _measurementController!,
+                  focusNode: _measurementFocusNode!,
+                  scrollController: _measurementScrollController!,
+                  editorKey: _measurementEditorKey!,
+                  viewportKey: _measurementViewportKey!,
+                  titleController: _measurementTitleController,
+                  onTitleChanged: (_) {},
+                  isMeasurement: true,
+                ),
+              ),
+            ),
+          ),
+        ),
+    ],
+  );
 
   Widget _buildPagedEditor() => ColoredBox(
     color: const Color(0xFF141824),
@@ -286,8 +497,14 @@ class BookSectionEditorState extends State<BookSectionEditor> {
 
   @override
   void dispose() {
+    _paginationTimer?.cancel();
+    _paginationRequest++;
+    _measurementController?.dispose();
+    _measurementFocusNode?.dispose();
+    _measurementScrollController?.dispose();
     _disposePageControllers();
     _titleController.dispose();
+    _measurementTitleController.dispose();
     super.dispose();
   }
 
