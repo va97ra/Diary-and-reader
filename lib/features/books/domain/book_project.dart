@@ -1,5 +1,6 @@
 import 'dart:collection';
 
+import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 
@@ -11,6 +12,7 @@ class BookProject {
     required this.activeSectionId,
     required this.createdAt,
     required this.updatedAt,
+    this.layoutSettings = const BookLayoutSettings(),
   }) : _sections = List.unmodifiable(sections);
 
   factory BookProject.create({
@@ -34,6 +36,7 @@ class BookProject {
       activeSectionId: chapter.id,
       createdAt: timestamp,
       updatedAt: timestamp,
+      layoutSettings: const BookLayoutSettings(),
     );
   }
 
@@ -65,6 +68,11 @@ class BookProject {
       createdAt: createdAt,
       updatedAt:
           DateTime.tryParse(json['updatedAt']?.toString() ?? '') ?? createdAt,
+      layoutSettings: json['layoutSettings'] is Map
+          ? BookLayoutSettings.fromJson(
+              Map<String, dynamic>.from(json['layoutSettings'] as Map),
+            )
+          : const BookLayoutSettings(),
     );
   }
 
@@ -74,6 +82,7 @@ class BookProject {
   final String? activeSectionId;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final BookLayoutSettings layoutSettings;
 
   UnmodifiableListView<BookSection> get sections =>
       UnmodifiableListView(_sections);
@@ -90,6 +99,7 @@ class BookProject {
     String? activeSectionId,
     bool clearActiveSection = false,
     DateTime? updatedAt,
+    BookLayoutSettings? layoutSettings,
   }) => BookProject(
     id: id,
     metadata: metadata ?? this.metadata,
@@ -99,6 +109,7 @@ class BookProject {
         : activeSectionId ?? this.activeSectionId,
     createdAt: createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
+    layoutSettings: layoutSettings ?? this.layoutSettings,
   );
 
   Map<String, dynamic> toJson() => {
@@ -108,5 +119,6 @@ class BookProject {
     'activeSectionId': activeSectionId,
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
+    'layoutSettings': layoutSettings.toJson(),
   };
 }

@@ -4,6 +4,7 @@ import 'package:dnevnik/features/books/domain/author_workspace_snapshot.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_section_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -49,7 +50,10 @@ void main() {
     }
 
     expect(find.byKey(const ValueKey('book-page-1')), findsOneWidget);
-    expect(find.byKey(const ValueKey('book-page-2')), findsOneWidget);
+    final editorState = tester.state<BookSectionEditorState>(
+      find.byType(BookSectionEditor),
+    );
+    expect(editorState.pageCount, greaterThan(1));
 
     await tester.binding.setSurfaceSize(null);
   });

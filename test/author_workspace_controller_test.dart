@@ -1,4 +1,5 @@
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
+import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -18,5 +19,23 @@ void main() {
     expect(controller.activeProject!.metadata.title, 'Новая книга');
     expect(scene.parentId, chapter.id);
     expect(repository.snapshot!.activeProject!.sections, hasLength(2));
+  });
+
+  test('persists the selected page orientation with the book', () async {
+    final repository = MemoryAuthorWorkspaceRepository();
+    final controller = AuthorWorkspaceController(repository);
+    await controller.load(preferredLanguage: 'ru');
+
+    controller.updateLayoutSettings(
+      controller.activeProject!.layoutSettings.copyWith(
+        orientation: BookPageOrientation.landscape,
+      ),
+    );
+    await controller.flush();
+
+    expect(
+      repository.snapshot!.activeProject!.layoutSettings.orientation,
+      BookPageOrientation.landscape,
+    );
   });
 }

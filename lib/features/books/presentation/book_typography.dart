@@ -7,6 +7,11 @@ abstract final class BookTypography {
   static const bodyPoints = 12.0;
   static const titlePoints = 24.0;
   static const lineHeight = 1.5;
+  static const selectionTheme = TextSelectionThemeData(
+    cursorColor: AppTheme.ink,
+    selectionColor: Color(0x40334155),
+    selectionHandleColor: AppTheme.ink,
+  );
 
   static double get bodySize =>
       BookPageFormat.pointsToLogicalPixels(bodyPoints);

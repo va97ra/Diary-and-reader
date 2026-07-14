@@ -68,6 +68,7 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
                 child: BookSectionEditor(
                   key: ValueKey(section.id),
                   section: section,
+                  pageFormat: project.layoutSettings.pageFormat,
                   showToolbar: isTablet,
                   onTitleChanged: widget.controller.updateSectionTitle,
                   onContentChanged: widget.controller.updateSectionContent,

@@ -12,6 +12,14 @@ void main() {
     expect(format.width / format.height, closeTo(297 / 210, 0.001));
   });
 
+  test('A4 portrait swaps physical sides without changing the paper', () {
+    const format = BookPageFormat.a4Portrait;
+
+    expect(format.widthMm, 210);
+    expect(format.heightMm, 297);
+    expect(format.width / format.height, closeTo(210 / 297, 0.001));
+  });
+
   test('typographic points convert independently from page zoom', () {
     expect(BookPageFormat.pointsToLogicalPixels(12), 16);
     expect(BookPageFormat.pointsToLogicalPixels(24), 32);

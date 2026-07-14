@@ -4,6 +4,7 @@ import 'dart:collection';
 import 'package:dnevnik/features/books/application/section_tree_editor.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_repository.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_snapshot.dart';
+import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
@@ -165,6 +166,16 @@ class AuthorWorkspaceController extends ChangeNotifier {
     _replaceActiveProject(
       (project) =>
           project.copyWith(metadata: metadata, updatedAt: DateTime.now()),
+    );
+    _changed();
+  }
+
+  void updateLayoutSettings(BookLayoutSettings layoutSettings) {
+    _replaceActiveProject(
+      (project) => project.copyWith(
+        layoutSettings: layoutSettings,
+        updatedAt: DateTime.now(),
+      ),
     );
     _changed();
   }

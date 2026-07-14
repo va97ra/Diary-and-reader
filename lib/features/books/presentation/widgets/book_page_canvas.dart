@@ -9,6 +9,7 @@ class BookPageCanvas extends StatelessWidget {
   const BookPageCanvas({
     required this.pageNumber,
     required this.scale,
+    required this.pageFormat,
     required this.controller,
     required this.focusNode,
     required this.scrollController,
@@ -19,10 +20,9 @@ class BookPageCanvas extends StatelessWidget {
     super.key,
   });
 
-  static const format = BookPageFormat.a4Landscape;
-
   final int pageNumber;
   final double scale;
+  final BookPageFormat pageFormat;
   final QuillController controller;
   final FocusNode focusNode;
   final ScrollController scrollController;
@@ -38,13 +38,13 @@ class BookPageCanvas extends StatelessWidget {
     final page = MediaQuery(
       data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
       child: Container(
-        width: format.width,
-        height: format.height,
+        width: pageFormat.width,
+        height: pageFormat.height,
         padding: EdgeInsets.fromLTRB(
-          format.marginLeft,
-          format.marginTop,
-          format.marginRight,
-          format.marginBottom / 2,
+          pageFormat.marginLeft,
+          pageFormat.marginTop,
+          pageFormat.marginRight,
+          pageFormat.marginBottom / 2,
         ),
         decoration: BoxDecoration(
           color: AppTheme.paper,
@@ -62,6 +62,7 @@ class BookPageCanvas extends StatelessWidget {
             if (_isFirstPage) ...[
               TextField(
                 controller: titleController,
+                cursorColor: AppTheme.ink,
                 onChanged: onTitleChanged,
                 maxLines: 2,
                 style: TextStyle(
@@ -93,6 +94,7 @@ class BookPageCanvas extends StatelessWidget {
                     placeholder: AppStrings.of(context).startWriting,
                     padding: EdgeInsets.zero,
                     customStyles: BookTypography.editorStyles,
+                    textSelectionThemeData: BookTypography.selectionTheme,
                     scrollable: false,
                     autoFocus: false,
                   ),
@@ -103,7 +105,9 @@ class BookPageCanvas extends StatelessWidget {
             Align(
               alignment: Alignment.center,
               child: Text(
-                '${AppStrings.of(context).page} $pageNumber · A4 297×210 мм',
+                '${AppStrings.of(context).page} $pageNumber · '
+                'A4 ${pageFormat.widthMm.toInt()}×'
+                '${pageFormat.heightMm.toInt()} мм',
                 style: const TextStyle(color: Colors.blueGrey, fontSize: 11),
               ),
             ),
@@ -114,8 +118,8 @@ class BookPageCanvas extends StatelessWidget {
 
     return SizedBox(
       key: ValueKey('book-page-$pageNumber'),
-      width: format.width * scale,
-      height: format.height * scale,
+      width: pageFormat.width * scale,
+      height: pageFormat.height * scale,
       child: Transform.scale(
         alignment: Alignment.topLeft,
         scale: scale,

@@ -18,6 +18,15 @@ class BookPageFormat {
   static const logicalPixelsPerInch = 96.0;
   static const pointsPerInch = 72.0;
 
+  static const a4Portrait = BookPageFormat(
+    widthMm: 210,
+    heightMm: 297,
+    marginTopMm: 20,
+    marginRightMm: 20,
+    marginBottomMm: 20,
+    marginLeftMm: 20,
+  );
+
   static const a4Landscape = BookPageFormat(
     widthMm: 297,
     heightMm: 210,
@@ -49,4 +58,25 @@ class BookPageFormat {
 
   static double pointsToLogicalPixels(double points) =>
       points * logicalPixelsPerInch / pointsPerInch;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BookPageFormat &&
+          widthMm == other.widthMm &&
+          heightMm == other.heightMm &&
+          marginTopMm == other.marginTopMm &&
+          marginRightMm == other.marginRightMm &&
+          marginBottomMm == other.marginBottomMm &&
+          marginLeftMm == other.marginLeftMm;
+
+  @override
+  int get hashCode => Object.hash(
+    widthMm,
+    heightMm,
+    marginTopMm,
+    marginRightMm,
+    marginBottomMm,
+    marginLeftMm,
+  );
 }

@@ -71,6 +71,11 @@ class AppStrings {
   String get deleteBook => _text('deleteBook');
   String get deleteSectionQuestion => _text('deleteSectionQuestion');
   String get deleteBookQuestion => _text('deleteBookQuestion');
+  String get pageLayout => _text('pageLayout');
+  String get paperFormat => _text('paperFormat');
+  String get orientation => _text('orientation');
+  String get portrait => _text('portrait');
+  String get landscape => _text('landscape');
 
   static const _values = <String, Map<String, String>>{
     'ru': {
@@ -132,6 +137,11 @@ class AppStrings {
       'deleteSectionQuestion':
           'Раздел и все его вложенные сцены будут удалены.',
       'deleteBookQuestion': 'Книга и все её главы будут удалены.',
+      'pageLayout': 'Макет страницы',
+      'paperFormat': 'Формат бумаги',
+      'orientation': 'Ориентация',
+      'portrait': 'Книжная',
+      'landscape': 'Альбомная',
     },
     'en': {
       'appTitle': 'My diary',
@@ -192,6 +202,11 @@ class AppStrings {
       'deleteSectionQuestion':
           'The section and all of its nested scenes will be deleted.',
       'deleteBookQuestion': 'The book and all of its chapters will be deleted.',
+      'pageLayout': 'Page layout',
+      'paperFormat': 'Paper size',
+      'orientation': 'Orientation',
+      'portrait': 'Portrait',
+      'landscape': 'Landscape',
     },
   };
 }

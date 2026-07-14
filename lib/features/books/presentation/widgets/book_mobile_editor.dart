@@ -1,5 +1,6 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/core/theme/app_theme.dart';
+import 'package:dnevnik/features/books/domain/book_page_format.dart';
 import 'package:dnevnik/features/books/presentation/book_typography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -13,6 +14,7 @@ class BookMobileEditor extends StatelessWidget {
     required this.onTitleChanged,
     required this.pageNumber,
     required this.pageCount,
+    required this.pageFormat,
     required this.onPreviousPage,
     required this.onNextPage,
     super.key,
@@ -25,6 +27,7 @@ class BookMobileEditor extends StatelessWidget {
   final ValueChanged<String> onTitleChanged;
   final int pageNumber;
   final int pageCount;
+  final BookPageFormat pageFormat;
   final VoidCallback? onPreviousPage;
   final VoidCallback? onNextPage;
 
@@ -42,6 +45,7 @@ class BookMobileEditor extends StatelessWidget {
         children: [
           TextField(
             controller: titleController,
+            cursorColor: AppTheme.ink,
             onChanged: onTitleChanged,
             maxLines: 2,
             style: const TextStyle(
@@ -67,6 +71,7 @@ class BookMobileEditor extends StatelessWidget {
                 placeholder: AppStrings.of(context).startWriting,
                 padding: EdgeInsets.zero,
                 customStyles: BookTypography.editorStyles,
+                textSelectionThemeData: BookTypography.selectionTheme,
                 scrollable: true,
                 autoFocus: false,
               ),
@@ -81,7 +86,9 @@ class BookMobileEditor extends StatelessWidget {
               ),
               Expanded(
                 child: Text(
-                  AppStrings.of(context).a4Sheet(pageNumber, pageCount),
+                  '${AppStrings.of(context).a4Sheet(pageNumber, pageCount)} · '
+                  '${pageFormat.widthMm.toInt()}×'
+                  '${pageFormat.heightMm.toInt()} мм',
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.blueGrey, fontSize: 12),
                 ),

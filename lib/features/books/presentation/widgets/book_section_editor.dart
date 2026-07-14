@@ -11,6 +11,7 @@ import 'package:flutter_quill/flutter_quill.dart';
 class BookSectionEditor extends StatefulWidget {
   const BookSectionEditor({
     required this.section,
+    required this.pageFormat,
     required this.onTitleChanged,
     required this.onContentChanged,
     required this.showToolbar,
@@ -19,6 +20,7 @@ class BookSectionEditor extends StatefulWidget {
   });
 
   final BookSection section;
+  final BookPageFormat pageFormat;
   final ValueChanged<String> onTitleChanged;
   final ValueChanged<RichDocument> onContentChanged;
   final bool showToolbar;
@@ -39,8 +41,10 @@ class BookSectionEditorState extends State<BookSectionEditor> {
   int _activePage = 0;
   bool _paginationInProgress = false;
   bool _usesPagedLayout = false;
+  int _paginationLayoutRetries = 0;
 
   QuillController get controller => _controllers[_activePage];
+  int get pageCount => _controllers.length;
 
   @override
   void initState() {
@@ -48,6 +52,20 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     _titleController = TextEditingController(text: widget.section.title);
     _createPageControllers([widget.section.content]);
     widget.onControllerReady?.call(controller);
+  }
+
+  @override
+  void didUpdateWidget(covariant BookSectionEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.pageFormat == widget.pageFormat) return;
+    final manuscript = BookPagePaginator.merge(_pageDocuments);
+    _paginationInProgress = true;
+    _disposePageControllers();
+    _createPageControllers([manuscript]);
+    _activePage = 0;
+    _paginationInProgress = false;
+    widget.onControllerReady?.call(controller);
+    _schedulePagination();
   }
 
   void _createPageControllers(List<RichDocument> documents) {
@@ -122,23 +140,36 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_usesPagedLayout || _paginationInProgress) return;
       if (pageIndex != null) {
-        _checkPageOverflow(pageIndex);
+        final result = _checkPageOverflow(pageIndex);
+        if (result == null) _retryPagination(pageIndex: pageIndex);
         return;
       }
       for (var index = 0; index < _controllers.length; index++) {
-        if (_checkPageOverflow(index)) break;
+        final result = _checkPageOverflow(index);
+        if (result == null) {
+          _retryPagination();
+          break;
+        }
+        if (result) break;
       }
     });
   }
 
-  bool _checkPageOverflow(int index) {
+  void _retryPagination({int? pageIndex}) {
+    if (_paginationLayoutRetries >= 4) return;
+    _paginationLayoutRetries++;
+    _schedulePagination(pageIndex: pageIndex);
+  }
+
+  bool? _checkPageOverflow(int index) {
     if (index >= _controllers.length) return false;
     final editorState = _editorKeys[index].currentState;
     final viewportContext = _viewportKeys[index].currentContext;
     final viewport = viewportContext?.findRenderObject();
     if (editorState == null || viewport is! RenderBox || !viewport.hasSize) {
-      return false;
+      return null;
     }
+    _paginationLayoutRetries = 0;
 
     final probe = viewport.localToGlobal(
       Offset(viewport.size.width - 8, viewport.size.height - 24),
@@ -202,6 +233,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
                   onTitleChanged: widget.onTitleChanged,
                   pageNumber: _activePage + 1,
                   pageCount: _controllers.length,
+                  pageFormat: widget.pageFormat,
                   onPreviousPage: _activePage > 0
                       ? () => _selectMobilePage(_activePage - 1)
                       : null,
@@ -219,7 +251,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     child: LayoutBuilder(
       builder: (context, constraints) {
         const horizontalPadding = 32.0;
-        final scale = BookPageFormat.a4Landscape.scaleForWidth(
+        final scale = widget.pageFormat.scaleForWidth(
           constraints.maxWidth - horizontalPadding * 2,
         );
         return ListView.separated(
@@ -235,6 +267,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
             child: BookPageCanvas(
               pageNumber: index + 1,
               scale: scale,
+              pageFormat: widget.pageFormat,
               controller: _controllers[index],
               focusNode: _focusNodes[index],
               scrollController: _scrollControllers[index],
