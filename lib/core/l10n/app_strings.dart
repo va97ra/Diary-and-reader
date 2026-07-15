@@ -176,6 +176,12 @@ class AppStrings {
   String get quoteSaved => _text('quoteSaved');
   String get highlightSaved => _text('highlightSaved');
   String get selectionCopied => _text('selectionCopied');
+  String get exportBook => _text('exportBook');
+  String get exportEpub => _text('exportEpub');
+  String get exportEpubHint => _text('exportEpubHint');
+  String get moreExportFormatsLater => _text('moreExportFormatsLater');
+  String get bookExported => _text('bookExported');
+  String get bookExportFailed => _text('bookExportFailed');
   String readerPageOf(int current, int count) =>
       '${_text('readerPage')} $current ${_text('ofPages')} $count';
   String sectionOf(int current, int count) =>
@@ -350,6 +356,14 @@ class AppStrings {
       'quoteSaved': 'Цитата сохранена',
       'highlightSaved': 'Выделение сохранено',
       'selectionCopied': 'Текст скопирован',
+      'exportBook': 'Экспорт книги',
+      'exportEpub': 'EPUB 3.3 (.epub)',
+      'exportEpubHint':
+          'Адаптивная электронная книга с оглавлением и оформлением текста',
+      'moreExportFormatsLater':
+          'PDF, DOCX, FB2, HTML, Markdown и TXT будут добавлены следующими модулями.',
+      'bookExported': 'Книга EPUB сохранена',
+      'bookExportFailed': 'Не удалось сохранить книгу',
     },
     'en': {
       'appTitle': 'My diary',
@@ -518,6 +532,14 @@ class AppStrings {
       'quoteSaved': 'Quote saved',
       'highlightSaved': 'Highlight saved',
       'selectionCopied': 'Text copied',
+      'exportBook': 'Export book',
+      'exportEpub': 'EPUB 3.3 (.epub)',
+      'exportEpubHint':
+          'Reflowable ebook with a table of contents and rich text styling',
+      'moreExportFormatsLater':
+          'PDF, DOCX, FB2, HTML, Markdown, and TXT will follow as separate modules.',
+      'bookExported': 'EPUB book saved',
+      'bookExportFailed': 'Book could not be saved',
     },
   };
 }

@@ -1,6 +1,8 @@
 import 'package:dnevnik/app/author_studio_app.dart';
 import 'package:dnevnik/core/theme/app_theme.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
+import 'package:dnevnik/features/books/application/book_export_artifact.dart';
+import 'package:dnevnik/features/books/data/book_export_file_service.dart';
 import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -56,4 +58,47 @@ void main() {
 
     await tester.binding.setSurfaceSize(null);
   });
+
+  testWidgets('exports the active project as EPUB', (tester) async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(),
+    );
+    final saver = _MemoryBookExportSaver();
+    await controller.load(preferredLanguage: 'ru');
+
+    await tester.binding.setSurfaceSize(const Size(1280, 900));
+    await tester.pumpWidget(
+      AuthorStudioApp(controller: controller, exportFileSaver: saver),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('export-book-button')));
+    await tester.pumpAndSettle();
+    expect(find.text('Экспорт книги'), findsOneWidget);
+    expect(find.text('EPUB 3.3 (.epub)'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('export-book-epub')));
+    await tester.pumpAndSettle();
+
+    expect(saver.artifact?.extension, 'epub');
+    expect(saver.artifact?.bytes, isNotEmpty);
+    expect(saver.bookTitle, 'Новая книга');
+    expect(find.text('Книга EPUB сохранена'), findsOneWidget);
+    await tester.binding.setSurfaceSize(null);
+  });
+}
+
+class _MemoryBookExportSaver implements BookExportFileSaver {
+  BookExportArtifact? artifact;
+  String? bookTitle;
+
+  @override
+  Future<bool> save({
+    required BookExportArtifact artifact,
+    required String bookTitle,
+  }) async {
+    this.artifact = artifact;
+    this.bookTitle = bookTitle;
+    return true;
+  }
 }
