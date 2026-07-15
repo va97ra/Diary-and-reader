@@ -123,6 +123,46 @@ void main() {
     await tester.binding.setSurfaceSize(null);
   });
 
+  testWidgets('shows every export group and creates an archived FB2', (
+    tester,
+  ) async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(),
+    );
+    final saver = _MemoryBookExportSaver();
+    await controller.load(preferredLanguage: 'ru');
+
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pumpWidget(
+      AuthorStudioApp(controller: controller, exportFileSaver: saver),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('export-book-button')));
+    await tester.pumpAndSettle();
+    expect(find.text('Для электронных читалок'), findsOneWidget);
+    expect(find.text('Для печати и редактирования'), findsOneWidget);
+    expect(find.text('Открытые текстовые форматы'), findsOneWidget);
+    expect(find.byKey(const ValueKey('export-book-fb2')), findsOneWidget);
+    expect(find.byKey(const ValueKey('export-book-fb2-zip')), findsOneWidget);
+    expect(find.byKey(const ValueKey('export-book-html')), findsOneWidget);
+    expect(find.byKey(const ValueKey('export-book-markdown')), findsOneWidget);
+    expect(find.byKey(const ValueKey('export-book-txt')), findsOneWidget);
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('export-book-fb2-zip')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('export-book-fb2-zip')));
+    await tester.pumpAndSettle();
+
+    expect(saver.artifact?.extension, 'fb2.zip');
+    expect(saver.artifact?.mimeType, 'application/zip');
+    expect(saver.artifact?.bytes, isNotEmpty);
+    expect(find.text('Книга сохранена'), findsOneWidget);
+    await tester.binding.setSurfaceSize(null);
+  });
+
   testWidgets('opens PDF preview and reports generation errors', (
     tester,
   ) async {
@@ -141,6 +181,8 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('export-book-button')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('export-book-pdf')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('export-book-pdf')));
     await tester.pumpAndSettle();

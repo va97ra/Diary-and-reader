@@ -3,11 +3,16 @@ import 'package:dnevnik/features/books/application/author_workspace_controller.d
 import 'package:dnevnik/features/books/application/book_docx_exporter.dart';
 import 'package:dnevnik/features/books/application/book_epub_exporter.dart';
 import 'package:dnevnik/features/books/application/book_export_artifact.dart';
+import 'package:dnevnik/features/books/application/book_fb2_exporter.dart';
+import 'package:dnevnik/features/books/application/book_html_exporter.dart';
+import 'package:dnevnik/features/books/application/book_markdown_exporter.dart';
 import 'package:dnevnik/features/books/application/book_pdf_font_assets.dart';
 import 'package:dnevnik/features/books/application/book_project_archive_codec.dart';
+import 'package:dnevnik/features/books/application/book_txt_exporter.dart';
 import 'package:dnevnik/features/books/data/book_export_file_service.dart';
 import 'package:dnevnik/features/books/data/book_pdf_asset_font_loader.dart';
 import 'package:dnevnik/features/books/data/book_project_backup_file_service.dart';
+import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/presentation/book_export_sheet.dart';
 import 'package:dnevnik/features/books/presentation/book_pdf_preview_page.dart';
 import 'package:dnevnik/features/books/presentation/book_version_history_sheet.dart';
@@ -224,16 +229,28 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      isScrollControlled: true,
+      useSafeArea: true,
       builder: (sheetContext) => BookExportSheet(
         onSelected: (format) {
           Navigator.of(sheetContext).pop();
           switch (format) {
             case BookExportFormat.epub:
-              _exportEpub();
+              _exportArtifact(BookEpubExporter.create);
+            case BookExportFormat.fb2:
+              _exportArtifact(BookFb2Exporter.create);
+            case BookExportFormat.fb2Zip:
+              _exportArtifact(BookFb2Exporter.createZip);
             case BookExportFormat.pdf:
               _openPdfPreview();
             case BookExportFormat.docx:
-              _exportDocx();
+              _exportArtifact(BookDocxExporter.create);
+            case BookExportFormat.html:
+              _exportArtifact(BookHtmlExporter.create);
+            case BookExportFormat.markdown:
+              _exportArtifact(BookMarkdownExporter.create);
+            case BookExportFormat.txt:
+              _exportArtifact(BookTxtExporter.create);
           }
         },
       ),
@@ -316,12 +333,14 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
     }
   }
 
-  Future<void> _exportEpub() async {
+  Future<void> _exportArtifact(
+    BookExportArtifact Function(BookProject project) createArtifact,
+  ) async {
     final strings = AppStrings.of(context);
     final project = widget.controller.activeProject;
     if (project == null) return;
     try {
-      final artifact = BookEpubExporter.create(project);
+      final artifact = createArtifact(project);
       final saved = await widget.exportFileSaver.save(
         artifact: artifact,
         bookTitle: project.metadata.title,
@@ -345,23 +364,6 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
         ),
       ),
     );
-  }
-
-  Future<void> _exportDocx() async {
-    final strings = AppStrings.of(context);
-    final project = widget.controller.activeProject;
-    if (project == null) return;
-    try {
-      final artifact = BookDocxExporter.create(project);
-      final saved = await widget.exportFileSaver.save(
-        artifact: artifact,
-        bookTitle: project.metadata.title,
-      );
-      if (!mounted || !saved) return;
-      _showMessage(strings.bookExported);
-    } on Exception {
-      if (mounted) _showMessage(strings.bookExportFailed);
-    }
   }
 
   void _showMessage(String message) {

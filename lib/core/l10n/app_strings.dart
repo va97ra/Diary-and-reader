@@ -179,11 +179,21 @@ class AppStrings {
   String get exportBook => _text('exportBook');
   String get exportEpub => _text('exportEpub');
   String get exportEpubHint => _text('exportEpubHint');
+  String get exportFb2 => _text('exportFb2');
+  String get exportFb2Hint => _text('exportFb2Hint');
+  String get exportFb2Zip => _text('exportFb2Zip');
+  String get exportFb2ZipHint => _text('exportFb2ZipHint');
   String get exportPdf => _text('exportPdf');
   String get exportPdfHint => _text('exportPdfHint');
   String get exportDocx => _text('exportDocx');
   String get exportDocxHint => _text('exportDocxHint');
-  String get moreExportFormatsLater => _text('moreExportFormatsLater');
+  String get exportHtml => _text('exportHtml');
+  String get exportHtmlHint => _text('exportHtmlHint');
+  String get exportTxt => _text('exportTxt');
+  String get exportTxtHint => _text('exportTxtHint');
+  String get readerExportFormats => _text('readerExportFormats');
+  String get printExportFormats => _text('printExportFormats');
+  String get textExportFormats => _text('textExportFormats');
   String get bookExported => _text('bookExported');
   String get bookExportFailed => _text('bookExportFailed');
   String get pdfPreview => _text('pdfPreview');
@@ -393,14 +403,26 @@ class AppStrings {
       'exportEpub': 'EPUB 3.3 (.epub)',
       'exportEpubHint':
           'Адаптивная электронная книга с оглавлением и оформлением текста',
+      'exportFb2': 'FictionBook (.fb2)',
+      'exportFb2Hint':
+          'Формат для популярных читалок с главами и оформлением текста',
+      'exportFb2Zip': 'FictionBook в архиве (.fb2.zip)',
+      'exportFb2ZipHint':
+          'Компактный FB2 для библиотек и устройств с поддержкой архивов',
       'exportPdf': 'Печатный PDF (.pdf)',
       'exportPdfHint':
           'Фиксированные страницы A4 с полями, оглавлением и нумерацией',
       'exportDocx': 'Документ Word (.docx)',
       'exportDocxHint':
           'Редактируемая рукопись со стилями, оглавлением и разметкой A4',
-      'moreExportFormatsLater':
-          'FB2, HTML, Markdown и TXT будут добавлены следующими модулями.',
+      'exportHtml': 'Веб-страница (.html)',
+      'exportHtmlHint':
+          'Автономная адаптивная страница с оглавлением и оформлением',
+      'exportTxt': 'Обычный текст (.txt)',
+      'exportTxtHint': 'Максимально совместимый текст без оформления',
+      'readerExportFormats': 'Для электронных читалок',
+      'printExportFormats': 'Для печати и редактирования',
+      'textExportFormats': 'Открытые текстовые форматы',
       'bookExported': 'Книга сохранена',
       'bookExportFailed': 'Не удалось сохранить книгу',
       'pdfPreview': 'Предварительный просмотр PDF',
@@ -609,14 +631,26 @@ class AppStrings {
       'exportEpub': 'EPUB 3.3 (.epub)',
       'exportEpubHint':
           'Reflowable ebook with a table of contents and rich text styling',
+      'exportFb2': 'FictionBook (.fb2)',
+      'exportFb2Hint':
+          'Reader-friendly book with chapters and rich text styling',
+      'exportFb2Zip': 'Archived FictionBook (.fb2.zip)',
+      'exportFb2ZipHint':
+          'Compact FB2 for libraries and devices that support archives',
       'exportPdf': 'Print PDF (.pdf)',
       'exportPdfHint':
           'Fixed A4 pages with margins, contents, and page numbering',
       'exportDocx': 'Word document (.docx)',
       'exportDocxHint':
           'Editable manuscript with styles, contents, and A4 page layout',
-      'moreExportFormatsLater':
-          'FB2, HTML, Markdown, and TXT will follow as separate modules.',
+      'exportHtml': 'Web page (.html)',
+      'exportHtmlHint':
+          'Standalone responsive page with contents and rich text styling',
+      'exportTxt': 'Plain text (.txt)',
+      'exportTxtHint': 'Maximum compatibility without text styling',
+      'readerExportFormats': 'For ebook readers',
+      'printExportFormats': 'For print and editing',
+      'textExportFormats': 'Open text formats',
       'bookExported': 'Book saved',
       'bookExportFailed': 'Book could not be saved',
       'pdfPreview': 'PDF preview',

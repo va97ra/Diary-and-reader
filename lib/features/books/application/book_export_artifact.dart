@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-enum BookExportFormat { epub, pdf, docx }
+enum BookExportFormat { epub, fb2, fb2Zip, pdf, docx, html, markdown, txt }
 
 class BookExportArtifact {
   const BookExportArtifact({
