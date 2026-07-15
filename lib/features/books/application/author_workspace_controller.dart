@@ -9,17 +9,24 @@ import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
+import 'package:dnevnik/features/books/domain/book_project_version.dart';
 import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
 import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
+import 'package:dnevnik/features/books/domain/book_version_repository.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 import 'package:flutter/foundation.dart';
 
 class AuthorWorkspaceController extends ChangeNotifier {
-  AuthorWorkspaceController(this._repository);
+  AuthorWorkspaceController(
+    this._repository, {
+    BookVersionRepository? versionRepository,
+  }) : _versionRepository =
+           versionRepository ?? _TransientBookVersionRepository();
 
   final AuthorWorkspaceRepository _repository;
+  final BookVersionRepository _versionRepository;
   final List<BookProject> _projects = [];
   Future<void> _saveQueue = Future.value();
   Timer? _saveTimer;
@@ -252,6 +259,48 @@ class AuthorWorkspaceController extends ChangeNotifier {
     _changed();
   }
 
+  Future<List<BookProjectVersion>> listVersions() async {
+    final project = activeProject;
+    if (project == null) return const [];
+    return _versionRepository.list(project.id);
+  }
+
+  Future<BookProjectVersion?> createVersion({String? label}) async {
+    await flush();
+    final project = activeProject;
+    if (project == null) return null;
+    return _versionRepository.create(project: project, label: label);
+  }
+
+  Future<void> deleteVersion(String versionId) async {
+    final project = activeProject;
+    if (project == null) return;
+    await _versionRepository.delete(
+      projectId: project.id,
+      versionId: versionId,
+    );
+  }
+
+  Future<void> restoreVersion(
+    BookProjectVersion version, {
+    required String safetyLabel,
+  }) async {
+    final current = activeProject;
+    if (current == null || version.projectId != current.id) return;
+    await _replaceActiveProjectFromExternalSource(
+      version.project,
+      safetyLabel: safetyLabel,
+    );
+  }
+
+  Future<void> importProject(
+    BookProject project, {
+    required String safetyLabel,
+  }) => _replaceActiveProjectFromExternalSource(
+    project,
+    safetyLabel: safetyLabel,
+  );
+
   Future<void> flush() async {
     _saveTimer?.cancel();
     final revision = _changeRevision;
@@ -264,6 +313,36 @@ class AuthorWorkspaceController extends ChangeNotifier {
       if (_isDisposed || revision != _changeRevision) return;
       _setSaveState(WorkspaceSaveState.error);
     }
+  }
+
+  Future<void> _replaceActiveProjectFromExternalSource(
+    BookProject source, {
+    required String safetyLabel,
+  }) async {
+    await flush();
+    final current = activeProject;
+    if (current == null || source.sections.isEmpty) return;
+    await _versionRepository.create(project: current, label: safetyLabel);
+    final index = _projects.indexWhere((project) => project.id == current.id);
+    if (index < 0) return;
+    final copied = BookProject.fromJson(source.toJson());
+    _projects[index] = BookProject(
+      id: current.id,
+      metadata: copied.metadata,
+      sections: copied.sections,
+      activeSectionId: copied.activeSectionId,
+      createdAt: current.createdAt,
+      updatedAt: DateTime.now(),
+      layoutSettings: copied.layoutSettings,
+      paragraphSettings: copied.paragraphSettings,
+      readerSettings: copied.readerSettings,
+      readerProgress: copied.readerProgress,
+      readerAnnotations: copied.readerAnnotations,
+    );
+    _activeProjectId = current.id;
+    _markDirty();
+    notifyListeners();
+    await flush();
   }
 
   BookProject _newProject() => BookProject.create(
@@ -356,5 +435,47 @@ class AuthorWorkspaceController extends ChangeNotifier {
     _saveTimer?.cancel();
     unawaited(_enqueueSave(_snapshot).catchError((_) {}));
     super.dispose();
+  }
+}
+
+class _TransientBookVersionRepository implements BookVersionRepository {
+  final List<BookProjectVersion> _versions = [];
+
+  @override
+  Future<List<BookProjectVersion>> list(String projectId) async {
+    final versions =
+        _versions.where((version) => version.projectId == projectId).toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return versions;
+  }
+
+  @override
+  Future<BookProjectVersion> create({
+    required BookProject project,
+    String? label,
+  }) async {
+    final now = DateTime.now().toUtc();
+    final normalizedLabel = label?.trim();
+    final version = BookProjectVersion(
+      id: 'version-${now.microsecondsSinceEpoch}',
+      projectId: project.id,
+      createdAt: now,
+      label: normalizedLabel == null || normalizedLabel.isEmpty
+          ? null
+          : normalizedLabel,
+      project: BookProject.fromJson(project.toJson()),
+    );
+    _versions.add(version);
+    return version;
+  }
+
+  @override
+  Future<void> delete({
+    required String projectId,
+    required String versionId,
+  }) async {
+    _versions.removeWhere(
+      (version) => version.projectId == projectId && version.id == versionId,
+    );
   }
 }

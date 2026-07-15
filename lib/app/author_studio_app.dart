@@ -4,6 +4,7 @@ import 'package:dnevnik/features/books/application/author_workspace_controller.d
 import 'package:dnevnik/features/books/application/book_pdf_font_assets.dart';
 import 'package:dnevnik/features/books/data/book_export_file_service.dart';
 import 'package:dnevnik/features/books/data/book_pdf_asset_font_loader.dart';
+import 'package:dnevnik/features/books/data/book_project_backup_file_service.dart';
 import 'package:dnevnik/features/books/presentation/author_workspace_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -13,12 +14,14 @@ class AuthorStudioApp extends StatelessWidget {
   const AuthorStudioApp({
     required this.controller,
     this.exportFileSaver = const BookExportFileService(),
+    this.backupFileGateway = const BookProjectBackupFileService(),
     this.pdfFontLoader = const BookPdfAssetFontLoader(),
     super.key,
   });
 
   final AuthorWorkspaceController controller;
   final BookExportFileSaver exportFileSaver;
+  final BookProjectBackupFileGateway backupFileGateway;
   final BookPdfFontLoader pdfFontLoader;
 
   @override
@@ -39,6 +42,7 @@ class AuthorStudioApp extends StatelessWidget {
       home: AuthorWorkspacePage(
         controller: controller,
         exportFileSaver: exportFileSaver,
+        backupFileGateway: backupFileGateway,
         pdfFontLoader: pdfFontLoader,
       ),
     ),

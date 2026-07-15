@@ -5,6 +5,7 @@ import 'package:dnevnik/features/books/application/workspace_save_state.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_repository.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_snapshot.dart';
 import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
+import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
 import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
@@ -135,6 +136,51 @@ void main() {
       'Последняя версия',
     );
     expect(controller.saveState, WorkspaceSaveState.saved);
+  });
+
+  test('restores a version and first saves the replaced state', () async {
+    final repository = MemoryAuthorWorkspaceRepository();
+    final controller = AuthorWorkspaceController(repository);
+    await controller.load(preferredLanguage: 'ru');
+    controller.updateMetadata(
+      controller.activeProject!.metadata.copyWith(title: 'Первая редакция'),
+    );
+    final version = await controller.createVersion(label: 'Стабильная');
+    controller.updateMetadata(
+      controller.activeProject!.metadata.copyWith(title: 'Новые правки'),
+    );
+
+    await controller.restoreVersion(
+      version!,
+      safetyLabel: 'Перед восстановлением',
+    );
+
+    expect(controller.activeProject!.metadata.title, 'Первая редакция');
+    final versions = await controller.listVersions();
+    expect(versions, hasLength(2));
+    expect(versions.first.label, 'Перед восстановлением');
+    expect(versions.first.project.metadata.title, 'Новые правки');
+    expect(
+      repository.snapshot!.activeProject!.metadata.title,
+      'Первая редакция',
+    );
+  });
+
+  test('imports a backup under the current project identity', () async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(),
+    );
+    await controller.load(preferredLanguage: 'ru');
+    final originalId = controller.activeProject!.id;
+    final imported = controller.activeProject!.copyWith(
+      metadata: const BookMetadata(title: 'Книга из файла'),
+    );
+
+    await controller.importProject(imported, safetyLabel: 'Перед импортом');
+
+    expect(controller.activeProject!.id, originalId);
+    expect(controller.activeProject!.metadata.title, 'Книга из файла');
+    expect((await controller.listVersions()).single.label, 'Перед импортом');
   });
 }
 

@@ -192,6 +192,29 @@ class AppStrings {
   String get pdfPreviewFailed => _text('pdfPreviewFailed');
   String get pdfSaved => _text('pdfSaved');
   String get retry => _text('retry');
+  String get projectData => _text('projectData');
+  String get versionHistory => _text('versionHistory');
+  String get createVersion => _text('createVersion');
+  String get versionLabel => _text('versionLabel');
+  String get versionLabelHint => _text('versionLabelHint');
+  String get unnamedVersion => _text('unnamedVersion');
+  String get noVersions => _text('noVersions');
+  String get restoreVersion => _text('restoreVersion');
+  String get restoreVersionQuestion => _text('restoreVersionQuestion');
+  String get versionCreated => _text('versionCreated');
+  String get versionRestored => _text('versionRestored');
+  String get versionOperationFailed => _text('versionOperationFailed');
+  String get deleteVersion => _text('deleteVersion');
+  String get deleteVersionQuestion => _text('deleteVersionQuestion');
+  String get safetyVersionLabel => _text('safetyVersionLabel');
+  String get backupProject => _text('backupProject');
+  String get restoreProjectBackup => _text('restoreProjectBackup');
+  String get projectBackupSaved => _text('projectBackupSaved');
+  String get projectBackupFailed => _text('projectBackupFailed');
+  String get projectRestored => _text('projectRestored');
+  String get projectRestoreFailed => _text('projectRestoreFailed');
+  String get confirmProjectRestore => _text('confirmProjectRestore');
+  String get webVersionLimit => _text('webVersionLimit');
   String readerPageOf(int current, int count) =>
       '${_text('readerPage')} $current ${_text('ofPages')} $count';
   String sectionOf(int current, int count) =>
@@ -386,6 +409,34 @@ class AppStrings {
       'pdfPreviewFailed': 'Не удалось создать предварительный просмотр PDF',
       'pdfSaved': 'PDF сохранён',
       'retry': 'Повторить',
+      'projectData': 'Данные проекта',
+      'versionHistory': 'История версий',
+      'createVersion': 'Создать снимок',
+      'versionLabel': 'Название снимка',
+      'versionLabelHint': 'Например: перед редактурой главы',
+      'unnamedVersion': 'Снимок без названия',
+      'noVersions':
+          'Снимков пока нет. Создайте первый перед крупными правками.',
+      'restoreVersion': 'Восстановить',
+      'restoreVersionQuestion':
+          'Текущая версия будет сохранена защитным снимком, затем рукопись заменится выбранной версией.',
+      'versionCreated': 'Снимок версии создан',
+      'versionRestored': 'Версия восстановлена',
+      'versionOperationFailed': 'Не удалось выполнить операцию с версией',
+      'deleteVersion': 'Удалить снимок',
+      'deleteVersionQuestion':
+          'Удалить этот снимок без возможности восстановления?',
+      'safetyVersionLabel': 'Автоматически перед восстановлением',
+      'backupProject': 'Сохранить резервную копию',
+      'restoreProjectBackup': 'Восстановить из файла',
+      'projectBackupSaved': 'Резервная копия проекта сохранена',
+      'projectBackupFailed': 'Не удалось сохранить резервную копию',
+      'projectRestored': 'Проект восстановлен из резервной копии',
+      'projectRestoreFailed': 'Не удалось прочитать резервную копию проекта',
+      'confirmProjectRestore':
+          'Текущая книга будет сохранена защитным снимком и заменена данными из выбранного файла.',
+      'webVersionLimit':
+          'В браузере хранятся пять последних снимков каждой книги. Для долговременного хранения сохраняйте резервные копии в файл.',
     },
     'en': {
       'appTitle': 'My diary',
@@ -574,6 +625,32 @@ class AppStrings {
       'pdfPreviewFailed': 'PDF preview could not be created',
       'pdfSaved': 'PDF saved',
       'retry': 'Retry',
+      'projectData': 'Project data',
+      'versionHistory': 'Version history',
+      'createVersion': 'Create snapshot',
+      'versionLabel': 'Snapshot name',
+      'versionLabelHint': 'For example: before revising the chapter',
+      'unnamedVersion': 'Unnamed snapshot',
+      'noVersions': 'No snapshots yet. Create one before major edits.',
+      'restoreVersion': 'Restore',
+      'restoreVersionQuestion':
+          'The current version will be saved as a safety snapshot before the manuscript is replaced.',
+      'versionCreated': 'Version snapshot created',
+      'versionRestored': 'Version restored',
+      'versionOperationFailed': 'The version operation could not be completed',
+      'deleteVersion': 'Delete snapshot',
+      'deleteVersionQuestion': 'Delete this snapshot permanently?',
+      'safetyVersionLabel': 'Automatic snapshot before restore',
+      'backupProject': 'Save backup copy',
+      'restoreProjectBackup': 'Restore from file',
+      'projectBackupSaved': 'Project backup saved',
+      'projectBackupFailed': 'The backup could not be saved',
+      'projectRestored': 'Project restored from backup',
+      'projectRestoreFailed': 'The project backup could not be read',
+      'confirmProjectRestore':
+          'The current book will be saved as a safety snapshot and replaced with data from the selected file.',
+      'webVersionLimit':
+          'The browser keeps the five newest snapshots for each book. Save a backup file for long-term storage.',
     },
   };
 }

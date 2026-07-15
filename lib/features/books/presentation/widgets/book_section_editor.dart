@@ -92,16 +92,29 @@ class BookSectionEditorState extends State<BookSectionEditor> {
   @override
   void didUpdateWidget(covariant BookSectionEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.pageFormat == widget.pageFormat &&
-        oldWidget.paragraphSettings == widget.paragraphSettings) {
-      return;
+    if (oldWidget.section.title != widget.section.title &&
+        _titleController.text != widget.section.title) {
+      _titleController.value = TextEditingValue(
+        text: widget.section.title,
+        selection: TextSelection.collapsed(offset: widget.section.title.length),
+      );
+      _measurementTitleController.text = widget.section.title;
     }
-    final manuscript = BookPagePaginator.merge(_pageDocuments);
+    final incomingSignature = jsonEncode(widget.section.content);
+    final contentChanged = incomingSignature != _lastManuscriptSignature;
+    final layoutChanged =
+        oldWidget.pageFormat != widget.pageFormat ||
+        oldWidget.paragraphSettings != widget.paragraphSettings;
+    if (!contentChanged && !layoutChanged) return;
+    final manuscript = contentChanged
+        ? widget.section.content
+        : BookPagePaginator.merge(_pageDocuments);
     _cancelPaginationMeasurement(rebuild: false);
     _disposePageControllers();
     _createPageControllers([manuscript]);
     _activePage = 0;
     _lastManuscriptSignature = jsonEncode(manuscript);
+    _statistics = ManuscriptStatistics.fromDocument(manuscript);
     widget.onControllerReady?.call(controller);
     _schedulePagination();
   }
