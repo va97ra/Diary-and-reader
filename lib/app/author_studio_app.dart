@@ -3,6 +3,7 @@ import 'package:dnevnik/core/theme/app_theme.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/application/book_pdf_font_assets.dart';
 import 'package:dnevnik/features/books/data/book_export_file_service.dart';
+import 'package:dnevnik/features/books/data/book_import_file_service.dart';
 import 'package:dnevnik/features/books/data/book_pdf_asset_font_loader.dart';
 import 'package:dnevnik/features/books/data/book_project_backup_file_service.dart';
 import 'package:dnevnik/features/books/presentation/author_workspace_page.dart';
@@ -16,6 +17,7 @@ class AuthorStudioApp extends StatelessWidget {
     this.exportFileSaver = const BookExportFileService(),
     this.backupFileGateway = const BookProjectBackupFileService(),
     this.pdfFontLoader = const BookPdfAssetFontLoader(),
+    this.importFileGateway = const BookImportFileService(),
     super.key,
   });
 
@@ -23,6 +25,7 @@ class AuthorStudioApp extends StatelessWidget {
   final BookExportFileSaver exportFileSaver;
   final BookProjectBackupFileGateway backupFileGateway;
   final BookPdfFontLoader pdfFontLoader;
+  final BookImportFileGateway importFileGateway;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -44,6 +47,7 @@ class AuthorStudioApp extends StatelessWidget {
         exportFileSaver: exportFileSaver,
         backupFileGateway: backupFileGateway,
         pdfFontLoader: pdfFontLoader,
+        importFileGateway: importFileGateway,
       ),
     ),
   );

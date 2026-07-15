@@ -52,6 +52,16 @@ class AppStrings {
   String get manuscript => _text('manuscript');
   String get properties => _text('properties');
   String get newBook => _text('newBook');
+  String get importEbook => _text('importEbook');
+  String get importEbookHint => _text('importEbookHint');
+  String get importedBook => _text('importedBook');
+  String get importedBookHint => _text('importedBookHint');
+  String get sourceFile => _text('sourceFile');
+  String get bookImported => _text('bookImported');
+  String get bookImportFailed => _text('bookImportFailed');
+  String get unsupportedBookFormat => _text('unsupportedBookFormat');
+  String get noReadableBookText => _text('noReadableBookText');
+  String sectionsInBook(int count) => '${_text('sectionsInBook')}: $count';
   String get newPart => _text('newPart');
   String get newChapter => _text('newChapter');
   String get newScene => _text('newScene');
@@ -270,6 +280,18 @@ class AppStrings {
       'manuscript': 'Рукопись',
       'properties': 'Свойства',
       'newBook': 'Новая книга',
+      'importEbook': 'Импортировать книгу для чтения',
+      'importEbookHint': 'Поддерживаются EPUB, FB2 и FB2.ZIP без DRM',
+      'importedBook': 'Импортированная книга',
+      'importedBookHint':
+          'Текст защищён от случайного редактирования. Прогресс, закладки и заметки сохраняются.',
+      'sourceFile': 'Исходный файл',
+      'sectionsInBook': 'Разделов',
+      'bookImported': 'Книга добавлена в библиотеку',
+      'bookImportFailed': 'Не удалось прочитать книгу',
+      'unsupportedBookFormat': 'Поддерживаются EPUB, FB2 и FB2.ZIP',
+      'noReadableBookText':
+          'В книге не найден доступный текст. Возможно, файл защищён DRM или содержит только изображения.',
       'newPart': 'Новая часть',
       'newChapter': 'Новая глава',
       'newScene': 'Новая сцена',
@@ -499,6 +521,18 @@ class AppStrings {
       'manuscript': 'Manuscript',
       'properties': 'Properties',
       'newBook': 'New book',
+      'importEbook': 'Import a book for reading',
+      'importEbookHint': 'Supports DRM-free EPUB, FB2, and FB2.ZIP files',
+      'importedBook': 'Imported book',
+      'importedBookHint':
+          'The text is protected from accidental editing. Progress, bookmarks, and notes are saved.',
+      'sourceFile': 'Source file',
+      'sectionsInBook': 'Sections',
+      'bookImported': 'Book added to the library',
+      'bookImportFailed': 'The book could not be read',
+      'unsupportedBookFormat': 'EPUB, FB2, and FB2.ZIP are supported',
+      'noReadableBookText':
+          'No readable text was found. The file may use DRM or contain only images.',
       'newPart': 'New part',
       'newChapter': 'New chapter',
       'newScene': 'New scene',

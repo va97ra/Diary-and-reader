@@ -73,6 +73,35 @@ class AuthorWorkspaceController extends ChangeNotifier {
     _changed();
   }
 
+  void addImportedBook(BookProject project) {
+    if (project.kind != BookProjectKind.importedBook ||
+        project.sections.isEmpty) {
+      throw ArgumentError.value(project, 'project', 'Invalid imported book');
+    }
+    final id = _projects.any((candidate) => candidate.id == project.id)
+        ? 'imported-${DateTime.now().microsecondsSinceEpoch}'
+        : project.id;
+    final imported = BookProject(
+      id: id,
+      metadata: project.metadata,
+      sections: project.sections,
+      activeSectionId: project.activeSectionId,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+      layoutSettings: project.layoutSettings,
+      paragraphSettings: project.paragraphSettings,
+      readerSettings: project.readerSettings,
+      readerProgress: project.readerProgress,
+      readerAnnotations: project.readerAnnotations,
+      kind: BookProjectKind.importedBook,
+      sourceFormat: project.sourceFormat,
+      sourceFileName: project.sourceFileName,
+    );
+    _projects.add(imported);
+    _activeProjectId = imported.id;
+    _changed();
+  }
+
   void deleteProject(String id) {
     final index = _projects.indexWhere((project) => project.id == id);
     if (index < 0) return;
@@ -97,7 +126,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
 
   void addSection(BookSectionType type) {
     final project = activeProject;
-    if (project == null) return;
+    if (project == null || project.isReadOnly) return;
     final parentId = _parentForNewSection(project, type);
     final section = BookSection.create(
       title: _defaultSectionTitle(type),
@@ -118,6 +147,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
   }
 
   void moveSection(String id, TreeMoveDirection direction) {
+    if (activeProject?.isReadOnly ?? true) return;
     _replaceActiveProject(
       (project) => project.copyWith(
         sections: SectionTreeEditor.moveSubtree(
@@ -133,7 +163,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
 
   void deleteSection(String id) {
     final project = activeProject;
-    if (project == null) return;
+    if (project == null || project.isReadOnly) return;
     var sections = SectionTreeEditor.removeSubtree(project.sections, id);
     if (sections.isEmpty) {
       sections = [
@@ -167,11 +197,13 @@ class AuthorWorkspaceController extends ChangeNotifier {
   }
 
   void updateSectionTitle(String title) {
+    if (activeProject?.isReadOnly ?? true) return;
     _updateActiveSection((section) => section.copyWith(title: title));
     _changed();
   }
 
   void updateSectionContent(RichDocument content) {
+    if (activeProject?.isReadOnly ?? true) return;
     _updateActiveSection(
       (section) =>
           section.copyWith(content: content, updatedAt: DateTime.now()),
@@ -182,6 +214,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
   }
 
   void updateSectionStatus(DraftStatus status) {
+    if (activeProject?.isReadOnly ?? true) return;
     _updateActiveSection(
       (section) => section.copyWith(status: status, updatedAt: DateTime.now()),
     );
@@ -189,6 +222,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
   }
 
   void updateSectionTargetWords(int targetWords) {
+    if (activeProject?.isReadOnly ?? true) return;
     _updateActiveSection(
       (section) =>
           section.copyWith(targetWords: targetWords, updatedAt: DateTime.now()),
@@ -197,6 +231,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
   }
 
   void updateMetadata(BookMetadata metadata) {
+    if (activeProject?.isReadOnly ?? true) return;
     _replaceActiveProject(
       (project) =>
           project.copyWith(metadata: metadata, updatedAt: DateTime.now()),
@@ -205,6 +240,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
   }
 
   void updateLayoutSettings(BookLayoutSettings layoutSettings) {
+    if (activeProject?.isReadOnly ?? true) return;
     _replaceActiveProject(
       (project) => project.copyWith(
         layoutSettings: layoutSettings,
@@ -215,6 +251,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
   }
 
   void updateParagraphSettings(BookParagraphSettings paragraphSettings) {
+    if (activeProject?.isReadOnly ?? true) return;
     _replaceActiveProject(
       (project) => project.copyWith(
         paragraphSettings: paragraphSettings,
@@ -261,20 +298,20 @@ class AuthorWorkspaceController extends ChangeNotifier {
 
   Future<List<BookProjectVersion>> listVersions() async {
     final project = activeProject;
-    if (project == null) return const [];
+    if (project == null || project.isReadOnly) return const [];
     return _versionRepository.list(project.id);
   }
 
   Future<BookProjectVersion?> createVersion({String? label}) async {
     await flush();
     final project = activeProject;
-    if (project == null) return null;
+    if (project == null || project.isReadOnly) return null;
     return _versionRepository.create(project: project, label: label);
   }
 
   Future<void> deleteVersion(String versionId) async {
     final project = activeProject;
-    if (project == null) return;
+    if (project == null || project.isReadOnly) return;
     await _versionRepository.delete(
       projectId: project.id,
       versionId: versionId,
@@ -286,7 +323,11 @@ class AuthorWorkspaceController extends ChangeNotifier {
     required String safetyLabel,
   }) async {
     final current = activeProject;
-    if (current == null || version.projectId != current.id) return;
+    if (current == null ||
+        current.isReadOnly ||
+        version.projectId != current.id) {
+      return;
+    }
     await _replaceActiveProjectFromExternalSource(
       version.project,
       safetyLabel: safetyLabel,
@@ -321,7 +362,9 @@ class AuthorWorkspaceController extends ChangeNotifier {
   }) async {
     await flush();
     final current = activeProject;
-    if (current == null || source.sections.isEmpty) return;
+    if (current == null || current.isReadOnly || source.sections.isEmpty) {
+      return;
+    }
     await _versionRepository.create(project: current, label: safetyLabel);
     final index = _projects.indexWhere((project) => project.id == current.id);
     if (index < 0) return;
@@ -338,6 +381,9 @@ class AuthorWorkspaceController extends ChangeNotifier {
       readerSettings: copied.readerSettings,
       readerProgress: copied.readerProgress,
       readerAnnotations: copied.readerAnnotations,
+      kind: current.kind,
+      sourceFormat: current.sourceFormat,
+      sourceFileName: current.sourceFileName,
     );
     _activeProjectId = current.id;
     _markDirty();

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0" xmlns:l="http://www.w3.org/1999/xlink">
+  <description>
+    <title-info>
+      <genre>prose_contemporary</genre>
+      <author><first-name>Тестовый</first-name><last-name>Автор</last-name></author>
+      <book-title>Книга для проверки импорта</book-title>
+      <annotation><p>Проверка реального выбора файла и чтения.</p></annotation>
+      <lang>ru</lang>
+    </title-info>
+  </description>
+  <body>
+    <section>
+      <title><p>Глава первая</p></title>
+      <p>Это текст импортированной книги.</p>
+      <p><strong>Жирный фрагмент</strong> и <emphasis>курсивный фрагмент</emphasis>.</p>
+      <p><a l:type="simple" l:href="https://example.com">Безопасная ссылка</a></p>
+    </section>
+    <section>
+      <title><p>Глава вторая</p></title>
+      <p>Вторая глава подтверждает работу оглавления.</p>
+    </section>
+  </body>
+</FictionBook>

@@ -5,17 +5,21 @@ import 'package:dnevnik/features/books/application/book_epub_exporter.dart';
 import 'package:dnevnik/features/books/application/book_export_artifact.dart';
 import 'package:dnevnik/features/books/application/book_fb2_exporter.dart';
 import 'package:dnevnik/features/books/application/book_html_exporter.dart';
+import 'package:dnevnik/features/books/application/book_import_file.dart';
+import 'package:dnevnik/features/books/application/book_import_parser.dart';
 import 'package:dnevnik/features/books/application/book_markdown_exporter.dart';
 import 'package:dnevnik/features/books/application/book_pdf_font_assets.dart';
 import 'package:dnevnik/features/books/application/book_project_archive_codec.dart';
 import 'package:dnevnik/features/books/application/book_txt_exporter.dart';
 import 'package:dnevnik/features/books/data/book_export_file_service.dart';
+import 'package:dnevnik/features/books/data/book_import_file_service.dart';
 import 'package:dnevnik/features/books/data/book_pdf_asset_font_loader.dart';
 import 'package:dnevnik/features/books/data/book_project_backup_file_service.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/presentation/book_export_sheet.dart';
 import 'package:dnevnik/features/books/presentation/book_pdf_preview_page.dart';
 import 'package:dnevnik/features/books/presentation/book_version_history_sheet.dart';
+import 'package:dnevnik/features/books/presentation/imported_book_page.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_page.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_formatting_toolbar.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_navigator.dart';
@@ -32,6 +36,7 @@ class AuthorWorkspacePage extends StatefulWidget {
     this.exportFileSaver = const BookExportFileService(),
     this.backupFileGateway = const BookProjectBackupFileService(),
     this.pdfFontLoader = const BookPdfAssetFontLoader(),
+    this.importFileGateway = const BookImportFileService(),
     super.key,
   });
 
@@ -39,6 +44,7 @@ class AuthorWorkspacePage extends StatefulWidget {
   final BookExportFileSaver exportFileSaver;
   final BookProjectBackupFileGateway backupFileGateway;
   final BookPdfFontLoader pdfFontLoader;
+  final BookImportFileGateway importFileGateway;
 
   @override
   State<AuthorWorkspacePage> createState() => _AuthorWorkspacePageState();
@@ -51,6 +57,13 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
     final project = widget.controller.activeProject!;
+    if (project.isReadOnly) {
+      return ImportedBookPage(
+        controller: widget.controller,
+        onOpenReader: _openReader,
+        onImportBook: _importBook,
+      );
+    }
     final section = project.activeSection!;
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -134,7 +147,10 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
               if (isTablet)
                 SizedBox(
                   width: isDesktop ? 290 : 250,
-                  child: BookNavigator(controller: widget.controller),
+                  child: BookNavigator(
+                    controller: widget.controller,
+                    onImportBook: _importBook,
+                  ),
                 ),
               Expanded(
                 child: BookSectionEditor(
@@ -198,6 +214,7 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
       child: BookNavigator(
         controller: widget.controller,
         closeAfterSelection: true,
+        onImportBook: _importBook,
       ),
     ),
   );
@@ -255,6 +272,30 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
         },
       ),
     );
+  }
+
+  Future<void> _importBook() async {
+    final strings = AppStrings.of(context);
+    try {
+      final file = await widget.importFileGateway.open();
+      if (file == null || !mounted) return;
+      final project = BookImportParser.parse(file);
+      widget.controller.addImportedBook(project);
+      await widget.controller.flush();
+      if (!mounted) return;
+      _showMessage(strings.bookImported);
+      await _openReader();
+    } on BookImportException catch (error) {
+      if (!mounted) return;
+      final message = switch (error.failure) {
+        BookImportFailure.unsupportedFormat => strings.unsupportedBookFormat,
+        BookImportFailure.noReadableText => strings.noReadableBookText,
+        BookImportFailure.invalidFile => strings.bookImportFailed,
+      };
+      _showMessage(message);
+    } on Exception {
+      if (mounted) _showMessage(strings.bookImportFailed);
+    }
   }
 
   Future<void> _handleProjectDataAction(_ProjectDataAction action) async {

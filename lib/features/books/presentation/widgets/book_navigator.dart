@@ -2,6 +2,7 @@ import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/core/theme/app_theme.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/application/section_tree_editor.dart';
+import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:flutter/material.dart';
 
@@ -9,11 +10,15 @@ class BookNavigator extends StatelessWidget {
   const BookNavigator({
     required this.controller,
     this.closeAfterSelection = false,
+    this.onImportBook,
+    this.onOpenReader,
     super.key,
   });
 
   final AuthorWorkspaceController controller;
   final bool closeAfterSelection;
+  final VoidCallback? onImportBook;
+  final VoidCallback? onOpenReader;
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +39,9 @@ class BookNavigator extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          strings.manuscript,
+                          project.isReadOnly
+                              ? strings.library
+                              : strings.manuscript,
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                         DropdownButtonHideUnderline(
@@ -54,32 +61,37 @@ class BookNavigator extends StatelessWidget {
                                 )
                                 .toList(),
                             onChanged: (id) {
-                              if (id != null) controller.selectProject(id);
+                              if (id == null) return;
+                              controller.selectProject(id);
+                              if (closeAfterSelection) {
+                                Navigator.of(context).pop();
+                              }
                             },
                           ),
                         ),
                       ],
                     ),
                   ),
-                  PopupMenuButton<BookSectionType>(
-                    tooltip: strings.addPage,
-                    onSelected: controller.addSection,
-                    itemBuilder: (_) => [
-                      PopupMenuItem(
-                        value: BookSectionType.part,
-                        child: Text(strings.newPart),
-                      ),
-                      PopupMenuItem(
-                        value: BookSectionType.chapter,
-                        child: Text(strings.newChapter),
-                      ),
-                      PopupMenuItem(
-                        value: BookSectionType.scene,
-                        child: Text(strings.newScene),
-                      ),
-                    ],
-                    icon: const Icon(Icons.add),
-                  ),
+                  if (!project.isReadOnly)
+                    PopupMenuButton<BookSectionType>(
+                      tooltip: strings.addPage,
+                      onSelected: controller.addSection,
+                      itemBuilder: (_) => [
+                        PopupMenuItem(
+                          value: BookSectionType.part,
+                          child: Text(strings.newPart),
+                        ),
+                        PopupMenuItem(
+                          value: BookSectionType.chapter,
+                          child: Text(strings.newChapter),
+                        ),
+                        PopupMenuItem(
+                          value: BookSectionType.scene,
+                          child: Text(strings.newScene),
+                        ),
+                      ],
+                      icon: const Icon(Icons.add),
+                    ),
                 ],
               ),
             ),
@@ -95,11 +107,21 @@ class BookNavigator extends StatelessWidget {
                     isActive: section.id == project.activeSectionId,
                     depth: _depthOf(project.sections, section),
                     onTap: () {
+                      if (project.isReadOnly && onOpenReader != null) {
+                        controller.updateReaderProgress(
+                          BookReaderProgress(sectionId: section.id),
+                        );
+                        if (closeAfterSelection) Navigator.of(context).pop();
+                        onOpenReader?.call();
+                        return;
+                      }
                       controller.selectSection(section.id);
                       if (closeAfterSelection) Navigator.of(context).pop();
                     },
-                    onAction: (action) =>
-                        _handleSectionAction(context, section, action),
+                    onAction: project.isReadOnly
+                        ? null
+                        : (action) =>
+                              _handleSectionAction(context, section, action),
                   );
                 },
               ),
@@ -109,11 +131,16 @@ class BookNavigator extends StatelessWidget {
               leading: const Icon(Icons.library_books_outlined),
               title: Text(strings.library),
               trailing: PopupMenuButton<_BookAction>(
+                key: const ValueKey('library-book-actions'),
                 onSelected: (action) => _handleBookAction(context, action),
                 itemBuilder: (_) => [
                   PopupMenuItem(
                     value: _BookAction.add,
                     child: Text(strings.newBook),
+                  ),
+                  PopupMenuItem(
+                    value: _BookAction.import,
+                    child: Text(strings.importEbook),
                   ),
                   PopupMenuItem(
                     value: _BookAction.delete,
@@ -155,6 +182,11 @@ class BookNavigator extends StatelessWidget {
   ) async {
     if (action == _BookAction.add) {
       controller.addProject();
+      return;
+    }
+    if (action == _BookAction.import) {
+      if (closeAfterSelection) Navigator.of(context).pop();
+      onImportBook?.call();
       return;
     }
     final confirmed = await _confirmDelete(
@@ -217,7 +249,7 @@ class _SectionTile extends StatelessWidget {
   final bool isActive;
   final int depth;
   final VoidCallback onTap;
-  final ValueChanged<_SectionAction> onAction;
+  final ValueChanged<_SectionAction>? onAction;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -232,23 +264,25 @@ class _SectionTile extends StatelessWidget {
         BookSectionType.scene => Icons.short_text,
       }, color: isActive ? AppTheme.accent : Colors.blueGrey),
       title: Text(section.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-      trailing: PopupMenuButton<_SectionAction>(
-        onSelected: onAction,
-        itemBuilder: (context) => [
-          PopupMenuItem(
-            value: _SectionAction.up,
-            child: Text(AppStrings.of(context).moveUp),
-          ),
-          PopupMenuItem(
-            value: _SectionAction.down,
-            child: Text(AppStrings.of(context).moveDown),
-          ),
-          PopupMenuItem(
-            value: _SectionAction.delete,
-            child: Text(AppStrings.of(context).deleteSection),
-          ),
-        ],
-      ),
+      trailing: onAction == null
+          ? null
+          : PopupMenuButton<_SectionAction>(
+              onSelected: onAction,
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: _SectionAction.up,
+                  child: Text(AppStrings.of(context).moveUp),
+                ),
+                PopupMenuItem(
+                  value: _SectionAction.down,
+                  child: Text(AppStrings.of(context).moveDown),
+                ),
+                PopupMenuItem(
+                  value: _SectionAction.delete,
+                  child: Text(AppStrings.of(context).deleteSection),
+                ),
+              ],
+            ),
       onTap: onTap,
     ),
   );
@@ -256,4 +290,4 @@ class _SectionTile extends StatelessWidget {
 
 enum _SectionAction { up, down, delete }
 
-enum _BookAction { add, delete }
+enum _BookAction { add, import, delete }

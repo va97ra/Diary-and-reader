@@ -7,6 +7,7 @@ import 'package:dnevnik/features/books/domain/author_workspace_snapshot.dart';
 import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
+import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
 import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
@@ -181,6 +182,55 @@ void main() {
     expect(controller.activeProject!.id, originalId);
     expect(controller.activeProject!.metadata.title, 'Книга из файла');
     expect((await controller.listVersions()).single.label, 'Перед импортом');
+  });
+
+  test('persists imported books but blocks authoring changes', () async {
+    final repository = MemoryAuthorWorkspaceRepository();
+    final controller = AuthorWorkspaceController(repository);
+    await controller.load(preferredLanguage: 'ru');
+    final timestamp = DateTime.utc(2026, 7, 15);
+    final section = BookSection(
+      id: 'import-section',
+      title: 'Импортированная глава',
+      type: BookSectionType.chapter,
+      status: DraftStatus.complete,
+      content: const [
+        {'insert': 'Исходный текст\n'},
+      ],
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    );
+    final imported = BookProject(
+      id: 'imported-book',
+      metadata: const BookMetadata(title: 'Чужая книга'),
+      sections: [section],
+      activeSectionId: section.id,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      readerProgress: BookReaderProgress(sectionId: section.id),
+      kind: BookProjectKind.importedBook,
+      sourceFormat: 'EPUB',
+      sourceFileName: 'book.epub',
+    );
+
+    controller.addImportedBook(imported);
+    controller.updateSectionTitle('Случайная правка');
+    controller.updateSectionContent(const [
+      {'insert': 'Изменённый текст\n'},
+    ]);
+    controller.updateReaderProgress(
+      BookReaderProgress(sectionId: section.id, sectionProgress: 0.5),
+    );
+    await controller.flush();
+
+    expect(controller.activeSection!.title, 'Импортированная глава');
+    expect(controller.activeSection!.content, section.content);
+    expect(controller.activeProject!.readerProgress.sectionProgress, 0.5);
+    expect(
+      repository.snapshot!.activeProject!.kind,
+      BookProjectKind.importedBook,
+    );
+    expect(repository.snapshot!.activeProject!.sourceFileName, 'book.epub');
   });
 }
 

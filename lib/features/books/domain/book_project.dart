@@ -9,6 +9,8 @@ import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 
+enum BookProjectKind { manuscript, importedBook }
+
 class BookProject {
   BookProject({
     required this.id,
@@ -21,6 +23,9 @@ class BookProject {
     this.paragraphSettings = const BookParagraphSettings(),
     this.readerSettings = const BookReaderSettings(),
     this.readerProgress = const BookReaderProgress(),
+    this.kind = BookProjectKind.manuscript,
+    this.sourceFormat = '',
+    this.sourceFileName = '',
     BookReaderAnnotations? readerAnnotations,
   }) : readerAnnotations = readerAnnotations ?? BookReaderAnnotations(),
        _sections = List.unmodifiable(sections);
@@ -53,6 +58,7 @@ class BookProject {
       readerSettings: const BookReaderSettings(),
       readerProgress: BookReaderProgress(sectionId: chapter.id),
       readerAnnotations: BookReaderAnnotations(),
+      kind: BookProjectKind.manuscript,
     );
   }
 
@@ -130,6 +136,13 @@ class BookProject {
           : const BookReaderSettings(),
       readerProgress: readerProgress,
       readerAnnotations: readerAnnotations,
+      kind:
+          BookProjectKind.values.where((kind) {
+            return kind.name == json['kind']?.toString();
+          }).firstOrNull ??
+          BookProjectKind.manuscript,
+      sourceFormat: json['sourceFormat']?.toString() ?? '',
+      sourceFileName: json['sourceFileName']?.toString() ?? '',
     );
   }
 
@@ -144,6 +157,11 @@ class BookProject {
   final BookReaderSettings readerSettings;
   final BookReaderProgress readerProgress;
   final BookReaderAnnotations readerAnnotations;
+  final BookProjectKind kind;
+  final String sourceFormat;
+  final String sourceFileName;
+
+  bool get isReadOnly => kind == BookProjectKind.importedBook;
 
   UnmodifiableListView<BookSection> get sections =>
       UnmodifiableListView(_sections);
@@ -165,6 +183,9 @@ class BookProject {
     BookReaderSettings? readerSettings,
     BookReaderProgress? readerProgress,
     BookReaderAnnotations? readerAnnotations,
+    BookProjectKind? kind,
+    String? sourceFormat,
+    String? sourceFileName,
   }) => BookProject(
     id: id,
     metadata: metadata ?? this.metadata,
@@ -179,6 +200,9 @@ class BookProject {
     readerSettings: readerSettings ?? this.readerSettings,
     readerProgress: readerProgress ?? this.readerProgress,
     readerAnnotations: readerAnnotations ?? this.readerAnnotations,
+    kind: kind ?? this.kind,
+    sourceFormat: sourceFormat ?? this.sourceFormat,
+    sourceFileName: sourceFileName ?? this.sourceFileName,
   );
 
   Map<String, dynamic> toJson() => {
@@ -193,6 +217,9 @@ class BookProject {
     'readerSettings': readerSettings.toJson(),
     'readerProgress': readerProgress.toJson(),
     'readerAnnotations': readerAnnotations.toJson(),
+    'kind': kind.name,
+    'sourceFormat': sourceFormat,
+    'sourceFileName': sourceFileName,
     'documentFormatVersion': _currentDocumentFormatVersion,
   };
 }
