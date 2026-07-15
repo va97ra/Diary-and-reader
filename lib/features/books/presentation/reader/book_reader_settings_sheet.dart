@@ -46,6 +46,38 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 20),
+            Text(strings.readerViewMode),
+            const SizedBox(height: 8),
+            SegmentedButton<BookReaderViewMode>(
+              segments: [
+                ButtonSegment(
+                  value: BookReaderViewMode.continuous,
+                  icon: const Icon(Icons.view_stream_outlined),
+                  label: Text(strings.continuousReading),
+                ),
+                ButtonSegment(
+                  value: BookReaderViewMode.singlePage,
+                  icon: const Icon(Icons.crop_portrait_outlined),
+                  label: Text(strings.singlePageReading),
+                ),
+                ButtonSegment(
+                  value: BookReaderViewMode.spread,
+                  icon: const Icon(Icons.menu_book_outlined),
+                  label: Text(strings.spreadReading),
+                ),
+              ],
+              selected: {_settings.viewMode},
+              onSelectionChanged: (selection) =>
+                  _change(_settings.copyWith(viewMode: selection.first)),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                strings.spreadPhoneHint,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+            const SizedBox(height: 22),
             Text(strings.readerTheme),
             const SizedBox(height: 8),
             SegmentedButton<BookReaderTheme>(
@@ -117,6 +149,26 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
               displayValue: '${_settings.contentWidth.round()} px',
               onChanged: (value) =>
                   _change(_settings.copyWith(contentWidth: value)),
+            ),
+            _ReaderSlider(
+              label: strings.horizontalMargins,
+              value: _settings.horizontalPadding,
+              min: 16,
+              max: 96,
+              divisions: 10,
+              displayValue: '${_settings.horizontalPadding.round()} px',
+              onChanged: (value) =>
+                  _change(_settings.copyWith(horizontalPadding: value)),
+            ),
+            _ReaderSlider(
+              label: strings.verticalMargins,
+              value: _settings.verticalPadding,
+              min: 12,
+              max: 80,
+              divisions: 17,
+              displayValue: '${_settings.verticalPadding.round()} px',
+              onChanged: (value) =>
+                  _change(_settings.copyWith(verticalPadding: value)),
             ),
           ],
         ),

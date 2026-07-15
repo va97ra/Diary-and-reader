@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/book_reader_search.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
@@ -12,10 +10,9 @@ import 'package:dnevnik/features/books/presentation/reader/book_reader_navigatio
 import 'package:dnevnik/features/books/presentation/reader/book_reader_note_dialog.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_search_sheet.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_section_view.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_settings_sheet.dart';
-import 'package:dnevnik/features/books/presentation/reader/book_reader_typography.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_quill/flutter_quill.dart';
 
 class BookReaderPage extends StatefulWidget {
   const BookReaderPage({
@@ -39,10 +36,6 @@ class _BookReaderPageState extends State<BookReaderPage> {
   late BookReaderSettings _settings;
   late BookReaderAnnotations _annotations;
   late int _activeIndex;
-  late QuillController _controller;
-  late FocusNode _focusNode;
-  late ScrollController _scrollController;
-  Timer? _progressTimer;
   double _sectionProgress = 0;
 
   List<BookSection> get _sections => widget.project.sections;
@@ -59,30 +52,6 @@ class _BookReaderPageState extends State<BookReaderPage> {
     _sectionProgress = savedIndex < 0
         ? 0
         : widget.project.readerProgress.sectionProgress;
-    _createDocumentController();
-    _restoreScrollPosition();
-  }
-
-  void _createDocumentController() {
-    _controller = QuillController(
-      document: Document.fromJson(_section.content),
-      selection: const TextSelection.collapsed(offset: 0),
-      readOnly: true,
-    );
-    _focusNode = FocusNode(canRequestFocus: false);
-    _scrollController = ScrollController()..addListener(_scheduleProgressSave);
-  }
-
-  void _replaceDocumentController() {
-    final oldController = _controller;
-    final oldFocusNode = _focusNode;
-    final oldScrollController = _scrollController;
-    _createDocumentController();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      oldController.dispose();
-      oldFocusNode.dispose();
-      oldScrollController.dispose();
-    });
   }
 
   void _goToLocation(String sectionId, double sectionProgress) {
@@ -91,7 +60,6 @@ class _BookReaderPageState extends State<BookReaderPage> {
     final normalizedProgress = sectionProgress.clamp(0, 1).toDouble();
     if (index == _activeIndex) {
       setState(() => _sectionProgress = normalizedProgress);
-      _restoreScrollPosition();
       _saveProgress();
       return;
     }
@@ -99,22 +67,8 @@ class _BookReaderPageState extends State<BookReaderPage> {
     setState(() {
       _activeIndex = index;
       _sectionProgress = normalizedProgress;
-      _replaceDocumentController();
     });
-    _restoreScrollPosition();
     _saveProgress();
-  }
-
-  void _scheduleProgressSave() {
-    if (!_scrollController.hasClients) return;
-    final max = _scrollController.position.maxScrollExtent;
-    final next = max <= 0
-        ? 0.0
-        : (_scrollController.offset / max).clamp(0, 1).toDouble();
-    if ((next - _sectionProgress).abs() < 0.005) return;
-    setState(() => _sectionProgress = next);
-    _progressTimer?.cancel();
-    _progressTimer = Timer(const Duration(milliseconds: 450), _saveProgress);
   }
 
   void _saveProgress() => widget.onProgressChanged(
@@ -124,15 +78,11 @@ class _BookReaderPageState extends State<BookReaderPage> {
     ),
   );
 
-  void _restoreScrollPosition() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future<void>.delayed(const Duration(milliseconds: 80), () {
-        if (!mounted || !_scrollController.hasClients) return;
-        _scrollController.jumpTo(
-          _sectionProgress * _scrollController.position.maxScrollExtent,
-        );
-      });
-    });
+  void _handleSectionProgress(double progress) {
+    final normalized = progress.clamp(0, 1).toDouble();
+    if ((normalized - _sectionProgress).abs() < 0.001) return;
+    setState(() => _sectionProgress = normalized);
+    _saveProgress();
   }
 
   double get _overallProgress {
@@ -255,54 +205,12 @@ class _BookReaderPageState extends State<BookReaderPage> {
   Widget _buildReadingSurface(
     BuildContext context,
     BookReaderPalette palette,
-  ) => ColoredBox(
-    color: palette.background,
-    child: Center(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: _settings.contentWidth + 96),
-        child: Container(
-          key: const ValueKey('reader-surface'),
-          width: double.infinity,
-          color: palette.surface,
-          padding: const EdgeInsets.fromLTRB(28, 24, 28, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _section.title,
-                style: TextStyle(
-                  color: palette.ink,
-                  fontFamily: _settings.fontFamily,
-                  fontSize: _settings.fontSize * 1.75,
-                  height: 1.2,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 18),
-              Divider(color: palette.divider, height: 1),
-              const SizedBox(height: 18),
-              Expanded(
-                child: QuillEditor(
-                  key: ValueKey('reader-document-${_section.id}'),
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  scrollController: _scrollController,
-                  config: QuillEditorConfig(
-                    padding: EdgeInsets.zero,
-                    customStyles: BookReaderTypography.styles(
-                      _settings,
-                      palette,
-                    ),
-                    scrollable: true,
-                    autoFocus: false,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
+  ) => BookReaderSectionView(
+    section: _section,
+    settings: _settings,
+    palette: palette,
+    initialProgress: _sectionProgress,
+    onProgressChanged: _handleSectionProgress,
   );
 
   Widget _buildNavigationBar(BuildContext context, BookReaderPalette palette) {
@@ -491,13 +399,4 @@ class _BookReaderPageState extends State<BookReaderPage> {
     context: themedContext,
     builder: (_) => BookReaderNoteDialog(initialText: note?.text ?? ''),
   );
-
-  @override
-  void dispose() {
-    _progressTimer?.cancel();
-    _controller.dispose();
-    _focusNode.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
 }

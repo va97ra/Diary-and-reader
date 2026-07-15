@@ -143,6 +143,17 @@ class AppStrings {
   String get clearSearch => _text('clearSearch');
   String get searchHint => _text('searchHint');
   String get nothingFound => _text('nothingFound');
+  String get readerViewMode => _text('readerViewMode');
+  String get continuousReading => _text('continuousReading');
+  String get singlePageReading => _text('singlePageReading');
+  String get spreadReading => _text('spreadReading');
+  String get spreadPhoneHint => _text('spreadPhoneHint');
+  String get horizontalMargins => _text('horizontalMargins');
+  String get verticalMargins => _text('verticalMargins');
+  String get previousReaderPage => _text('previousReaderPage');
+  String get nextReaderPage => _text('nextReaderPage');
+  String readerPageOf(int current, int count) =>
+      '${_text('readerPage')} $current ${_text('ofPages')} $count';
   String sectionOf(int current, int count) =>
       '${_text('section')} $current ${_text('ofPages')} $count';
 
@@ -279,6 +290,17 @@ class AppStrings {
       'clearSearch': 'Очистить поиск',
       'searchHint': 'Введите минимум два символа для поиска по всей книге',
       'nothingFound': 'Совпадений не найдено',
+      'readerViewMode': 'Режим чтения',
+      'continuousReading': 'Лента',
+      'singlePageReading': 'Страница',
+      'spreadReading': 'Разворот',
+      'spreadPhoneHint':
+          'На узком экране разворот автоматически становится одной страницей.',
+      'horizontalMargins': 'Поля слева и справа',
+      'verticalMargins': 'Поля сверху и снизу',
+      'previousReaderPage': 'Предыдущая страница книги',
+      'nextReaderPage': 'Следующая страница книги',
+      'readerPage': 'Страница',
     },
     'en': {
       'appTitle': 'My diary',
@@ -412,6 +434,17 @@ class AppStrings {
       'clearSearch': 'Clear search',
       'searchHint': 'Enter at least two characters to search the whole book',
       'nothingFound': 'No matches found',
+      'readerViewMode': 'Reading mode',
+      'continuousReading': 'Scroll',
+      'singlePageReading': 'Page',
+      'spreadReading': 'Spread',
+      'spreadPhoneHint':
+          'On a narrow screen, a spread automatically becomes one page.',
+      'horizontalMargins': 'Left and right margins',
+      'verticalMargins': 'Top and bottom margins',
+      'previousReaderPage': 'Previous book page',
+      'nextReaderPage': 'Next book page',
+      'readerPage': 'Page',
     },
   };
 }
