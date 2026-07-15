@@ -62,6 +62,7 @@ class AppStrings {
   String get unsupportedBookFormat => _text('unsupportedBookFormat');
   String get noReadableBookText => _text('noReadableBookText');
   String sectionsInBook(int count) => '${_text('sectionsInBook')}: $count';
+  String imagesInBook(int count) => '${_text('imagesInBook')}: $count';
   String get newPart => _text('newPart');
   String get newChapter => _text('newChapter');
   String get newScene => _text('newScene');
@@ -287,11 +288,12 @@ class AppStrings {
           'Текст защищён от случайного редактирования. Прогресс, закладки и заметки сохраняются.',
       'sourceFile': 'Исходный файл',
       'sectionsInBook': 'Разделов',
+      'imagesInBook': 'Изображений',
       'bookImported': 'Книга добавлена в библиотеку',
       'bookImportFailed': 'Не удалось прочитать книгу',
       'unsupportedBookFormat': 'Поддерживаются EPUB, FB2 и FB2.ZIP',
       'noReadableBookText':
-          'В книге не найден доступный текст. Возможно, файл защищён DRM или содержит только изображения.',
+          'В книге не найдено доступное содержимое. Возможно, файл повреждён или защищён DRM.',
       'newPart': 'Новая часть',
       'newChapter': 'Новая глава',
       'newScene': 'Новая сцена',
@@ -528,11 +530,12 @@ class AppStrings {
           'The text is protected from accidental editing. Progress, bookmarks, and notes are saved.',
       'sourceFile': 'Source file',
       'sectionsInBook': 'Sections',
+      'imagesInBook': 'Images',
       'bookImported': 'Book added to the library',
       'bookImportFailed': 'The book could not be read',
       'unsupportedBookFormat': 'EPUB, FB2, and FB2.ZIP are supported',
       'noReadableBookText':
-          'No readable text was found. The file may use DRM or contain only images.',
+          'No readable content was found. The file may be damaged or use DRM.',
       'newPart': 'New part',
       'newChapter': 'New chapter',
       'newScene': 'New scene',

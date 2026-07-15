@@ -1,7 +1,9 @@
 import 'dart:math' as math;
 
 import 'package:dnevnik/core/l10n/app_strings.dart';
+import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_image_embed_builder.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_typography.dart';
 import 'package:flutter/material.dart';
@@ -21,6 +23,7 @@ class BookReaderPageCard extends StatelessWidget {
     required this.scrollController,
     required this.editorKey,
     required this.viewportKey,
+    required this.assets,
     this.isMeasurement = false,
     super.key,
   });
@@ -37,6 +40,7 @@ class BookReaderPageCard extends StatelessWidget {
   final ScrollController scrollController;
   final GlobalKey<EditorState> editorKey;
   final GlobalKey viewportKey;
+  final List<BookAsset> assets;
   final bool isMeasurement;
 
   @override
@@ -117,6 +121,7 @@ class BookReaderPageCard extends StatelessWidget {
                   scrollable: false,
                   autoFocus: false,
                   showCursor: false,
+                  embedBuilders: [BookImageEmbedBuilder(assets)],
                 ),
               ),
             ),

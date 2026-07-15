@@ -4,6 +4,7 @@ import 'package:dnevnik/features/books/application/author_workspace_controller.d
 import 'package:dnevnik/features/books/application/section_tree_editor.dart';
 import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_cover_view.dart';
 import 'package:flutter/material.dart';
 
 class BookNavigator extends StatelessWidget {
@@ -52,10 +53,41 @@ class BookNavigator extends StatelessWidget {
                                 .map(
                                   (item) => DropdownMenuItem(
                                     value: item.id,
-                                    child: Text(
-                                      item.metadata.title,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
+                                    child: Row(
+                                      children: [
+                                        BookCoverView(
+                                          project: item,
+                                          width: 28,
+                                          height: 40,
+                                          borderRadius: 4,
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                item.metadata.title,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              if (item.isReadOnly)
+                                                Text(
+                                                  strings.importedBook,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: Theme.of(
+                                                    context,
+                                                  ).textTheme.labelSmall,
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 )

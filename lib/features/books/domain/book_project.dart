@@ -1,5 +1,6 @@
 import 'dart:collection';
 
+import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
@@ -26,9 +27,12 @@ class BookProject {
     this.kind = BookProjectKind.manuscript,
     this.sourceFormat = '',
     this.sourceFileName = '',
+    List<BookAsset> assets = const [],
+    this.coverAssetId,
     BookReaderAnnotations? readerAnnotations,
   }) : readerAnnotations = readerAnnotations ?? BookReaderAnnotations(),
-       _sections = List.unmodifiable(sections);
+       _sections = List.unmodifiable(sections),
+       _assets = List.unmodifiable(assets);
 
   factory BookProject.create({
     required String title,
@@ -72,7 +76,7 @@ class BookProject {
     final documentFormatVersion = json['documentFormatVersion'] is num
         ? (json['documentFormatVersion'] as num).toInt()
         : 1;
-    if (documentFormatVersion < _currentDocumentFormatVersion) {
+    if (documentFormatVersion < _automaticLineHeightMigrationVersion) {
       sections = sections
           .map(
             (section) => section.copyWith(
@@ -143,6 +147,15 @@ class BookProject {
           BookProjectKind.manuscript,
       sourceFormat: json['sourceFormat']?.toString() ?? '',
       sourceFileName: json['sourceFileName']?.toString() ?? '',
+      assets: (json['assets'] as List<dynamic>? ?? const [])
+          .whereType<Map>()
+          .map(
+            (asset) => BookAsset.tryFromJson(Map<String, dynamic>.from(asset)),
+          )
+          .whereType<BookAsset>()
+          .where((asset) => asset.id.isNotEmpty && asset.isRenderableImage)
+          .toList(),
+      coverAssetId: json['coverAssetId']?.toString(),
     );
   }
 
@@ -160,11 +173,22 @@ class BookProject {
   final BookProjectKind kind;
   final String sourceFormat;
   final String sourceFileName;
+  final List<BookAsset> _assets;
+  final String? coverAssetId;
 
   bool get isReadOnly => kind == BookProjectKind.importedBook;
 
   UnmodifiableListView<BookSection> get sections =>
       UnmodifiableListView(_sections);
+
+  UnmodifiableListView<BookAsset> get assets => UnmodifiableListView(_assets);
+
+  BookAsset? get coverAsset => _assets
+      .where((asset) => asset.id == coverAssetId && asset.isRenderableImage)
+      .firstOrNull;
+
+  BookAsset? assetById(String id) =>
+      _assets.where((asset) => asset.id == id).firstOrNull;
 
   BookSection? get activeSection =>
       _sections.where((section) => section.id == activeSectionId).firstOrNull;
@@ -186,6 +210,9 @@ class BookProject {
     BookProjectKind? kind,
     String? sourceFormat,
     String? sourceFileName,
+    List<BookAsset>? assets,
+    String? coverAssetId,
+    bool clearCoverAsset = false,
   }) => BookProject(
     id: id,
     metadata: metadata ?? this.metadata,
@@ -203,6 +230,8 @@ class BookProject {
     kind: kind ?? this.kind,
     sourceFormat: sourceFormat ?? this.sourceFormat,
     sourceFileName: sourceFileName ?? this.sourceFileName,
+    assets: assets ?? _assets,
+    coverAssetId: clearCoverAsset ? null : coverAssetId ?? this.coverAssetId,
   );
 
   Map<String, dynamic> toJson() => {
@@ -220,8 +249,11 @@ class BookProject {
     'kind': kind.name,
     'sourceFormat': sourceFormat,
     'sourceFileName': sourceFileName,
+    'assets': _assets.map((asset) => asset.toJson()).toList(),
+    'coverAssetId': coverAssetId,
     'documentFormatVersion': _currentDocumentFormatVersion,
   };
 }
 
-const _currentDocumentFormatVersion = 2;
+const _currentDocumentFormatVersion = 3;
+const _automaticLineHeightMigrationVersion = 2;

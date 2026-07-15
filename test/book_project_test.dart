@@ -179,6 +179,6 @@ void main() {
     expect(current.activeSection!.content.single['attributes'], {
       'line-height': '1.5',
     });
-    expect(current.toJson()['documentFormatVersion'], 2);
+    expect(current.toJson()['documentFormatVersion'], 3);
   });
 }

@@ -1,16 +1,25 @@
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 import 'package:xml/xml.dart';
 
+typedef BookImageResolver = String? Function(String source);
+
 abstract final class XmlBookContentConverter {
-  static RichDocument convert(Iterable<XmlNode> nodes) {
+  static RichDocument convert(
+    Iterable<XmlNode> nodes, {
+    BookImageResolver? imageResolver,
+  }) {
     final operations = <Map<String, dynamic>>[];
     for (final node in nodes) {
-      _appendNode(node, operations);
+      _appendNode(node, operations, imageResolver);
     }
     return operations.isEmpty ? emptyRichDocument() : operations;
   }
 
-  static void _appendNode(XmlNode node, List<Map<String, dynamic>> operations) {
+  static void _appendNode(
+    XmlNode node,
+    List<Map<String, dynamic>> operations,
+    BookImageResolver? imageResolver,
+  ) {
     if (node is XmlText) {
       final text = _normalized(node.value);
       if (text.isNotEmpty) _appendParagraphText(text, operations);
@@ -20,36 +29,60 @@ abstract final class XmlBookContentConverter {
     final tag = node.name.local.toLowerCase();
     switch (tag) {
       case 'p':
-        _appendBlock(node, operations, const {});
+        _appendBlock(node, operations, const {}, imageResolver: imageResolver);
       case 'subtitle':
-        _appendBlock(node, operations, const {'header': 2});
+        _appendBlock(node, operations, const {
+          'header': 2,
+        }, imageResolver: imageResolver);
       case 'h1':
-        _appendBlock(node, operations, const {'header': 1});
+        _appendBlock(node, operations, const {
+          'header': 1,
+        }, imageResolver: imageResolver);
       case 'h2':
-        _appendBlock(node, operations, const {'header': 2});
+        _appendBlock(node, operations, const {
+          'header': 2,
+        }, imageResolver: imageResolver);
       case 'h3' || 'h4' || 'h5' || 'h6':
-        _appendBlock(node, operations, const {'header': 3});
+        _appendBlock(node, operations, const {
+          'header': 3,
+        }, imageResolver: imageResolver);
       case 'blockquote':
         final paragraphs = _directReadableBlocks(node);
         if (paragraphs.isEmpty) {
-          _appendBlock(node, operations, const {'blockquote': true});
+          _appendBlock(node, operations, const {
+            'blockquote': true,
+          }, imageResolver: imageResolver);
         } else {
           for (final paragraph in paragraphs) {
-            _appendBlock(paragraph, operations, const {'blockquote': true});
+            _appendBlock(paragraph, operations, const {
+              'blockquote': true,
+            }, imageResolver: imageResolver);
           }
         }
       case 'cite':
         final paragraphs = _directReadableBlocks(node);
         for (final paragraph in paragraphs) {
-          _appendBlock(paragraph, operations, const {'blockquote': true});
+          _appendBlock(paragraph, operations, const {
+            'blockquote': true,
+          }, imageResolver: imageResolver);
         }
       case 'pre':
-        _appendBlock(node, operations, const {'code-block': true}, raw: true);
+        _appendBlock(
+          node,
+          operations,
+          const {'code-block': true},
+          raw: true,
+          imageResolver: imageResolver,
+        );
       case 'li':
         final list = node.parentElement?.name.local.toLowerCase() == 'ol'
             ? 'ordered'
             : 'bullet';
-        _appendBlock(node, operations, {'list': list});
+        _appendBlock(node, operations, {
+          'list': list,
+        }, imageResolver: imageResolver);
+      case 'image' || 'img':
+        _appendImage(node, operations, imageResolver, appendNewline: true);
       case 'empty-line' || 'hr':
         operations.add({
           'insert': '\n',
@@ -61,7 +94,7 @@ abstract final class XmlBookContentConverter {
         break;
       default:
         for (final child in node.children) {
-          _appendNode(child, operations);
+          _appendNode(child, operations, imageResolver);
         }
     }
   }
@@ -76,9 +109,16 @@ abstract final class XmlBookContentConverter {
     List<Map<String, dynamic>> operations,
     Map<String, dynamic> blockAttributes, {
     bool raw = false,
+    BookImageResolver? imageResolver,
   }) {
     final start = operations.length;
-    _appendInline(element, const {}, operations, raw: raw);
+    _appendInline(
+      element,
+      const {},
+      operations,
+      raw: raw,
+      imageResolver: imageResolver,
+    );
     _trimBlockRuns(operations, start);
     if (operations.length == start) return;
     operations.add({
@@ -101,6 +141,7 @@ abstract final class XmlBookContentConverter {
     Map<String, dynamic> inherited,
     List<Map<String, dynamic>> operations, {
     required bool raw,
+    BookImageResolver? imageResolver,
   }) {
     if (node is XmlText) {
       final text = raw ? node.value : _normalized(node.value);
@@ -114,6 +155,10 @@ abstract final class XmlBookContentConverter {
     }
     if (node is! XmlElement) return;
     final tag = node.name.local.toLowerCase();
+    if (tag == 'image' || tag == 'img') {
+      _appendImage(node, operations, imageResolver, appendNewline: false);
+      return;
+    }
     if (tag == 'br') {
       operations.add({'insert': '\n'});
       return;
@@ -150,16 +195,50 @@ abstract final class XmlBookContentConverter {
         }
     }
     for (final child in node.children) {
-      _appendInline(child, attributes, operations, raw: raw);
+      _appendInline(
+        child,
+        attributes,
+        operations,
+        raw: raw,
+        imageResolver: imageResolver,
+      );
     }
+  }
+
+  static void _appendImage(
+    XmlElement element,
+    List<Map<String, dynamic>> operations,
+    BookImageResolver? imageResolver, {
+    required bool appendNewline,
+  }) {
+    if (imageResolver == null) return;
+    final source = element.attributes
+        .where((attribute) {
+          final name = attribute.name.local.toLowerCase();
+          return name == 'src' || name == 'href';
+        })
+        .map((attribute) => attribute.value.trim())
+        .where((value) => value.isNotEmpty)
+        .firstOrNull;
+    if (source == null) return;
+    final assetId = imageResolver(source);
+    if (assetId == null || assetId.isEmpty) return;
+    operations.add({
+      'insert': {'bookImage': assetId},
+    });
+    if (appendNewline) operations.add({'insert': '\n'});
   }
 
   static void _trimBlockRuns(List<Map<String, dynamic>> operations, int start) {
     if (operations.length == start) return;
     final first = operations[start];
-    first['insert'] = first['insert'].toString().trimLeft();
+    if (first['insert'] is String) {
+      first['insert'] = (first['insert'] as String).trimLeft();
+    }
     final last = operations.last;
-    last['insert'] = last['insert'].toString().trimRight();
+    if (last['insert'] is String) {
+      last['insert'] = (last['insert'] as String).trimRight();
+    }
     operations.removeWhere((operation) => operation['insert'] == '');
   }
 

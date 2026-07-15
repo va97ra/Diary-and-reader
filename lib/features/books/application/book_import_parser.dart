@@ -5,6 +5,7 @@ import 'package:archive/archive.dart';
 import 'package:dnevnik/features/books/application/book_import_file.dart';
 import 'package:dnevnik/features/books/application/xml_book_content_converter.dart';
 import 'package:dnevnik/features/books/application/xml_text_decoder.dart';
+import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
@@ -99,6 +100,7 @@ abstract final class BookImportParser {
       'book-title',
     ).ifEmpty(_baseName(file.name));
     final author = _fb2Author(_directElement(titleInfo, 'author'));
+    final media = _fb2Media(document, titleInfo);
     final body =
         document.rootElement.childElements.where((element) {
           return element.name.local == 'body' &&
@@ -136,7 +138,10 @@ abstract final class BookImportParser {
               ? BookSectionType.scene
               : BookSectionType.chapter,
           status: DraftStatus.complete,
-          content: XmlBookContentConverter.convert(contentNodes),
+          content: XmlBookContentConverter.convert(
+            contentNodes,
+            imageResolver: media.resolve,
+          ),
           parentId: parentId,
           createdAt: timestamp,
           updatedAt: timestamp,
@@ -159,8 +164,9 @@ abstract final class BookImportParser {
         body.children.where((node) {
           return node is! XmlElement || node.name.local != 'title';
         }),
+        imageResolver: media.resolve,
       );
-      if (richDocumentPlainText(content).trim().isNotEmpty) {
+      if (richDocumentHasContent(content)) {
         sections.add(
           BookSection(
             id: 'import-${timestamp.microsecondsSinceEpoch}-section-1',
@@ -188,6 +194,8 @@ abstract final class BookImportParser {
             _directElement(titleInfo, 'sequence')?.getAttribute('name') ?? '',
       ),
       sections: sections,
+      assets: media.assets,
+      coverAssetId: media.coverAssetId,
     );
   }
 
@@ -222,6 +230,7 @@ abstract final class BookImportParser {
       for (final item in _elements(package, 'item'))
         ?item.getAttribute('id'): item,
     };
+    final media = _epubMedia(archive, rootPath, package, manifest);
     final itemRefs = _elements(package, 'itemref').toList();
     final linear = itemRefs.where((item) {
       return item.getAttribute('linear')?.toLowerCase() != 'no';
@@ -254,8 +263,14 @@ abstract final class BookImportParser {
       }
       final body = _elements(content, 'body').firstOrNull;
       if (body == null) continue;
-      final richContent = XmlBookContentConverter.convert(body.children);
-      if (richDocumentPlainText(richContent).trim().isEmpty) continue;
+      final richContent = XmlBookContentConverter.convert(
+        body.children,
+        imageResolver: (source) {
+          final path = _resolveArchivePath(contentPath, source);
+          return media.pathToAssetId[path.toLowerCase()];
+        },
+      );
+      if (!richDocumentHasContent(richContent)) continue;
       chapterNumber++;
       final heading = body.descendantElements
           .where((element) {
@@ -300,6 +315,8 @@ abstract final class BookImportParser {
         rights: _textOf(metadataElement, 'rights'),
       ),
       sections: sections,
+      assets: media.assets,
+      coverAssetId: media.coverAssetId,
     );
   }
 
@@ -309,6 +326,8 @@ abstract final class BookImportParser {
     required String sourceFormat,
     required BookMetadata metadata,
     required List<BookSection> sections,
+    List<BookAsset> assets = const [],
+    String? coverAssetId,
   }) {
     if (sections.isEmpty) {
       throw const BookImportException(BookImportFailure.noReadableText);
@@ -327,8 +346,160 @@ abstract final class BookImportParser {
       kind: BookProjectKind.importedBook,
       sourceFormat: sourceFormat,
       sourceFileName: file.name,
+      assets: assets,
+      coverAssetId: coverAssetId,
     );
   }
+
+  static _ImportedMedia _fb2Media(XmlDocument document, XmlElement? titleInfo) {
+    final assets = <BookAsset>[];
+    final sourceToAssetId = <String, String>{};
+    var totalBytes = 0;
+    for (final binary in _elements(document, 'binary')) {
+      final sourceId = binary.getAttribute('id')?.trim() ?? '';
+      final mediaType = _normalizedImageMediaType(
+        binary.getAttribute('content-type') ?? '',
+      );
+      if (sourceId.isEmpty || mediaType == null) continue;
+      try {
+        final bytes = base64Decode(
+          binary.innerText.replaceAll(RegExp(r'\s+'), ''),
+        );
+        if (!_canStoreImage(bytes.length, totalBytes)) continue;
+        totalBytes += bytes.length;
+        final assetId = 'asset-${assets.length + 1}';
+        assets.add(
+          BookAsset(
+            id: assetId,
+            mediaType: mediaType,
+            bytes: Uint8List.fromList(bytes),
+            sourcePath: sourceId,
+          ),
+        );
+        sourceToAssetId[sourceId.toLowerCase()] = assetId;
+      } on FormatException {
+        continue;
+      }
+    }
+    final coverSource =
+        _firstElement(titleInfo ?? document.rootElement, 'coverpage')
+            ?.descendantElements
+            .where((element) {
+              return element.name.local.toLowerCase() == 'image';
+            })
+            .map(_imageReference)
+            .whereType<String>()
+            .firstOrNull;
+    return _ImportedMedia(
+      assets: assets,
+      sourceToAssetId: sourceToAssetId,
+      coverAssetId: coverSource == null
+          ? null
+          : sourceToAssetId[_cleanImageReference(coverSource).toLowerCase()],
+    );
+  }
+
+  static _ImportedMedia _epubMedia(
+    Archive archive,
+    String packagePath,
+    XmlDocument package,
+    Map<String, XmlElement> manifest,
+  ) {
+    final assets = <BookAsset>[];
+    final pathToAssetId = <String, String>{};
+    final manifestIdToAssetId = <String, String>{};
+    var totalBytes = 0;
+    for (final entry in manifest.entries) {
+      final item = entry.value;
+      final mediaType = _normalizedImageMediaType(
+        item.getAttribute('media-type') ?? '',
+      );
+      final href = item.getAttribute('href');
+      if (mediaType == null || href == null || href.isEmpty) continue;
+      final path = _resolveArchivePath(packagePath, href);
+      final file = _archiveFile(archive, path);
+      if (file == null || !_canStoreImage(file.size, totalBytes)) continue;
+      final bytes = _archiveBytes(file);
+      totalBytes += bytes.length;
+      final assetId = 'asset-${assets.length + 1}';
+      assets.add(
+        BookAsset(
+          id: assetId,
+          mediaType: mediaType,
+          bytes: bytes,
+          sourcePath: path,
+        ),
+      );
+      pathToAssetId[path.toLowerCase()] = assetId;
+      manifestIdToAssetId[entry.key] = assetId;
+    }
+
+    String? coverAssetId;
+    for (final entry in manifest.entries) {
+      final properties = entry.value
+          .getAttribute('properties')
+          ?.toLowerCase()
+          .split(RegExp(r'\s+'));
+      if (properties?.contains('cover-image') ?? false) {
+        coverAssetId = manifestIdToAssetId[entry.key];
+        if (coverAssetId != null) break;
+      }
+    }
+    if (coverAssetId == null) {
+      final epub2CoverId = _elements(package, 'meta')
+          .where((element) {
+            return element.getAttribute('name')?.toLowerCase() == 'cover';
+          })
+          .map((element) => element.getAttribute('content'))
+          .whereType<String>()
+          .firstOrNull;
+      coverAssetId = manifestIdToAssetId[epub2CoverId];
+    }
+    if (coverAssetId == null) {
+      final guideCoverHref = _elements(package, 'reference')
+          .where((element) {
+            return element.getAttribute('type')?.toLowerCase() == 'cover';
+          })
+          .map((element) => element.getAttribute('href'))
+          .whereType<String>()
+          .firstOrNull;
+      if (guideCoverHref != null) {
+        final path = _resolveArchivePath(packagePath, guideCoverHref);
+        coverAssetId = pathToAssetId[path.toLowerCase()];
+      }
+    }
+    return _ImportedMedia(
+      assets: assets,
+      sourceToAssetId: pathToAssetId,
+      coverAssetId: coverAssetId,
+    );
+  }
+
+  static String? _imageReference(XmlElement element) => element.attributes
+      .where((attribute) {
+        final name = attribute.name.local.toLowerCase();
+        return name == 'href' || name == 'src';
+      })
+      .map((attribute) => attribute.value.trim())
+      .where((value) => value.isNotEmpty)
+      .firstOrNull;
+
+  static String _cleanImageReference(String value) =>
+      Uri.decodeComponent(value.split('#').last.trim());
+
+  static String? _normalizedImageMediaType(String value) {
+    final normalized = value.trim().toLowerCase().split(';').first;
+    return switch (normalized) {
+      'image/jpg' => 'image/jpeg',
+      'image/jpeg' || 'image/png' || 'image/gif' || 'image/webp' => normalized,
+      _ => null,
+    };
+  }
+
+  static bool _canStoreImage(int bytes, int currentTotal) =>
+      bytes > 0 &&
+      bytes <= 20 * 1024 * 1024 &&
+      currentTotal + bytes <= 128 * 1024 * 1024;
 
   static String _fb2Author(XmlElement? author) {
     if (author == null) return '';
@@ -398,6 +569,26 @@ abstract final class BookImportParser {
 }
 
 enum _DetectedFormat { epub, fb2, fb2Zip }
+
+class _ImportedMedia {
+  const _ImportedMedia({
+    required this.assets,
+    required this.sourceToAssetId,
+    required this.coverAssetId,
+  });
+
+  final List<BookAsset> assets;
+  final Map<String, String> sourceToAssetId;
+  final String? coverAssetId;
+
+  Map<String, String> get pathToAssetId => sourceToAssetId;
+
+  String? resolve(String source) =>
+      sourceToAssetId[_cleanImportImageReference(source).toLowerCase()];
+}
+
+String _cleanImportImageReference(String value) =>
+    Uri.decodeComponent(value.split('#').last.trim());
 
 extension on String {
   String ifEmpty(String fallback) => trim().isEmpty ? fallback : trim();

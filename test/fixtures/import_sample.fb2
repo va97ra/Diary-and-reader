@@ -5,6 +5,7 @@
       <genre>prose_contemporary</genre>
       <author><first-name>Тестовый</first-name><last-name>Автор</last-name></author>
       <book-title>Книга для проверки импорта</book-title>
+      <coverpage><image l:href="#cover.png"/></coverpage>
       <annotation><p>Проверка реального выбора файла и чтения.</p></annotation>
       <lang>ru</lang>
     </title-info>
@@ -15,10 +16,12 @@
       <p>Это текст импортированной книги.</p>
       <p><strong>Жирный фрагмент</strong> и <emphasis>курсивный фрагмент</emphasis>.</p>
       <p><a l:type="simple" l:href="https://example.com">Безопасная ссылка</a></p>
+      <image l:href="#cover.png"/>
     </section>
     <section>
       <title><p>Глава вторая</p></title>
       <p>Вторая глава подтверждает работу оглавления.</p>
     </section>
   </body>
+  <binary id="cover.png" content-type="image/png">iVBORw0KGgoAAAANSUhEUgAAADwAAABaCAYAAADkUTU1AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAFdSURBVHhe7dfBrcJAEINhCqECmuBCxzRFF6A9IK2sRLM7eLLI8eG7PMjE/413ud4e7zO54B/UOVidg9U5WJ2D1TlYnYPVTQe/nve/gvsiDo7gC1fDfREHR/CFq+G+iIPVOVidg9U5WJ2D1R0ajL+SfvnFlFUejGEj8AZTaTCGzMBbLCXBOH4kAr878kwGPRgHz47GZ2efj5QH4+cjGDf2UIOZQ5m3erTgioEVN0uC8bNfsO86OIM9CjHvOziDOWgL876DM5iDtjDvOziDOWgL8z4luGGO6rHvOjirH8YaV3GTFtwwBzJv9ajBDWMo48ae8uDZwfjs7PMRenCDg0eG43dHnskoCf7C8TPwFktpcIMhI/AGU3lwD8OOiuwdGvwPHKzOweocrM7B6hyszsHqHBzBf+tWw30RB0fwhavhvoiDI/jC1XBfxMHqHKzOweocrM7B6hyszsHqThf8ARS6xia/bURvAAAAAElFTkSuQmCC</binary>
 </FictionBook>

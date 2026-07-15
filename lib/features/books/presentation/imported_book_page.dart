@@ -1,6 +1,6 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
-import 'package:dnevnik/core/theme/app_theme.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_cover_view.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_navigator.dart';
 import 'package:flutter/material.dart';
 
@@ -86,20 +86,10 @@ class ImportedBookPage extends StatelessWidget {
                             children: [
                               Row(
                                 children: [
-                                  Container(
+                                  BookCoverView(
+                                    project: project,
                                     width: 72,
                                     height: 96,
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.accent.withValues(
-                                        alpha: 0.16,
-                                      ),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: const Icon(
-                                      Icons.auto_stories_outlined,
-                                      size: 38,
-                                      color: AppTheme.accent,
-                                    ),
                                   ),
                                   const SizedBox(width: 20),
                                   Expanded(
@@ -157,6 +147,14 @@ class ImportedBookPage extends StatelessWidget {
                                       ),
                                     ),
                                   ),
+                                  if (project.assets.isNotEmpty)
+                                    Chip(
+                                      label: Text(
+                                        strings.imagesInBook(
+                                          project.assets.length,
+                                        ),
+                                      ),
+                                    ),
                                 ],
                               ),
                               if (project.sourceFileName.isNotEmpty)

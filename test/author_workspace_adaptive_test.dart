@@ -1,8 +1,9 @@
+import 'dart:io';
+
 import 'package:dnevnik/app/author_studio_app.dart';
 import 'package:dnevnik/core/theme/app_theme.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/application/book_export_artifact.dart';
-import 'package:dnevnik/features/books/application/book_fb2_exporter.dart';
 import 'package:dnevnik/features/books/application/book_import_file.dart';
 import 'package:dnevnik/features/books/application/book_pdf_font_assets.dart';
 import 'package:dnevnik/features/books/application/book_project_archive_codec.dart';
@@ -74,13 +75,11 @@ void main() {
     final repository = MemoryAuthorWorkspaceRepository();
     final controller = AuthorWorkspaceController(repository);
     await controller.load(preferredLanguage: 'ru');
-    controller.updateSectionContent(const [
-      {'insert': 'Текст импортируемой книги\n'},
-    ]);
-    await controller.flush();
-    final exported = BookFb2Exporter.create(controller.activeProject!);
     final gateway = _MemoryBookImportGateway(
-      BookImportFile(name: 'other-book.fb2', bytes: exported.bytes),
+      BookImportFile(
+        name: 'other-book.fb2',
+        bytes: File('test/fixtures/import_sample.fb2').readAsBytesSync(),
+      ),
     );
 
     await tester.binding.setSurfaceSize(const Size(1280, 900));
@@ -96,6 +95,7 @@ void main() {
 
     expect(gateway.openCount, 1);
     expect(find.byType(BookReaderPage), findsOneWidget);
+    expect(find.byKey(const ValueKey('book-image-asset-1')), findsOneWidget);
     expect(controller.projects, hasLength(2));
     expect(controller.activeProject!.kind, BookProjectKind.importedBook);
     expect(
@@ -106,7 +106,9 @@ void main() {
     Navigator.of(tester.element(find.byType(BookReaderPage))).pop();
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('read-imported-book')), findsOneWidget);
-    expect(find.text('Импортированная книга'), findsOneWidget);
+    expect(find.text('Импортированная книга'), findsWidgets);
+    expect(find.byKey(const ValueKey('book-cover-image')), findsWidgets);
+    expect(find.text('Изображений: 1'), findsOneWidget);
     expect(find.byType(QuillEditor), findsNothing);
     await tester.binding.setSurfaceSize(null);
   });

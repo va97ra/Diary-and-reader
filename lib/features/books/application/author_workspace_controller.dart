@@ -96,6 +96,8 @@ class AuthorWorkspaceController extends ChangeNotifier {
       kind: BookProjectKind.importedBook,
       sourceFormat: project.sourceFormat,
       sourceFileName: project.sourceFileName,
+      assets: project.assets,
+      coverAssetId: project.coverAssetId,
     );
     _projects.add(imported);
     _activeProjectId = imported.id;
@@ -384,6 +386,8 @@ class AuthorWorkspaceController extends ChangeNotifier {
       kind: current.kind,
       sourceFormat: current.sourceFormat,
       sourceFileName: current.sourceFileName,
+      assets: current.assets,
+      coverAssetId: current.coverAssetId,
     );
     _activeProjectId = current.id;
     _markDirty();

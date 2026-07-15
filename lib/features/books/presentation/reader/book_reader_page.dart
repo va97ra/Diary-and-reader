@@ -221,6 +221,7 @@ class _BookReaderPageState extends State<BookReaderPage> {
       Positioned.fill(
         child: BookReaderSectionView(
           section: _section,
+          assets: widget.project.assets,
           settings: _settings,
           palette: palette,
           initialProgress: _sectionProgress,

@@ -5,10 +5,12 @@ import 'dart:math' as math;
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/book_page_paginator.dart';
 import 'package:dnevnik/features/books/application/book_reader_text_anchor.dart';
+import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_image_embed_builder.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_highlight_style.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_page_card.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.dart';
@@ -20,6 +22,7 @@ import 'package:flutter_quill/flutter_quill.dart';
 class BookReaderSectionView extends StatefulWidget {
   const BookReaderSectionView({
     required this.section,
+    required this.assets,
     required this.settings,
     required this.palette,
     required this.initialProgress,
@@ -31,6 +34,7 @@ class BookReaderSectionView extends StatefulWidget {
   });
 
   final BookSection section;
+  final List<BookAsset> assets;
   final BookReaderSettings settings;
   final BookReaderPalette palette;
   final double initialProgress;
@@ -245,6 +249,7 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
                     scrollable: true,
                     autoFocus: false,
                     showCursor: false,
+                    embedBuilders: [BookImageEmbedBuilder(widget.assets)],
                   ),
                 ),
               ),
@@ -307,6 +312,7 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
                     scrollController: _measurementScrollController!,
                     editorKey: _measurementEditorKey!,
                     viewportKey: _measurementViewportKey!,
+                    assets: widget.assets,
                     isMeasurement: true,
                   ),
                 ),
@@ -391,6 +397,7 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
         scrollController: _pageScrollControllers[index],
         editorKey: _pageEditorKeys[index],
         viewportKey: _pageViewportKeys[index],
+        assets: widget.assets,
       );
 
   void _handleContinuousScroll() {
