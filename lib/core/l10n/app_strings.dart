@@ -179,9 +179,17 @@ class AppStrings {
   String get exportBook => _text('exportBook');
   String get exportEpub => _text('exportEpub');
   String get exportEpubHint => _text('exportEpubHint');
+  String get exportPdf => _text('exportPdf');
+  String get exportPdfHint => _text('exportPdfHint');
   String get moreExportFormatsLater => _text('moreExportFormatsLater');
   String get bookExported => _text('bookExported');
   String get bookExportFailed => _text('bookExportFailed');
+  String get pdfPreview => _text('pdfPreview');
+  String get savePdf => _text('savePdf');
+  String get preparingPdf => _text('preparingPdf');
+  String get pdfPreviewFailed => _text('pdfPreviewFailed');
+  String get pdfSaved => _text('pdfSaved');
+  String get retry => _text('retry');
   String readerPageOf(int current, int count) =>
       '${_text('readerPage')} $current ${_text('ofPages')} $count';
   String sectionOf(int current, int count) =>
@@ -360,10 +368,19 @@ class AppStrings {
       'exportEpub': 'EPUB 3.3 (.epub)',
       'exportEpubHint':
           'Адаптивная электронная книга с оглавлением и оформлением текста',
+      'exportPdf': 'Печатный PDF (.pdf)',
+      'exportPdfHint':
+          'Фиксированные страницы A4 с полями, оглавлением и нумерацией',
       'moreExportFormatsLater':
-          'PDF, DOCX, FB2, HTML, Markdown и TXT будут добавлены следующими модулями.',
-      'bookExported': 'Книга EPUB сохранена',
+          'DOCX, FB2, HTML, Markdown и TXT будут добавлены следующими модулями.',
+      'bookExported': 'Книга сохранена',
       'bookExportFailed': 'Не удалось сохранить книгу',
+      'pdfPreview': 'Предварительный просмотр PDF',
+      'savePdf': 'Сохранить PDF',
+      'preparingPdf': 'Подготавливаем печатные страницы…',
+      'pdfPreviewFailed': 'Не удалось создать предварительный просмотр PDF',
+      'pdfSaved': 'PDF сохранён',
+      'retry': 'Повторить',
     },
     'en': {
       'appTitle': 'My diary',
@@ -536,10 +553,19 @@ class AppStrings {
       'exportEpub': 'EPUB 3.3 (.epub)',
       'exportEpubHint':
           'Reflowable ebook with a table of contents and rich text styling',
+      'exportPdf': 'Print PDF (.pdf)',
+      'exportPdfHint':
+          'Fixed A4 pages with margins, contents, and page numbering',
       'moreExportFormatsLater':
-          'PDF, DOCX, FB2, HTML, Markdown, and TXT will follow as separate modules.',
-      'bookExported': 'EPUB book saved',
+          'DOCX, FB2, HTML, Markdown, and TXT will follow as separate modules.',
+      'bookExported': 'Book saved',
       'bookExportFailed': 'Book could not be saved',
+      'pdfPreview': 'PDF preview',
+      'savePdf': 'Save PDF',
+      'preparingPdf': 'Preparing print pages…',
+      'pdfPreviewFailed': 'PDF preview could not be created',
+      'pdfSaved': 'PDF saved',
+      'retry': 'Retry',
     },
   };
 }

@@ -2,8 +2,11 @@ import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/application/book_epub_exporter.dart';
 import 'package:dnevnik/features/books/application/book_export_artifact.dart';
+import 'package:dnevnik/features/books/application/book_pdf_font_assets.dart';
 import 'package:dnevnik/features/books/data/book_export_file_service.dart';
+import 'package:dnevnik/features/books/data/book_pdf_asset_font_loader.dart';
 import 'package:dnevnik/features/books/presentation/book_export_sheet.dart';
+import 'package:dnevnik/features/books/presentation/book_pdf_preview_page.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_page.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_formatting_toolbar.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_navigator.dart';
@@ -16,11 +19,13 @@ class AuthorWorkspacePage extends StatefulWidget {
   const AuthorWorkspacePage({
     required this.controller,
     this.exportFileSaver = const BookExportFileService(),
+    this.pdfFontLoader = const BookPdfAssetFontLoader(),
     super.key,
   });
 
   final AuthorWorkspaceController controller;
   final BookExportFileSaver exportFileSaver;
+  final BookPdfFontLoader pdfFontLoader;
 
   @override
   State<AuthorWorkspacePage> createState() => _AuthorWorkspacePageState();
@@ -182,20 +187,23 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
       builder: (sheetContext) => BookExportSheet(
         onSelected: (format) {
           Navigator.of(sheetContext).pop();
-          _exportBook(format);
+          switch (format) {
+            case BookExportFormat.epub:
+              _exportEpub();
+            case BookExportFormat.pdf:
+              _openPdfPreview();
+          }
         },
       ),
     );
   }
 
-  Future<void> _exportBook(BookExportFormat format) async {
+  Future<void> _exportEpub() async {
     final strings = AppStrings.of(context);
     final project = widget.controller.activeProject;
     if (project == null) return;
     try {
-      final artifact = switch (format) {
-        BookExportFormat.epub => BookEpubExporter.create(project),
-      };
+      final artifact = BookEpubExporter.create(project);
       final saved = await widget.exportFileSaver.save(
         artifact: artifact,
         bookTitle: project.metadata.title,
@@ -205,6 +213,20 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
     } on Exception {
       if (mounted) _showMessage(strings.bookExportFailed);
     }
+  }
+
+  Future<void> _openPdfPreview() async {
+    final project = widget.controller.activeProject;
+    if (project == null || !mounted) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => BookPdfPreviewPage(
+          project: project,
+          fontLoader: widget.pdfFontLoader,
+          fileSaver: widget.exportFileSaver,
+        ),
+      ),
+    );
   }
 
   void _showMessage(String message) {

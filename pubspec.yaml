@@ -16,6 +16,8 @@ dependencies:
     sdk: flutter
   flutter_quill: 11.5.1
   intl: 0.20.2
+  pdf: 3.13.0
+  printing: 5.15.0
   shared_preferences: ^2.5.5
 
 dev_dependencies:
@@ -25,3 +27,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/fonts/PTSerif-Regular.ttf
+    - assets/fonts/PTSerif-Bold.ttf
+    - assets/fonts/PTSerif-Italic.ttf
+    - assets/fonts/PTSerif-BoldItalic.ttf

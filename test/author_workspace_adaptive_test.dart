@@ -2,6 +2,7 @@ import 'package:dnevnik/app/author_studio_app.dart';
 import 'package:dnevnik/core/theme/app_theme.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/application/book_export_artifact.dart';
+import 'package:dnevnik/features/books/application/book_pdf_font_assets.dart';
 import 'package:dnevnik/features/books/data/book_export_file_service.dart';
 import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
 import 'package:flutter/material.dart';
@@ -76,6 +77,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Экспорт книги'), findsOneWidget);
     expect(find.text('EPUB 3.3 (.epub)'), findsOneWidget);
+    expect(find.text('Печатный PDF (.pdf)'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('export-book-epub')));
     await tester.pumpAndSettle();
@@ -83,7 +85,38 @@ void main() {
     expect(saver.artifact?.extension, 'epub');
     expect(saver.artifact?.bytes, isNotEmpty);
     expect(saver.bookTitle, 'Новая книга');
-    expect(find.text('Книга EPUB сохранена'), findsOneWidget);
+    expect(find.text('Книга сохранена'), findsOneWidget);
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('opens PDF preview and reports generation errors', (
+    tester,
+  ) async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(),
+    );
+    await controller.load(preferredLanguage: 'ru');
+
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pumpWidget(
+      AuthorStudioApp(
+        controller: controller,
+        pdfFontLoader: _FailingPdfFontLoader(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('export-book-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('export-book-pdf')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Предварительный просмотр PDF'), findsOneWidget);
+    expect(
+      find.text('Не удалось создать предварительный просмотр PDF'),
+      findsOneWidget,
+    );
+    expect(find.text('Повторить'), findsOneWidget);
     await tester.binding.setSurfaceSize(null);
   });
 }
@@ -101,4 +134,10 @@ class _MemoryBookExportSaver implements BookExportFileSaver {
     this.bookTitle = bookTitle;
     return true;
   }
+}
+
+class _FailingPdfFontLoader implements BookPdfFontLoader {
+  @override
+  Future<BookPdfFontAssets> load() =>
+      Future.error(const FormatException('Font test failure'));
 }

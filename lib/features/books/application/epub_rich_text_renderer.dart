@@ -1,8 +1,9 @@
+import 'package:dnevnik/features/books/application/book_export_content.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 
 abstract final class EpubRichTextRenderer {
   static String render(RichDocument document) {
-    final lines = _lines(document);
+    final blocks = BookExportContentParser.parse(document);
     final output = StringBuffer();
     String? openList;
 
@@ -12,142 +13,87 @@ abstract final class EpubRichTextRenderer {
       openList = null;
     }
 
-    for (final line in lines) {
-      final list = line.attributes['list']?.toString();
-      final listTag = list == 'ordered'
-          ? 'ol'
-          : list == null
-          ? null
-          : 'ul';
+    for (final block in blocks) {
+      final listTag = switch (block.type) {
+        BookExportBlockType.orderedListItem => 'ol',
+        BookExportBlockType.bulletListItem ||
+        BookExportBlockType.checkedListItem ||
+        BookExportBlockType.uncheckedListItem => 'ul',
+        _ => null,
+      };
+      final content = block.runs.isEmpty
+          ? '&#160;'
+          : block.runs.map(_inline).join();
       if (listTag != null) {
         if (openList != listTag) {
           closeList();
           output.writeln('<$listTag>');
           openList = listTag;
         }
-        final checkbox = switch (list) {
-          'checked' => '<span class="check">☑</span> ',
-          'unchecked' => '<span class="check">☐</span> ',
+        final checkbox = switch (block.type) {
+          BookExportBlockType.checkedListItem =>
+            '<span class="check">☑</span> ',
+          BookExportBlockType.uncheckedListItem =>
+            '<span class="check">☐</span> ',
           _ => '',
         };
-        output.writeln(
-          '<li${_blockAttributes(line.attributes)}>$checkbox${line.html}</li>',
-        );
+        output.writeln('<li${_blockAttributes(block)}>$checkbox$content</li>');
         continue;
       }
 
       closeList();
-      final header = _integer(line.attributes['header']);
-      final tag = switch (header) {
-        1 => 'h2',
-        2 => 'h3',
-        3 => 'h4',
-        _ when line.attributes['blockquote'] == true => 'blockquote',
-        _ when line.attributes['code-block'] == true => 'pre',
+      final tag = switch (block.type) {
+        BookExportBlockType.heading1 => 'h2',
+        BookExportBlockType.heading2 => 'h3',
+        BookExportBlockType.heading3 => 'h4',
+        BookExportBlockType.quote => 'blockquote',
+        BookExportBlockType.code => 'pre',
         _ => 'p',
       };
-      output.writeln(
-        '<$tag${_blockAttributes(line.attributes)}>${line.html}</$tag>',
-      );
+      output.writeln('<$tag${_blockAttributes(block)}>$content</$tag>');
     }
     closeList();
     return output.toString();
   }
 
-  static List<_EpubLine> _lines(RichDocument document) {
-    final lines = <_EpubLine>[];
-    var fragments = <String>[];
-
-    void finish(Map<String, dynamic> attributes) {
-      lines.add(
-        _EpubLine(
-          html: fragments.isEmpty ? '&#160;' : fragments.join(),
-          attributes: attributes,
-        ),
-      );
-      fragments = <String>[];
-    }
-
-    for (final operation in document) {
-      final insert = operation['insert'];
-      if (insert is! String) continue;
-      final attributes = operation['attributes'] is Map
-          ? Map<String, dynamic>.from(operation['attributes'] as Map)
-          : const <String, dynamic>{};
-      final parts = insert.split('\n');
-      for (var index = 0; index < parts.length; index++) {
-        if (parts[index].isNotEmpty) {
-          fragments.add(_inline(parts[index], attributes));
-        }
-        if (index < parts.length - 1) finish(attributes);
-      }
-    }
-    if (fragments.isNotEmpty) finish(const <String, dynamic>{});
-    return lines.isEmpty
-        ? const [_EpubLine(html: '&#160;', attributes: {})]
-        : lines;
-  }
-
-  static String _inline(String text, Map<String, dynamic> attributes) {
-    var html = escapeXml(text);
-    final link = attributes['link']?.toString().trim();
-    final size = double.tryParse(attributes['size']?.toString() ?? '');
-    final font = attributes['font']?.toString().trim();
+  static String _inline(BookExportTextRun run) {
+    var html = escapeXml(run.text);
     final styles = <String>[
-      if (size != null && size >= 6 && size <= 96)
-        'font-size:${_number(size * 0.75)}pt',
-      if (font != null && font.isNotEmpty)
-        'font-family:&quot;${escapeXml(font)}&quot;',
+      if (run.fontSizePt != null) 'font-size:${_number(run.fontSizePt!)}pt',
+      if (run.fontFamily != null)
+        'font-family:&quot;${escapeXml(run.fontFamily!)}&quot;',
     ];
     if (styles.isNotEmpty) {
       html = '<span style="${styles.join(';')}">$html</span>';
     }
-    if (attributes['code'] == true) html = '<code>$html</code>';
-    if (attributes['bold'] == true) html = '<strong>$html</strong>';
-    if (attributes['italic'] == true) html = '<em>$html</em>';
-    if (attributes['underline'] == true) html = '<u>$html</u>';
-    if (attributes['strike'] == true) html = '<s>$html</s>';
-    if (attributes['script'] == 'super') html = '<sup>$html</sup>';
-    if (attributes['script'] == 'sub') html = '<sub>$html</sub>';
-    if (link != null && _safeLink(link)) {
-      html = '<a href="${escapeXml(link)}">$html</a>';
+    if (run.code) html = '<code>$html</code>';
+    if (run.bold) html = '<strong>$html</strong>';
+    if (run.italic) html = '<em>$html</em>';
+    if (run.underline) html = '<u>$html</u>';
+    if (run.strike) html = '<s>$html</s>';
+    if (run.superscript) html = '<sup>$html</sup>';
+    if (run.subscript) html = '<sub>$html</sub>';
+    if (run.link != null) {
+      html = '<a href="${escapeXml(run.link!)}">$html</a>';
     }
     return html;
   }
 
-  static String _blockAttributes(Map<String, dynamic> attributes) {
-    final classes = <String>[];
-    final align = attributes['align']?.toString();
-    if (const {'center', 'right', 'justify'}.contains(align)) {
-      classes.add('align-$align');
-    }
-    final indent = _integer(attributes['indent']);
-    if (indent != null && indent > 0) {
-      classes.add('indent-${indent.clamp(1, 8)}');
-    }
-    final semantic = attributes['bookParagraphStyle']?.toString();
-    if (semantic == 'epigraph') classes.add('epigraph');
-    if (semantic == 'sceneBreak') classes.add('scene-break');
-    final direction = attributes['direction'] == 'rtl' ? ' dir="rtl"' : '';
-    final lineHeight = double.tryParse(
-      attributes['line-height']?.toString() ?? '',
-    );
-    final style = lineHeight != null && lineHeight >= 1 && lineHeight <= 3
-        ? ' style="line-height:${_number(lineHeight)}"'
-        : '';
+  static String _blockAttributes(BookExportBlock block) {
+    final classes = <String>[
+      if (block.alignment != BookExportTextAlignment.left)
+        'align-${block.alignment.name}',
+      if (block.indent > 0) 'indent-${block.indent}',
+      if (block.semanticStyle == 'epigraph') 'epigraph',
+      if (block.semanticStyle == 'sceneBreak') 'scene-break',
+    ];
     final className = classes.isEmpty ? '' : ' class="${classes.join(' ')}"';
+    final direction = block.rightToLeft ? ' dir="rtl"' : '';
+    final style = block.lineHeight == null
+        ? ''
+        : ' style="line-height:${_number(block.lineHeight!)}"';
     return '$className$direction$style';
   }
-
-  static bool _safeLink(String value) {
-    final uri = Uri.tryParse(value);
-    return uri != null &&
-        (uri.scheme.isEmpty ||
-            const {'http', 'https', 'mailto'}.contains(uri.scheme));
-  }
-
-  static int? _integer(Object? value) =>
-      value is num ? value.toInt() : int.tryParse(value?.toString() ?? '');
 
   static String _number(double value) => value == value.roundToDouble()
       ? value.toInt().toString()
@@ -160,10 +106,3 @@ String escapeXml(String value) => value
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&apos;');
-
-class _EpubLine {
-  const _EpubLine({required this.html, required this.attributes});
-
-  final String html;
-  final Map<String, dynamic> attributes;
-}
