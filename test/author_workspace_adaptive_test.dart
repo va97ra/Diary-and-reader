@@ -78,11 +78,42 @@ void main() {
     expect(find.text('Экспорт книги'), findsOneWidget);
     expect(find.text('EPUB 3.3 (.epub)'), findsOneWidget);
     expect(find.text('Печатный PDF (.pdf)'), findsOneWidget);
+    expect(find.text('Документ Word (.docx)'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('export-book-epub')));
     await tester.pumpAndSettle();
 
     expect(saver.artifact?.extension, 'epub');
+    expect(saver.artifact?.bytes, isNotEmpty);
+    expect(saver.bookTitle, 'Новая книга');
+    expect(find.text('Книга сохранена'), findsOneWidget);
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('exports the active project as DOCX', (tester) async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(),
+    );
+    final saver = _MemoryBookExportSaver();
+    await controller.load(preferredLanguage: 'ru');
+
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pumpWidget(
+      AuthorStudioApp(controller: controller, exportFileSaver: saver),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('export-book-button')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('export-book-docx')), findsOneWidget);
+
+    await tester.ensureVisible(find.byKey(const ValueKey('export-book-docx')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('export-book-docx')));
+    await tester.pumpAndSettle();
+
+    expect(saver.artifact?.extension, 'docx');
+    expect(saver.artifact?.mimeType, contains('wordprocessingml'));
     expect(saver.artifact?.bytes, isNotEmpty);
     expect(saver.bookTitle, 'Новая книга');
     expect(find.text('Книга сохранена'), findsOneWidget);

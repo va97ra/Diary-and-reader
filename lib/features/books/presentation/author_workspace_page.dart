@@ -1,5 +1,6 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
+import 'package:dnevnik/features/books/application/book_docx_exporter.dart';
 import 'package:dnevnik/features/books/application/book_epub_exporter.dart';
 import 'package:dnevnik/features/books/application/book_export_artifact.dart';
 import 'package:dnevnik/features/books/application/book_pdf_font_assets.dart';
@@ -192,6 +193,8 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
               _exportEpub();
             case BookExportFormat.pdf:
               _openPdfPreview();
+            case BookExportFormat.docx:
+              _exportDocx();
           }
         },
       ),
@@ -227,6 +230,23 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
         ),
       ),
     );
+  }
+
+  Future<void> _exportDocx() async {
+    final strings = AppStrings.of(context);
+    final project = widget.controller.activeProject;
+    if (project == null) return;
+    try {
+      final artifact = BookDocxExporter.create(project);
+      final saved = await widget.exportFileSaver.save(
+        artifact: artifact,
+        bookTitle: project.metadata.title,
+      );
+      if (!mounted || !saved) return;
+      _showMessage(strings.bookExported);
+    } on Exception {
+      if (mounted) _showMessage(strings.bookExportFailed);
+    }
   }
 
   void _showMessage(String message) {

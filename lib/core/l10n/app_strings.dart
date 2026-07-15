@@ -181,6 +181,8 @@ class AppStrings {
   String get exportEpubHint => _text('exportEpubHint');
   String get exportPdf => _text('exportPdf');
   String get exportPdfHint => _text('exportPdfHint');
+  String get exportDocx => _text('exportDocx');
+  String get exportDocxHint => _text('exportDocxHint');
   String get moreExportFormatsLater => _text('moreExportFormatsLater');
   String get bookExported => _text('bookExported');
   String get bookExportFailed => _text('bookExportFailed');
@@ -371,8 +373,11 @@ class AppStrings {
       'exportPdf': 'Печатный PDF (.pdf)',
       'exportPdfHint':
           'Фиксированные страницы A4 с полями, оглавлением и нумерацией',
+      'exportDocx': 'Документ Word (.docx)',
+      'exportDocxHint':
+          'Редактируемая рукопись со стилями, оглавлением и разметкой A4',
       'moreExportFormatsLater':
-          'DOCX, FB2, HTML, Markdown и TXT будут добавлены следующими модулями.',
+          'FB2, HTML, Markdown и TXT будут добавлены следующими модулями.',
       'bookExported': 'Книга сохранена',
       'bookExportFailed': 'Не удалось сохранить книгу',
       'pdfPreview': 'Предварительный просмотр PDF',
@@ -556,8 +561,11 @@ class AppStrings {
       'exportPdf': 'Print PDF (.pdf)',
       'exportPdfHint':
           'Fixed A4 pages with margins, contents, and page numbering',
+      'exportDocx': 'Word document (.docx)',
+      'exportDocxHint':
+          'Editable manuscript with styles, contents, and A4 page layout',
       'moreExportFormatsLater':
-          'DOCX, FB2, HTML, Markdown, and TXT will follow as separate modules.',
+          'FB2, HTML, Markdown, and TXT will follow as separate modules.',
       'bookExported': 'Book saved',
       'bookExportFailed': 'Book could not be saved',
       'pdfPreview': 'PDF preview',

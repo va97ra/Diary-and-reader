@@ -54,6 +54,20 @@ class BookExportSheet extends StatelessWidget {
                   onTap: () => onSelected(BookExportFormat.pdf),
                 ),
               ),
+              Card(
+                clipBehavior: Clip.antiAlias,
+                child: ListTile(
+                  key: const ValueKey('export-book-docx'),
+                  leading: Icon(
+                    Icons.description_outlined,
+                    color: colors.primary,
+                  ),
+                  title: Text(strings.exportDocx),
+                  subtitle: Text(strings.exportDocxHint),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => onSelected(BookExportFormat.docx),
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
                 child: Text(
