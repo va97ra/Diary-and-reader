@@ -4,11 +4,15 @@ import 'dart:math' as math;
 
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/book_page_paginator.dart';
+import 'package:dnevnik/features/books/application/book_reader_text_anchor.dart';
+import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_highlight_style.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_page_card.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_text_selection.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_typography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -20,6 +24,9 @@ class BookReaderSectionView extends StatefulWidget {
     required this.palette,
     required this.initialProgress,
     required this.onProgressChanged,
+    required this.highlights,
+    required this.onTextSelection,
+    required this.clearSelectionVersion,
     super.key,
   });
 
@@ -28,6 +35,9 @@ class BookReaderSectionView extends StatefulWidget {
   final BookReaderPalette palette;
   final double initialProgress;
   final ValueChanged<double> onProgressChanged;
+  final List<BookReaderHighlight> highlights;
+  final ValueChanged<BookReaderTextSelection?> onTextSelection;
+  final int clearSelectionVersion;
 
   @override
   State<BookReaderSectionView> createState() => _BookReaderSectionViewState();
@@ -77,11 +87,16 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
 
   void _createContinuousResources() {
     _continuousController = QuillController(
-      document: Document.fromJson(widget.section.content),
+      document: _readerDocument(widget.section.content, globalStart: 0),
       selection: const TextSelection.collapsed(offset: 0),
       readOnly: true,
+      onSelectionChanged: (selection) => _handleTextSelection(
+        selection,
+        globalStart: 0,
+        localLength: _selectableLength(widget.section.content),
+      ),
     );
-    _continuousFocusNode = FocusNode(canRequestFocus: false);
+    _continuousFocusNode = FocusNode();
     _continuousScrollController = ScrollController()
       ..addListener(_handleContinuousScroll);
   }
@@ -93,12 +108,25 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
         oldWidget.section.id != widget.section.id ||
         jsonEncode(oldWidget.section.content) !=
             jsonEncode(widget.section.content);
+    final highlightsChanged =
+        jsonEncode(
+          oldWidget.highlights.map((item) => item.toJson()).toList(),
+        ) !=
+        jsonEncode(widget.highlights.map((item) => item.toJson()).toList());
     if (sectionChanged) {
       _replaceContinuousResources();
       _clearVisiblePages();
       _invalidatePagination();
+    } else if (highlightsChanged ||
+        oldWidget.settings.theme != widget.settings.theme) {
+      _replaceContinuousResources();
+      _replaceVisiblePagesForHighlights();
     } else if (_layoutSettingsChanged(oldWidget.settings, widget.settings)) {
       _invalidatePagination();
+    }
+
+    if (oldWidget.clearSelectionVersion != widget.clearSelectionVersion) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _clearSelection());
     }
 
     if ((widget.initialProgress - _progress).abs() > 0.004 || sectionChanged) {
@@ -216,6 +244,7 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
                     ),
                     scrollable: true,
                     autoFocus: false,
+                    showCursor: false,
                   ),
                 ),
               ),
@@ -545,14 +574,9 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
     for (final document in documents) {
       starts.add(offset);
       offset += _pageContentLength(document);
-      _pageControllers.add(
-        QuillController(
-          document: Document.fromJson(document),
-          selection: const TextSelection.collapsed(offset: 0),
-          readOnly: true,
-        ),
-      );
-      _pageFocusNodes.add(FocusNode(canRequestFocus: false));
+      final globalStart = starts.last;
+      _pageControllers.add(_pageController(document, globalStart));
+      _pageFocusNodes.add(FocusNode());
       _pageScrollControllers.add(ScrollController());
       _pageEditorKeys.add(GlobalKey<EditorState>());
       _pageViewportKeys.add(GlobalKey());
@@ -575,6 +599,141 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
         controller.dispose();
       }
     });
+  }
+
+  QuillController _pageController(RichDocument document, int globalStart) =>
+      QuillController(
+        document: _readerDocument(document, globalStart: globalStart),
+        selection: const TextSelection.collapsed(offset: 0),
+        readOnly: true,
+        onSelectionChanged: (selection) => _handleTextSelection(
+          selection,
+          globalStart: globalStart,
+          localLength: _selectableLength(document),
+        ),
+      );
+
+  Document _readerDocument(RichDocument source, {required int globalStart}) {
+    final document = Document.fromJson(source);
+    final localLength = _selectableLength(source);
+    final fullText = richDocumentPlainText(widget.section.content);
+    for (final highlight in widget.highlights) {
+      final range = BookReaderTextAnchor.resolve(
+        text: fullText,
+        startOffset: highlight.startOffset,
+        endOffset: highlight.endOffset,
+        excerpt: highlight.excerpt,
+        sectionProgress: highlight.sectionProgress,
+      );
+      final start = math.max(0, range.start - globalStart);
+      final end = math.min(localLength, range.end - globalStart);
+      if (end <= start) continue;
+      document.format(
+        start,
+        end - start,
+        BackgroundAttribute(
+          BookReaderHighlightStyle.backgroundHex(
+            highlight.color,
+            widget.palette,
+          ),
+        ),
+      );
+    }
+    return document;
+  }
+
+  void _handleTextSelection(
+    TextSelection selection, {
+    required int globalStart,
+    required int localLength,
+  }) {
+    if (selection.isCollapsed) return;
+    final localStart = math
+        .min(selection.baseOffset, selection.extentOffset)
+        .clamp(0, localLength);
+    final localEnd = math
+        .max(selection.baseOffset, selection.extentOffset)
+        .clamp(0, localLength);
+    if (localEnd <= localStart) return;
+    final plainText = richDocumentPlainText(widget.section.content);
+    final start = (globalStart + localStart).clamp(0, plainText.length);
+    final end = (globalStart + localEnd).clamp(0, plainText.length);
+    if (end <= start) return;
+    final rawText = plainText.substring(start, end);
+    final leadingWhitespace = rawText.length - rawText.trimLeft().length;
+    final trailingWhitespace = rawText.length - rawText.trimRight().length;
+    final adjustedStart = start + leadingWhitespace;
+    final adjustedEnd = end - trailingWhitespace;
+    final text = plainText.substring(adjustedStart, adjustedEnd);
+    if (text.isEmpty) return;
+    widget.onTextSelection(
+      BookReaderTextSelection(
+        startOffset: adjustedStart,
+        endOffset: adjustedEnd,
+        text: text,
+        sectionProgress: plainText.isEmpty
+            ? 0
+            : adjustedStart / plainText.length,
+      ),
+    );
+  }
+
+  void _replaceVisiblePagesForHighlights() {
+    if (_pageDocuments.isEmpty || _pageStartOffsets.isEmpty) return;
+    final oldControllers = List<QuillController>.from(_pageControllers);
+    final oldFocusNodes = List<FocusNode>.from(_pageFocusNodes);
+    final oldScrollControllers = List<ScrollController>.from(
+      _pageScrollControllers,
+    );
+    _pageControllers.clear();
+    _pageFocusNodes.clear();
+    _pageScrollControllers.clear();
+    _pageEditorKeys.clear();
+    _pageViewportKeys.clear();
+    for (var index = 0; index < _pageDocuments.length; index++) {
+      _pageControllers.add(
+        _pageController(_pageDocuments[index], _pageStartOffsets[index]),
+      );
+      _pageFocusNodes.add(FocusNode());
+      _pageScrollControllers.add(ScrollController());
+      _pageEditorKeys.add(GlobalKey<EditorState>());
+      _pageViewportKeys.add(GlobalKey());
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final controller in oldControllers) {
+        controller.dispose();
+      }
+      for (final node in oldFocusNodes) {
+        node.dispose();
+      }
+      for (final controller in oldScrollControllers) {
+        controller.dispose();
+      }
+    });
+  }
+
+  int _selectableLength(RichDocument document) {
+    final length = _documentContentLength(document);
+    return document.lastOrNull?['insert'] == '\n'
+        ? math.max(0, length - 1)
+        : length;
+  }
+
+  void _clearSelection() {
+    final controllers = [_continuousController, ..._pageControllers];
+    for (final controller in controllers) {
+      final selection = controller.selection;
+      if (selection.isCollapsed) continue;
+      controller.updateSelection(
+        TextSelection.collapsed(offset: selection.extentOffset),
+        ChangeSource.local,
+      );
+    }
+    _continuousFocusNode.unfocus();
+    for (final node in _pageFocusNodes) {
+      node.unfocus();
+    }
+    widget.onTextSelection(null);
   }
 
   void _invalidatePagination() {

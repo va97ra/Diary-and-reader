@@ -152,6 +152,30 @@ class AppStrings {
   String get verticalMargins => _text('verticalMargins');
   String get previousReaderPage => _text('previousReaderPage');
   String get nextReaderPage => _text('nextReaderPage');
+  String get highlights => _text('highlights');
+  String get quotes => _text('quotes');
+  String get noHighlights => _text('noHighlights');
+  String get highlightActions => _text('highlightActions');
+  String get yellowHighlight => _text('yellowHighlight');
+  String get greenHighlight => _text('greenHighlight');
+  String get blueHighlight => _text('blueHighlight');
+  String get pinkHighlight => _text('pinkHighlight');
+  String get saveQuote => _text('saveQuote');
+  String get addNoteToSelection => _text('addNoteToSelection');
+  String get copySelection => _text('copySelection');
+  String get closeSelectionActions => _text('closeSelectionActions');
+  String get deleteHighlight => _text('deleteHighlight');
+  String get deleteQuote => _text('deleteQuote');
+  String get exportAnnotations => _text('exportAnnotations');
+  String get exportMarkdown => _text('exportMarkdown');
+  String get exportMarkdownHint => _text('exportMarkdownHint');
+  String get exportJson => _text('exportJson');
+  String get exportJsonHint => _text('exportJsonHint');
+  String get annotationsExported => _text('annotationsExported');
+  String get annotationsExportFailed => _text('annotationsExportFailed');
+  String get quoteSaved => _text('quoteSaved');
+  String get highlightSaved => _text('highlightSaved');
+  String get selectionCopied => _text('selectionCopied');
   String readerPageOf(int current, int count) =>
       '${_text('readerPage')} $current ${_text('ofPages')} $count';
   String sectionOf(int current, int count) =>
@@ -301,6 +325,31 @@ class AppStrings {
       'previousReaderPage': 'Предыдущая страница книги',
       'nextReaderPage': 'Следующая страница книги',
       'readerPage': 'Страница',
+      'highlights': 'Выделения',
+      'quotes': 'Цитаты',
+      'noHighlights':
+          'Выделите текст в книге, чтобы сохранить его цветом или как цитату',
+      'highlightActions': 'Действия с выделением',
+      'yellowHighlight': 'Жёлтое выделение',
+      'greenHighlight': 'Зелёное выделение',
+      'blueHighlight': 'Синее выделение',
+      'pinkHighlight': 'Розовое выделение',
+      'saveQuote': 'Цитата',
+      'addNoteToSelection': 'Заметка к выбранному тексту',
+      'copySelection': 'Копировать выбранный текст',
+      'closeSelectionActions': 'Закрыть действия с текстом',
+      'deleteHighlight': 'Удалить выделение',
+      'deleteQuote': 'Удалить цитату',
+      'exportAnnotations': 'Экспорт аннотаций',
+      'exportMarkdown': 'Markdown (.md)',
+      'exportMarkdownHint': 'Удобно читать и открывать в текстовых редакторах',
+      'exportJson': 'JSON (.json)',
+      'exportJsonHint': 'Структурированная резервная копия для переноса данных',
+      'annotationsExported': 'Аннотации сохранены',
+      'annotationsExportFailed': 'Не удалось сохранить аннотации',
+      'quoteSaved': 'Цитата сохранена',
+      'highlightSaved': 'Выделение сохранено',
+      'selectionCopied': 'Текст скопирован',
     },
     'en': {
       'appTitle': 'My diary',
@@ -445,6 +494,30 @@ class AppStrings {
       'previousReaderPage': 'Previous book page',
       'nextReaderPage': 'Next book page',
       'readerPage': 'Page',
+      'highlights': 'Highlights',
+      'quotes': 'Quotes',
+      'noHighlights': 'Select book text to save a highlight or quote',
+      'highlightActions': 'Highlight actions',
+      'yellowHighlight': 'Yellow highlight',
+      'greenHighlight': 'Green highlight',
+      'blueHighlight': 'Blue highlight',
+      'pinkHighlight': 'Pink highlight',
+      'saveQuote': 'Quote',
+      'addNoteToSelection': 'Note on selected text',
+      'copySelection': 'Copy selected text',
+      'closeSelectionActions': 'Close text actions',
+      'deleteHighlight': 'Delete highlight',
+      'deleteQuote': 'Delete quote',
+      'exportAnnotations': 'Export annotations',
+      'exportMarkdown': 'Markdown (.md)',
+      'exportMarkdownHint': 'Easy to read and open in text editors',
+      'exportJson': 'JSON (.json)',
+      'exportJsonHint': 'Structured backup for transferring data',
+      'annotationsExported': 'Annotations saved',
+      'annotationsExportFailed': 'Annotations could not be saved',
+      'quoteSaved': 'Quote saved',
+      'highlightSaved': 'Highlight saved',
+      'selectionCopied': 'Text copied',
     },
   };
 }

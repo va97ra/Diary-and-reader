@@ -42,6 +42,48 @@ void main() {
     );
     expect(find.text('Раздел 1 из 2 · 0%'), findsOneWidget);
 
+    readerEditor.controller.updateSelection(
+      const TextSelection(baseOffset: 0, extentOffset: 6),
+      ChangeSource.local,
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('reader-selection-bar')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('reader-highlight-yellow')));
+    await tester.pumpAndSettle();
+    expect(
+      controller.activeProject!.readerAnnotations.highlights,
+      hasLength(1),
+    );
+    expect(
+      controller.activeProject!.readerAnnotations.highlights.single.excerpt,
+      'Первый',
+    );
+    await tester.pump(const Duration(milliseconds: 1500));
+    await tester.pumpAndSettle();
+
+    readerEditor = tester.widget<QuillEditor>(find.byType(QuillEditor));
+    readerEditor.controller.updateSelection(
+      const TextSelection(baseOffset: 7, extentOffset: 12),
+      ChangeSource.local,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('reader-save-quote')));
+    await tester.pumpAndSettle();
+    expect(controller.activeProject!.readerAnnotations.quotes, hasLength(1));
+
+    await tester.tap(
+      find.byKey(const ValueKey('reader-export-annotations-button')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('reader-export-markdown')),
+      findsOneWidget,
+    );
+    Navigator.of(
+      tester.element(find.byKey(const ValueKey('reader-export-markdown'))),
+    ).pop();
+    await tester.pumpAndSettle();
+
     await tester.tap(find.byKey(const ValueKey('reader-bookmark-button')));
     await tester.pumpAndSettle();
     expect(controller.activeProject!.readerAnnotations.bookmarks, hasLength(1));
@@ -76,7 +118,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Раздел 1 из 2 · 0%'), findsOneWidget);
 
-    await tester.tap(find.text('Заметки'));
+    DefaultTabController.of(tester.element(find.byType(TabBar))).animateTo(3);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('reader-add-note')));
     await tester.pumpAndSettle();

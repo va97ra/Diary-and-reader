@@ -1,18 +1,24 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
+import 'package:dnevnik/features/books/application/book_reader_annotation_exporter.dart';
 import 'package:dnevnik/features/books/application/book_reader_search.dart';
+import 'package:dnevnik/features/books/data/book_reader_annotation_file_service.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
 import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_annotation_export_sheet.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_navigation_panel.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_note_dialog.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_search_sheet.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_section_view.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_selection_bar.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_settings_sheet.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_text_selection.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class BookReaderPage extends StatefulWidget {
   const BookReaderPage({
@@ -20,6 +26,7 @@ class BookReaderPage extends StatefulWidget {
     required this.onSettingsChanged,
     required this.onProgressChanged,
     required this.onAnnotationsChanged,
+    this.annotationFileSaver = const BookReaderAnnotationFileService(),
     super.key,
   });
 
@@ -27,6 +34,7 @@ class BookReaderPage extends StatefulWidget {
   final ValueChanged<BookReaderSettings> onSettingsChanged;
   final ValueChanged<BookReaderProgress> onProgressChanged;
   final ValueChanged<BookReaderAnnotations> onAnnotationsChanged;
+  final BookReaderAnnotationFileSaver annotationFileSaver;
 
   @override
   State<BookReaderPage> createState() => _BookReaderPageState();
@@ -37,6 +45,8 @@ class _BookReaderPageState extends State<BookReaderPage> {
   late BookReaderAnnotations _annotations;
   late int _activeIndex;
   double _sectionProgress = 0;
+  BookReaderTextSelection? _textSelection;
+  int _clearSelectionVersion = 0;
 
   List<BookSection> get _sections => widget.project.sections;
   BookSection get _section => _sections[_activeIndex];
@@ -55,6 +65,7 @@ class _BookReaderPageState extends State<BookReaderPage> {
   }
 
   void _goToLocation(String sectionId, double sectionProgress) {
+    _clearTextSelection();
     final index = _sections.indexWhere((section) => section.id == sectionId);
     if (index < 0) return;
     final normalizedProgress = sectionProgress.clamp(0, 1).toDouble();
@@ -205,12 +216,39 @@ class _BookReaderPageState extends State<BookReaderPage> {
   Widget _buildReadingSurface(
     BuildContext context,
     BookReaderPalette palette,
-  ) => BookReaderSectionView(
-    section: _section,
-    settings: _settings,
-    palette: palette,
-    initialProgress: _sectionProgress,
-    onProgressChanged: _handleSectionProgress,
+  ) => Stack(
+    children: [
+      Positioned.fill(
+        child: BookReaderSectionView(
+          section: _section,
+          settings: _settings,
+          palette: palette,
+          initialProgress: _sectionProgress,
+          onProgressChanged: _handleSectionProgress,
+          highlights: _annotations.highlights
+              .where((highlight) => highlight.sectionId == _section.id)
+              .toList(),
+          onTextSelection: _handleTextSelection,
+          clearSelectionVersion: _clearSelectionVersion,
+        ),
+      ),
+      if (_textSelection case final selection?)
+        Positioned(
+          left: 12,
+          right: 12,
+          bottom: 12,
+          child: Center(
+            child: BookReaderSelectionBar(
+              selection: selection,
+              onHighlight: _saveHighlight,
+              onSaveQuote: _saveQuote,
+              onAddNote: () => _addNoteForSelection(context),
+              onCopy: _copySelection,
+              onClose: _clearTextSelection,
+            ),
+          ),
+        ),
+    ],
   );
 
   Widget _buildNavigationBar(BuildContext context, BookReaderPalette palette) {
@@ -282,6 +320,14 @@ class _BookReaderPageState extends State<BookReaderPage> {
         _updateAnnotations(_annotations.removeBookmark(bookmark.id)),
     onDeleteNote: (note) =>
         _updateAnnotations(_annotations.removeNote(note.id)),
+    onHighlightColorChanged: (highlight, color) => _updateAnnotations(
+      _annotations.updateHighlight(highlight.copyWith(color: color)),
+    ),
+    onDeleteHighlight: (highlight) =>
+        _updateAnnotations(_annotations.removeHighlight(highlight.id)),
+    onDeleteQuote: (quote) =>
+        _updateAnnotations(_annotations.removeQuote(quote.id)),
+    onExport: () => _showAnnotationExport(panelContext),
   );
 
   void _goToIndex(int index) => _goToLocation(_sections[index].id, 0);
@@ -350,6 +396,130 @@ class _BookReaderPageState extends State<BookReaderPage> {
   void _updateAnnotations(BookReaderAnnotations annotations) {
     setState(() => _annotations = annotations);
     widget.onAnnotationsChanged(annotations);
+  }
+
+  void _handleTextSelection(BookReaderTextSelection? selection) {
+    if (!mounted || selection == null && _textSelection == null) return;
+    setState(() => _textSelection = selection);
+  }
+
+  void _clearTextSelection() {
+    if (_textSelection == null) return;
+    setState(() {
+      _textSelection = null;
+      _clearSelectionVersion++;
+    });
+  }
+
+  void _saveHighlight(BookReaderHighlightColor color) {
+    final selection = _textSelection;
+    if (selection == null) return;
+    _updateAnnotations(
+      _annotations.addHighlight(
+        BookReaderHighlight.create(
+          sectionId: _section.id,
+          sectionProgress: selection.sectionProgress,
+          startOffset: selection.startOffset,
+          endOffset: selection.endOffset,
+          excerpt: selection.text,
+          color: color,
+        ),
+      ),
+    );
+    _showMessage(AppStrings.of(context).highlightSaved);
+    _clearTextSelection();
+  }
+
+  void _saveQuote() {
+    final selection = _textSelection;
+    if (selection == null) return;
+    _updateAnnotations(
+      _annotations.addQuote(
+        BookReaderQuote.create(
+          sectionId: _section.id,
+          sectionProgress: selection.sectionProgress,
+          startOffset: selection.startOffset,
+          endOffset: selection.endOffset,
+          text: selection.text,
+        ),
+      ),
+    );
+    _showMessage(AppStrings.of(context).quoteSaved);
+    _clearTextSelection();
+  }
+
+  Future<void> _copySelection() async {
+    final selection = _textSelection;
+    if (selection == null) return;
+    await Clipboard.setData(ClipboardData(text: selection.text));
+    if (!mounted) return;
+    _showMessage(AppStrings.of(context).selectionCopied);
+    _clearTextSelection();
+  }
+
+  Future<void> _addNoteForSelection(BuildContext themedContext) async {
+    final selection = _textSelection;
+    if (selection == null) return;
+    final text = await _showNoteEditor(themedContext);
+    if (text == null || !mounted) return;
+    _updateAnnotations(
+      _annotations.addNote(
+        BookReaderNote.create(
+          sectionId: _section.id,
+          sectionProgress: selection.sectionProgress,
+          excerpt: selection.text,
+          text: text,
+        ),
+      ),
+    );
+    _clearTextSelection();
+  }
+
+  Future<void> _showAnnotationExport(BuildContext themedContext) =>
+      showModalBottomSheet<void>(
+        context: themedContext,
+        showDragHandle: true,
+        builder: (sheetContext) => BookReaderAnnotationExportSheet(
+          onSelected: (format) {
+            Navigator.of(sheetContext).pop();
+            _exportAnnotations(themedContext, format);
+          },
+        ),
+      );
+
+  Future<void> _exportAnnotations(
+    BuildContext themedContext,
+    BookReaderAnnotationExportFormat format,
+  ) async {
+    final strings = AppStrings.of(themedContext);
+    try {
+      final export = BookReaderAnnotationExporter.create(
+        project: widget.project.copyWith(readerAnnotations: _annotations),
+        format: format,
+        languageCode: Localizations.localeOf(themedContext).languageCode,
+      );
+      final saved = await widget.annotationFileSaver.save(
+        export: export,
+        bookTitle: widget.project.metadata.title,
+      );
+      if (!mounted || !saved) return;
+      _showMessage(strings.annotationsExported);
+    } on Exception {
+      if (mounted) _showMessage(strings.annotationsExportFailed);
+    }
+  }
+
+  void _showMessage(String message) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          duration: const Duration(milliseconds: 1400),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
   }
 
   String _currentExcerpt() {

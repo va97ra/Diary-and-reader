@@ -54,6 +54,27 @@ void main() {
             now: now,
           ),
         ],
+        highlights: [
+          BookReaderHighlight.create(
+            sectionId: scene.id,
+            sectionProgress: 0.3,
+            startOffset: 4,
+            endOffset: 16,
+            excerpt: 'Выделение',
+            color: BookReaderHighlightColor.green,
+            now: now,
+          ),
+        ],
+        quotes: [
+          BookReaderQuote.create(
+            sectionId: scene.id,
+            sectionProgress: 0.35,
+            startOffset: 20,
+            endOffset: 30,
+            text: 'Цитата',
+            now: now,
+          ),
+        ],
       ),
     );
 
@@ -74,6 +95,11 @@ void main() {
       'Фрагмент сцены',
     );
     expect(restored.readerAnnotations.notes.single.text, 'Проверить диалог');
+    expect(
+      restored.readerAnnotations.highlights.single.color,
+      BookReaderHighlightColor.green,
+    );
+    expect(restored.readerAnnotations.quotes.single.text, 'Цитата');
   });
 
   test('invalid active section falls back to the first section', () {

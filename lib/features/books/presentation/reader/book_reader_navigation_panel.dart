@@ -1,11 +1,10 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_annotations_panel.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_contents.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_location_callback.dart';
 import 'package:flutter/material.dart';
-
-typedef BookReaderLocationCallback =
-    void Function(String sectionId, double sectionProgress);
 
 class BookReaderNavigationPanel extends StatelessWidget {
   const BookReaderNavigationPanel({
@@ -17,6 +16,10 @@ class BookReaderNavigationPanel extends StatelessWidget {
     required this.onEditNote,
     required this.onDeleteBookmark,
     required this.onDeleteNote,
+    required this.onHighlightColorChanged,
+    required this.onDeleteHighlight,
+    required this.onDeleteQuote,
+    required this.onExport,
     super.key,
   });
 
@@ -28,26 +31,65 @@ class BookReaderNavigationPanel extends StatelessWidget {
   final ValueChanged<BookReaderNote> onEditNote;
   final ValueChanged<BookReaderBookmark> onDeleteBookmark;
   final ValueChanged<BookReaderNote> onDeleteNote;
+  final void Function(
+    BookReaderHighlight highlight,
+    BookReaderHighlightColor color,
+  )
+  onHighlightColorChanged;
+  final ValueChanged<BookReaderHighlight> onDeleteHighlight;
+  final ValueChanged<BookReaderQuote> onDeleteQuote;
+  final VoidCallback onExport;
 
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
+    final colors = Theme.of(context).colorScheme;
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Column(
         children: [
-          TabBar(
-            tabs: [
-              Tab(text: strings.contentsShort, icon: const Icon(Icons.toc)),
-              Tab(
-                text: strings.bookmarks,
-                icon: const Icon(Icons.bookmarks_outlined),
-              ),
-              Tab(
-                text: strings.notes,
-                icon: const Icon(Icons.sticky_note_2_outlined),
-              ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 500;
+              return Row(
+                children: [
+                  Expanded(
+                    child: TabBar(
+                      isScrollable: !compact,
+                      tabAlignment: compact ? null : TabAlignment.start,
+                      labelColor: colors.primary,
+                      unselectedLabelColor: colors.onSurfaceVariant,
+                      indicatorColor: colors.primary,
+                      tabs: [
+                        _readerTab(strings.contentsShort, Icons.toc, compact),
+                        _readerTab(
+                          strings.bookmarks,
+                          Icons.bookmarks_outlined,
+                          compact,
+                        ),
+                        _readerTab(
+                          strings.highlights,
+                          Icons.auto_awesome_outlined,
+                          compact,
+                        ),
+                        _readerTab(
+                          strings.notes,
+                          Icons.sticky_note_2_outlined,
+                          compact,
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    key: const ValueKey('reader-export-annotations-button'),
+                    tooltip: strings.exportAnnotations,
+                    onPressed: onExport,
+                    color: colors.onSurfaceVariant,
+                    icon: const Icon(Icons.download_outlined),
+                  ),
+                ],
+              );
+            },
           ),
           Expanded(
             child: TabBarView(
@@ -62,6 +104,15 @@ class BookReaderNavigationPanel extends StatelessWidget {
                   sections: sections,
                   onSelected: onLocationSelected,
                   onDelete: onDeleteBookmark,
+                ),
+                BookReaderAnnotationsPanel(
+                  highlights: annotations.highlights,
+                  quotes: annotations.quotes,
+                  sections: sections,
+                  onSelected: onLocationSelected,
+                  onHighlightColorChanged: onHighlightColorChanged,
+                  onDeleteHighlight: onDeleteHighlight,
+                  onDeleteQuote: onDeleteQuote,
                 ),
                 _NotesList(
                   notes: annotations.notes,
@@ -79,6 +130,15 @@ class BookReaderNavigationPanel extends StatelessWidget {
     );
   }
 }
+
+Tab _readerTab(String label, IconData icon, bool compact) => compact
+    ? Tab(
+        icon: Tooltip(
+          message: label,
+          child: Icon(icon, semanticLabel: label),
+        ),
+      )
+    : Tab(text: label, icon: Icon(icon));
 
 class _BookmarksList extends StatelessWidget {
   const _BookmarksList({

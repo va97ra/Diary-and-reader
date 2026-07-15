@@ -116,6 +116,7 @@ class BookReaderPageCard extends StatelessWidget {
                   customStyles: BookReaderTypography.styles(settings, palette),
                   scrollable: false,
                   autoFocus: false,
+                  showCursor: false,
                 ),
               ),
             ),

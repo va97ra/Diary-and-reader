@@ -73,6 +73,11 @@ class BookReaderPalette {
     ),
     dividerColor: divider,
     textTheme: base.textTheme.apply(bodyColor: ink, displayColor: ink),
+    textSelectionTheme: TextSelectionThemeData(
+      cursorColor: ink,
+      selectionColor: ink.withValues(alpha: 0.22),
+      selectionHandleColor: ink,
+    ),
     sliderTheme: base.sliderTheme.copyWith(
       showValueIndicator: ShowValueIndicator.onDrag,
     ),
