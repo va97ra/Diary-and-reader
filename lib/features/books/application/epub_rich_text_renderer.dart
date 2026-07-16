@@ -2,7 +2,10 @@ import 'package:dnevnik/features/books/application/book_export_content.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 
 abstract final class EpubRichTextRenderer {
-  static String render(RichDocument document) {
+  static String render(
+    RichDocument document, {
+    String? Function(String assetId)? imageSource,
+  }) {
     final blocks = BookExportContentParser.parse(document);
     final output = StringBuffer();
     String? openList;
@@ -14,6 +17,18 @@ abstract final class EpubRichTextRenderer {
     }
 
     for (final block in blocks) {
+      if (block.type == BookExportBlockType.image) {
+        closeList();
+        final source = block.assetId == null
+            ? null
+            : imageSource?.call(block.assetId!);
+        if (source != null) {
+          output.writeln(
+            '<figure class="book-image"><img src="${escapeXml(source)}" alt=""/></figure>',
+          );
+        }
+        continue;
+      }
       final listTag = switch (block.type) {
         BookExportBlockType.orderedListItem => 'ol',
         BookExportBlockType.bulletListItem ||
@@ -48,6 +63,7 @@ abstract final class EpubRichTextRenderer {
         BookExportBlockType.heading3 => 'h4',
         BookExportBlockType.quote => 'blockquote',
         BookExportBlockType.code => 'pre',
+        BookExportBlockType.image => 'p',
         _ => 'p',
       };
       output.writeln('<$tag${_blockAttributes(block)}>$content</$tag>');

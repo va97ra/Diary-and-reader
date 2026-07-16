@@ -3,9 +3,9 @@ import 'dart:math' as math;
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
-import 'package:dnevnik/features/books/presentation/reader/book_image_embed_builder.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_typography.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_image_embed_builder.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 

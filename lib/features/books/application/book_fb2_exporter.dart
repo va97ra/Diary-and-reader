@@ -67,6 +67,7 @@ abstract final class BookFb2Exporter {
   <body>
     <title><p>${escapeXml(metadata.title)}</p></title>
 $body  </body>
+${_binaries(project)}
 </FictionBook>
 ''';
   }
@@ -92,7 +93,7 @@ $body  </body>
       final output = StringBuffer()
         ..writeln('$indent<section id="section-${index + 1}">')
         ..writeln('$indent  <title><p>${escapeXml(section.title)}</p></title>');
-      final hasText = richDocumentPlainText(section.content).trim().isNotEmpty;
+      final hasText = richDocumentHasContent(section.content);
       if (children.isNotEmpty && hasText) {
         output.writeln('$indent  <section id="section-${index + 1}-text">');
         output.write(_indentedContent(section.content, depth + 2));
@@ -197,4 +198,12 @@ $body  </body>
     String two(int part) => part.toString().padLeft(2, '0');
     return '${local.year.toString().padLeft(4, '0')}-${two(local.month)}-${two(local.day)}';
   }
+
+  static String _binaries(BookProject project) => project.assets
+      .where((asset) => asset.isRenderableImage)
+      .map(
+        (asset) =>
+            '  <binary id="${escapeXml(asset.id)}" content-type="${escapeXml(asset.mediaType)}">${base64Encode(asset.bytes)}</binary>',
+      )
+      .join('\n');
 }

@@ -8,6 +8,14 @@ abstract final class Fb2RichTextRenderer {
     var orderedIndex = 0;
     for (final block in BookExportContentParser.parse(document)) {
       if (block.type != BookExportBlockType.orderedListItem) orderedIndex = 0;
+      if (block.type == BookExportBlockType.image) {
+        if (block.assetId != null) {
+          output.writeln(
+            '      <image l:href="#${escapeXml(block.assetId!)}"/>',
+          );
+        }
+        continue;
+      }
       if (block.runs.isEmpty) {
         output.writeln('      <empty-line/>');
         continue;
@@ -44,6 +52,8 @@ abstract final class Fb2RichTextRenderer {
           } else {
             output.writeln('      <p>$content</p>');
           }
+          break;
+        case BookExportBlockType.image:
           break;
       }
     }

@@ -5,6 +5,7 @@ import 'package:dnevnik/app/author_studio_app.dart';
 import 'package:dnevnik/core/theme/app_theme.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/application/book_export_artifact.dart';
+import 'package:dnevnik/features/books/application/book_image_file.dart';
 import 'package:dnevnik/features/books/application/book_import_file.dart';
 import 'package:dnevnik/features/books/application/book_pdf_font_assets.dart';
 import 'package:dnevnik/features/books/application/book_project_archive_codec.dart';
@@ -175,6 +176,41 @@ void main() {
       'Старый сад и ещё один сад.\n',
     );
     expect(find.text('Выполнено замен: 2'), findsOneWidget);
+
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('inserts an image into a mobile manuscript', (tester) async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(),
+    );
+    await controller.load(preferredLanguage: 'ru');
+    final imageGateway = _MemoryBookImageGateway(
+      BookImageFile(
+        name: 'pixel.png',
+        bytes: base64Decode(
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+        ),
+      ),
+    );
+
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pumpWidget(
+      AuthorStudioApp(controller: controller, imageFileGateway: imageGateway),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Форматирование'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('insert-book-image-button')));
+    await tester.pumpAndSettle();
+
+    expect(imageGateway.openCount, 1);
+    expect(controller.activeProject!.assets, hasLength(1));
+    expect(
+      jsonEncode(controller.activeSection!.content),
+      contains('bookImage'),
+    );
+    expect(find.text('Изображение добавлено в рукопись'), findsOneWidget);
 
     await tester.binding.setSurfaceSize(null);
   });
@@ -501,6 +537,19 @@ class _MemoryBookExportSaver implements BookExportFileSaver {
     this.artifact = artifact;
     this.bookTitle = bookTitle;
     return true;
+  }
+}
+
+class _MemoryBookImageGateway implements BookImageFileGateway {
+  _MemoryBookImageGateway(this.file);
+
+  final BookImageFile? file;
+  int openCount = 0;
+
+  @override
+  Future<BookImageFile?> open() async {
+    openCount++;
+    return file;
   }
 }
 

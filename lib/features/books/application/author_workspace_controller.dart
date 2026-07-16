@@ -6,6 +6,7 @@ import 'package:dnevnik/features/books/application/section_tree_editor.dart';
 import 'package:dnevnik/features/books/application/workspace_save_state.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_repository.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_snapshot.dart';
+import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
@@ -227,6 +228,23 @@ class AuthorWorkspaceController extends ChangeNotifier {
     _markDirty();
     notifyListeners();
     _scheduleSave();
+  }
+
+  void addAsset(BookAsset asset) {
+    final project = activeProject;
+    if (project == null || project.isReadOnly || !asset.isRenderableImage) {
+      return;
+    }
+    _replaceActiveProject(
+      (current) => current.copyWith(
+        assets: [
+          ...current.assets.where((existing) => existing.id != asset.id),
+          asset,
+        ],
+        updatedAt: DateTime.now(),
+      ),
+    );
+    _changed();
   }
 
   int replaceAllInManuscript(

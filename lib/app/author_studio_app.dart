@@ -1,8 +1,10 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/core/theme/app_theme.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
+import 'package:dnevnik/features/books/application/book_image_file.dart';
 import 'package:dnevnik/features/books/application/book_pdf_font_assets.dart';
 import 'package:dnevnik/features/books/data/book_export_file_service.dart';
+import 'package:dnevnik/features/books/data/book_image_file_service.dart';
 import 'package:dnevnik/features/books/data/book_import_file_service.dart';
 import 'package:dnevnik/features/books/data/book_pdf_asset_font_loader.dart';
 import 'package:dnevnik/features/books/data/book_project_backup_file_service.dart';
@@ -18,6 +20,7 @@ class AuthorStudioApp extends StatelessWidget {
     this.backupFileGateway = const BookProjectBackupFileService(),
     this.pdfFontLoader = const BookPdfAssetFontLoader(),
     this.importFileGateway = const BookImportFileService(),
+    this.imageFileGateway = const BookImageFileService(),
     super.key,
   });
 
@@ -26,6 +29,7 @@ class AuthorStudioApp extends StatelessWidget {
   final BookProjectBackupFileGateway backupFileGateway;
   final BookPdfFontLoader pdfFontLoader;
   final BookImportFileGateway importFileGateway;
+  final BookImageFileGateway imageFileGateway;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -48,6 +52,7 @@ class AuthorStudioApp extends StatelessWidget {
         backupFileGateway: backupFileGateway,
         pdfFontLoader: pdfFontLoader,
         importFileGateway: importFileGateway,
+        imageFileGateway: imageFileGateway,
       ),
     ),
   );

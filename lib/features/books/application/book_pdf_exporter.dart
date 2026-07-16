@@ -56,6 +56,7 @@ abstract final class BookPdfExporter {
             ...BookPdfContentRenderer.build(
               blocks: BookExportContentParser.parse(section.content),
               settings: project.paragraphSettings,
+              assets: project.assets,
             ),
           ],
         ),

@@ -30,7 +30,7 @@ class BookImageEmbedBuilder extends EmbedBuilder {
           constraints: const BoxConstraints(maxHeight: 440),
           child: Image.memory(
             asset.bytes,
-            key: ValueKey('book-image-$assetId'),
+            key: ValueKey('book-image-${asset.id}'),
             fit: BoxFit.contain,
             gaplessPlayback: true,
             errorBuilder: (_, _, _) => const SizedBox(

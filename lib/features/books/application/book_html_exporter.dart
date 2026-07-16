@@ -30,7 +30,10 @@ abstract final class BookHtmlExporter {
           final level = (entry.depth + 2).clamp(2, 6);
           return '''<section id="section-${entry.index + 1}" data-type="${entry.section.type.name}">
   <h$level>${escapeXml(entry.section.title)}</h$level>
-${EpubRichTextRenderer.render(entry.section.content)}</section>''';
+${EpubRichTextRenderer.render(entry.section.content, imageSource: (assetId) {
+            final asset = project.assetById(assetId);
+            return asset == null ? null : 'data:${asset.mediaType};base64,${base64Encode(asset.bytes)}';
+          })}</section>''';
         })
         .join('\n\n');
     final font = project.paragraphSettings.fontFamily.replaceAll('"', '');
@@ -59,6 +62,8 @@ ${EpubRichTextRenderer.render(entry.section.content)}</section>''';
     .align-center, .scene-break { text-align: center; text-indent: 0; }
     .align-right, .epigraph { text-align: right; }
     .align-justify { text-align: justify; }
+    .book-image { margin: 1.2rem 0; text-align: center; }
+    .book-image img { max-width: 100%; height: auto; }
     ${[for (var index = 1; index <= 8; index++) '.indent-$index { margin-left: ${index * 1.5}em; }'].join('\n    ')}
     @media (max-width: 600px) { body { padding: 1.5rem 1rem; } }
   </style>

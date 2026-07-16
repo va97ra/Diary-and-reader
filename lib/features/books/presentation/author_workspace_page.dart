@@ -5,6 +5,7 @@ import 'package:dnevnik/features/books/application/book_epub_exporter.dart';
 import 'package:dnevnik/features/books/application/book_export_artifact.dart';
 import 'package:dnevnik/features/books/application/book_fb2_exporter.dart';
 import 'package:dnevnik/features/books/application/book_html_exporter.dart';
+import 'package:dnevnik/features/books/application/book_image_file.dart';
 import 'package:dnevnik/features/books/application/book_import_file.dart';
 import 'package:dnevnik/features/books/application/book_import_parser.dart';
 import 'package:dnevnik/features/books/application/book_manuscript_search.dart';
@@ -13,6 +14,7 @@ import 'package:dnevnik/features/books/application/book_pdf_font_assets.dart';
 import 'package:dnevnik/features/books/application/book_project_archive_codec.dart';
 import 'package:dnevnik/features/books/application/book_txt_exporter.dart';
 import 'package:dnevnik/features/books/data/book_export_file_service.dart';
+import 'package:dnevnik/features/books/data/book_image_file_service.dart';
 import 'package:dnevnik/features/books/data/book_import_file_service.dart';
 import 'package:dnevnik/features/books/data/book_pdf_asset_font_loader.dart';
 import 'package:dnevnik/features/books/data/book_project_backup_file_service.dart';
@@ -40,6 +42,7 @@ class AuthorWorkspacePage extends StatefulWidget {
     this.backupFileGateway = const BookProjectBackupFileService(),
     this.pdfFontLoader = const BookPdfAssetFontLoader(),
     this.importFileGateway = const BookImportFileService(),
+    this.imageFileGateway = const BookImageFileService(),
     super.key,
   });
 
@@ -48,6 +51,7 @@ class AuthorWorkspacePage extends StatefulWidget {
   final BookProjectBackupFileGateway backupFileGateway;
   final BookPdfFontLoader pdfFontLoader;
   final BookImportFileGateway importFileGateway;
+  final BookImageFileGateway imageFileGateway;
 
   @override
   State<AuthorWorkspacePage> createState() => _AuthorWorkspacePageState();
@@ -125,10 +129,12 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
                           section: section,
                           pageFormat: project.layoutSettings.pageFormat,
                           paragraphSettings: project.paragraphSettings,
+                          assets: project.assets,
                           showToolbar: isTablet && !_isFocusMode,
                           usePagedLayout: isTablet || _isA4Preview,
                           compactA4Preview: !isTablet && _isA4Preview,
                           onExitCompactPreview: _toggleA4Preview,
+                          onInsertImage: _insertImage,
                           showStatusBar: !_isFocusMode,
                           saveState: widget.controller.saveState,
                           viewMode: project.layoutSettings.viewMode,
@@ -294,10 +300,39 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
     if (controller == null) return;
     await showModalBottomSheet<void>(
       context: context,
-      builder: (_) => BookFormattingSheet(
+      builder: (sheetContext) => BookFormattingSheet(
         controller: controller,
         paragraphSettings: widget.controller.activeProject!.paragraphSettings,
+        onInsertImage: () {
+          Navigator.pop(sheetContext);
+          _insertImage();
+        },
       ),
+    );
+  }
+
+  Future<void> _insertImage() async {
+    final file = await widget.imageFileGateway.open();
+    if (!mounted || file == null) return;
+    final asset = BookImageFileCodec.createAsset(file);
+    final controller = _editorController;
+    if (asset == null || controller == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppStrings.of(context).imageInsertFailed)),
+      );
+      return;
+    }
+    final selection = controller.selection;
+    final offset = selection.start.clamp(0, controller.document.length - 1);
+    controller.replaceText(
+      offset,
+      selection.end - selection.start,
+      BlockEmbed.custom(CustomBlockEmbed('bookImage', asset.id)),
+      TextSelection.collapsed(offset: offset + 1),
+    );
+    widget.controller.addAsset(asset);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppStrings.of(context).imageInserted)),
     );
   }
 

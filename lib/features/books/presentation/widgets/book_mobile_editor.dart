@@ -1,8 +1,10 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/core/theme/app_theme.dart';
+import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_page_format.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/presentation/book_typography.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_image_embed_builder.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
@@ -17,6 +19,7 @@ class BookMobileEditor extends StatelessWidget {
     required this.pageCount,
     required this.pageFormat,
     required this.paragraphSettings,
+    required this.assets,
     required this.onPreviousPage,
     required this.onNextPage,
     required this.showPageNavigation,
@@ -32,6 +35,7 @@ class BookMobileEditor extends StatelessWidget {
   final int pageCount;
   final BookPageFormat pageFormat;
   final BookParagraphSettings paragraphSettings;
+  final Iterable<BookAsset> assets;
   final VoidCallback? onPreviousPage;
   final VoidCallback? onNextPage;
   final bool showPageNavigation;
@@ -78,6 +82,7 @@ class BookMobileEditor extends StatelessWidget {
                 padding: EdgeInsets.zero,
                 customStyles: BookTypography.editorStyles(paragraphSettings),
                 textSelectionThemeData: BookTypography.selectionTheme,
+                embedBuilders: [BookImageEmbedBuilder(assets)],
                 scrollable: true,
                 autoFocus: false,
               ),

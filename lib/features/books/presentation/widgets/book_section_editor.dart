@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/book_page_paginator.dart';
 import 'package:dnevnik/features/books/application/workspace_save_state.dart';
+import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_page_format.dart';
 import 'package:dnevnik/features/books/domain/book_page_view_mode.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
@@ -23,12 +24,14 @@ class BookSectionEditor extends StatefulWidget {
     required this.section,
     required this.pageFormat,
     required this.paragraphSettings,
+    required this.assets,
     required this.onTitleChanged,
     required this.onContentChanged,
     required this.showToolbar,
     required this.usePagedLayout,
     required this.compactA4Preview,
     required this.onExitCompactPreview,
+    required this.onInsertImage,
     required this.showStatusBar,
     required this.saveState,
     required this.viewMode,
@@ -40,12 +43,14 @@ class BookSectionEditor extends StatefulWidget {
   final BookSection section;
   final BookPageFormat pageFormat;
   final BookParagraphSettings paragraphSettings;
+  final Iterable<BookAsset> assets;
   final ValueChanged<String> onTitleChanged;
   final ValueChanged<RichDocument> onContentChanged;
   final bool showToolbar;
   final bool usePagedLayout;
   final bool compactA4Preview;
   final VoidCallback onExitCompactPreview;
+  final VoidCallback onInsertImage;
   final bool showStatusBar;
   final WorkspaceSaveState saveState;
   final BookPageViewMode viewMode;
@@ -457,6 +462,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
           BookFormattingToolbar(
             controller: controller,
             paragraphSettings: widget.paragraphSettings,
+            onInsertImage: widget.onInsertImage,
           ),
         Expanded(
           child: widget.usePagedLayout
@@ -471,6 +477,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
                   pageCount: _controllers.length,
                   pageFormat: widget.pageFormat,
                   paragraphSettings: widget.paragraphSettings,
+                  assets: widget.assets,
                   onPreviousPage: _activePage > 0
                       ? () => _selectPage(_activePage - 1)
                       : null,
@@ -512,6 +519,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
                   scale: 1,
                   pageFormat: widget.pageFormat,
                   paragraphSettings: widget.paragraphSettings,
+                  assets: widget.assets,
                   controller: _measurementController!,
                   focusNode: _measurementFocusNode!,
                   scrollController: _measurementScrollController!,
@@ -714,6 +722,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     scale: scale,
     pageFormat: widget.pageFormat,
     paragraphSettings: widget.paragraphSettings,
+    assets: widget.assets,
     controller: _controllers[index],
     focusNode: _focusNodes[index],
     scrollController: _scrollControllers[index],

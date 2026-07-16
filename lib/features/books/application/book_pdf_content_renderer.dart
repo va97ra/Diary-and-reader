@@ -1,4 +1,5 @@
 import 'package:dnevnik/features/books/application/book_export_content.dart';
+import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -7,6 +8,7 @@ abstract final class BookPdfContentRenderer {
   static List<pw.Widget> build({
     required List<BookExportBlock> blocks,
     required BookParagraphSettings settings,
+    required Iterable<BookAsset> assets,
   }) {
     final output = <pw.Widget>[];
     var orderedIndex = 0;
@@ -21,7 +23,11 @@ abstract final class BookPdfContentRenderer {
         orderedIndex = 0;
       }
       output.addAll(
-        _spacing(block, settings, _blockWidget(block, settings, orderedIndex)),
+        _spacing(
+          block,
+          settings,
+          _blockWidget(block, settings, orderedIndex, assets),
+        ),
       );
       previousType = block.type;
     }
@@ -56,7 +62,21 @@ abstract final class BookPdfContentRenderer {
     BookExportBlock block,
     BookParagraphSettings settings,
     int orderedIndex,
+    Iterable<BookAsset> assets,
   ) {
+    if (block.type == BookExportBlockType.image) {
+      final asset = assets
+          .where((candidate) => candidate.id == block.assetId)
+          .firstOrNull;
+      if (asset == null) return pw.SizedBox();
+      return pw.Center(
+        child: pw.Image(
+          pw.MemoryImage(asset.bytes),
+          height: 320,
+          fit: pw.BoxFit.contain,
+        ),
+      );
+    }
     final fontSize = switch (block.type) {
       BookExportBlockType.heading1 => settings.fontSizePt * 1.65,
       BookExportBlockType.heading2 => settings.fontSizePt * 1.4,
@@ -100,6 +120,7 @@ abstract final class BookPdfContentRenderer {
       BookExportBlockType.bulletListItem => _listRow(block, '•', text),
       BookExportBlockType.checkedListItem => _checkRow(block, true, text),
       BookExportBlockType.uncheckedListItem => _checkRow(block, false, text),
+      BookExportBlockType.image => pw.SizedBox(),
       _ => text,
     };
   }

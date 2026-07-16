@@ -33,6 +33,9 @@ abstract final class PlainTextRichRenderer {
         case BookExportBlockType.code || BookExportBlockType.paragraph:
           output.writeln(text);
           break;
+        case BookExportBlockType.image:
+          output.writeln('[Image]');
+          break;
       }
     }
     return output.toString().trimRight();

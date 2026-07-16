@@ -1,3 +1,4 @@
+import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/core/theme/app_theme.dart';
 import 'package:dnevnik/features/books/domain/book_page_format.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
@@ -9,11 +10,13 @@ class BookFormattingToolbar extends StatelessWidget {
   const BookFormattingToolbar({
     required this.controller,
     required this.paragraphSettings,
+    required this.onInsertImage,
     super.key,
   });
 
   final QuillController controller;
   final BookParagraphSettings paragraphSettings;
+  final VoidCallback onInsertImage;
 
   @override
   Widget build(BuildContext context) => Material(
@@ -26,6 +29,13 @@ class BookFormattingToolbar extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
             child: BookParagraphStyleSelector(controller: controller),
           ),
+        ),
+        const SizedBox(height: 34, child: VerticalDivider(width: 12)),
+        IconButton(
+          key: const ValueKey('insert-book-image-button'),
+          tooltip: AppStrings.of(context).insertImage,
+          onPressed: onInsertImage,
+          icon: const Icon(Icons.add_photo_alternate_outlined),
         ),
         const SizedBox(height: 34, child: VerticalDivider(width: 12)),
         Expanded(
@@ -43,11 +53,13 @@ class BookFormattingSheet extends StatelessWidget {
   const BookFormattingSheet({
     required this.controller,
     required this.paragraphSettings,
+    required this.onInsertImage,
     super.key,
   });
 
   final QuillController controller;
   final BookParagraphSettings paragraphSettings;
+  final VoidCallback onInsertImage;
 
   @override
   Widget build(BuildContext context) => SafeArea(
@@ -57,6 +69,16 @@ class BookFormattingSheet extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           BookParagraphStyleSelector(controller: controller),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              key: const ValueKey('insert-book-image-button'),
+              onPressed: onInsertImage,
+              icon: const Icon(Icons.add_photo_alternate_outlined),
+              label: Text(AppStrings.of(context).insertImage),
+            ),
+          ),
           const SizedBox(height: 10),
           QuillSimpleToolbar(
             controller: controller,

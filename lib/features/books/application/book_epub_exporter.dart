@@ -24,6 +24,17 @@ abstract final class BookEpubExporter {
     archive.add(
       ArchiveFile.string('EPUB/text/title.xhtml', _titlePage(project)),
     );
+    for (final asset in project.assets.where(
+      (asset) => asset.isRenderableImage,
+    )) {
+      archive.add(
+        ArchiveFile(
+          'EPUB/images/${_imageFileName(project, asset.id)}',
+          asset.bytes.length,
+          asset.bytes,
+        ),
+      );
+    }
 
     for (var index = 0; index < project.sections.length; index++) {
       archive.add(
@@ -63,6 +74,13 @@ abstract final class BookEpubExporter {
         '    <item id="section-$index" href="text/${_sectionFile(index)}" media-type="application/xhtml+xml"/>',
       );
       spine.writeln('    <itemref idref="section-$index"/>');
+    }
+    for (var index = 0; index < project.assets.length; index++) {
+      final asset = project.assets[index];
+      if (!asset.isRenderableImage) continue;
+      manifest.writeln(
+        '    <item id="image-$index" href="images/${_imageFileName(project, asset.id)}" media-type="${escapeXml(asset.mediaType)}"/>',
+      );
     }
 
     return '''<?xml version="1.0" encoding="UTF-8"?>
@@ -175,7 +193,10 @@ ${items.join('\n')}
         '''
   <section id="section-${index + 1}" epub:type="${_epubType(section.type)}">
     <h1>${escapeXml(section.title)}</h1>
-${EpubRichTextRenderer.render(section.content)}  </section>''',
+${EpubRichTextRenderer.render(section.content, imageSource: (assetId) {
+          final file = _imageFileName(project, assetId);
+          return file.isEmpty ? null : '../images/$file';
+        })}  </section>''',
     includeEpubNamespace: true,
   );
 
@@ -228,6 +249,8 @@ a { color: inherit; }
 .align-right, .epigraph { text-align: right; }
 .align-justify { text-align: justify; }
 .check { font-family: sans-serif; }
+.book-image { margin: 1.2em 0; text-align: center; }
+.book-image img { max-width: 100%; height: auto; }
 ${[for (var index = 1; index <= 8; index++) '.indent-$index { margin-left: ${index * 1.5}em; }'].join('\n')}
 ''';
   }
@@ -254,6 +277,19 @@ ${[for (var index = 1; index <= 8; index++) '.indent-$index { margin-left: ${ind
 
   static String _sectionFile(int index) =>
       'section-${(index + 1).toString().padLeft(3, '0')}.xhtml';
+
+  static String _imageFileName(BookProject project, String assetId) {
+    final index = project.assets.indexWhere((asset) => asset.id == assetId);
+    if (index < 0) return '';
+    final extension = switch (project.assets[index].mediaType.toLowerCase()) {
+      'image/png' => 'png',
+      'image/jpeg' => 'jpg',
+      'image/gif' => 'gif',
+      'image/webp' => 'webp',
+      _ => 'bin',
+    };
+    return 'image-${index + 1}.$extension';
+  }
 
   static String _epubType(BookSectionType type) => switch (type) {
     BookSectionType.part => 'part',

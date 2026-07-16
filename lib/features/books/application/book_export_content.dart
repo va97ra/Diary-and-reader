@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 
 enum BookExportBlockType {
@@ -11,6 +13,7 @@ enum BookExportBlockType {
   bulletListItem,
   checkedListItem,
   uncheckedListItem,
+  image,
 }
 
 enum BookExportTextAlignment { left, center, right, justify }
@@ -52,6 +55,7 @@ class BookExportBlock {
     this.lineHeight,
     this.rightToLeft = false,
     this.semanticStyle,
+    this.assetId,
   });
 
   final BookExportBlockType type;
@@ -61,6 +65,7 @@ class BookExportBlock {
   final double? lineHeight;
   final bool rightToLeft;
   final String? semanticStyle;
+  final String? assetId;
 
   bool get isListItem => switch (type) {
     BookExportBlockType.orderedListItem ||
@@ -75,6 +80,7 @@ abstract final class BookExportContentParser {
   static List<BookExportBlock> parse(RichDocument document) {
     final blocks = <BookExportBlock>[];
     var runs = <BookExportTextRun>[];
+    var skipEmbedNewline = false;
 
     void finish(Map<String, dynamic> attributes) {
       blocks.add(_block(runs, attributes));
@@ -83,6 +89,21 @@ abstract final class BookExportContentParser {
 
     for (final operation in document) {
       final insert = operation['insert'];
+      if (insert is Map) {
+        final assetId = _imageAssetId(insert);
+        if (assetId != null) {
+          if (runs.isNotEmpty) finish(const {});
+          blocks.add(
+            BookExportBlock(
+              type: BookExportBlockType.image,
+              runs: const [],
+              assetId: assetId,
+            ),
+          );
+          skipEmbedNewline = true;
+        }
+        continue;
+      }
       if (insert is! String) continue;
       final attributes = operation['attributes'] is Map
           ? Map<String, dynamic>.from(operation['attributes'] as Map)
@@ -92,7 +113,13 @@ abstract final class BookExportContentParser {
         if (parts[index].isNotEmpty) {
           runs.add(_run(parts[index], attributes));
         }
-        if (index < parts.length - 1) finish(attributes);
+        if (index < parts.length - 1) {
+          if (skipEmbedNewline && parts[index].isEmpty) {
+            skipEmbedNewline = false;
+          } else {
+            finish(attributes);
+          }
+        }
       }
     }
     if (runs.isNotEmpty) finish(const <String, dynamic>{});
@@ -168,4 +195,19 @@ abstract final class BookExportContentParser {
 
   static int? _integer(Object? value) =>
       value is num ? value.toInt() : int.tryParse(value?.toString() ?? '');
+
+  static String? _imageAssetId(Map insert) {
+    final direct = insert['bookImage']?.toString();
+    if (direct != null && direct.isNotEmpty) return direct;
+    final custom = insert['custom'];
+    if (custom is! String) return null;
+    try {
+      final decoded = jsonDecode(custom);
+      if (decoded is! Map) return null;
+      final value = decoded['bookImage']?.toString();
+      return value == null || value.isEmpty ? null : value;
+    } on FormatException {
+      return null;
+    }
+  }
 }

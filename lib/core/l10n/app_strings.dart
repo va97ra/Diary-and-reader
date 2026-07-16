@@ -148,6 +148,9 @@ class AppStrings {
   String get quoteStyle => _text('quoteStyle');
   String get epigraph => _text('epigraph');
   String get sceneBreak => _text('sceneBreak');
+  String get insertImage => _text('insertImage');
+  String get imageInserted => _text('imageInserted');
+  String get imageInsertFailed => _text('imageInsertFailed');
   String get reader => _text('reader');
   String get tableOfContents => _text('tableOfContents');
   String get readingSettings => _text('readingSettings');
@@ -416,6 +419,10 @@ class AppStrings {
       'quoteStyle': 'Цитата',
       'epigraph': 'Эпиграф',
       'sceneBreak': 'Разделитель сцены',
+      'insertImage': 'Вставить изображение',
+      'imageInserted': 'Изображение добавлено в рукопись',
+      'imageInsertFailed':
+          'Не удалось добавить изображение. Поддерживаются PNG, JPEG, GIF и WebP до 20 МБ.',
       'reader': 'Читать книгу',
       'tableOfContents': 'Оглавление',
       'readingSettings': 'Настройки чтения',
@@ -694,6 +701,10 @@ class AppStrings {
       'quoteStyle': 'Quote',
       'epigraph': 'Epigraph',
       'sceneBreak': 'Scene break',
+      'insertImage': 'Insert image',
+      'imageInserted': 'Image added to the manuscript',
+      'imageInsertFailed':
+          'Could not add the image. PNG, JPEG, GIF, and WebP up to 20 MB are supported.',
       'reader': 'Read book',
       'tableOfContents': 'Table of contents',
       'readingSettings': 'Reading settings',

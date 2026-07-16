@@ -1,8 +1,10 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/core/theme/app_theme.dart';
+import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_page_format.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/presentation/book_typography.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_image_embed_builder.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
@@ -12,6 +14,7 @@ class BookPageCanvas extends StatelessWidget {
     required this.scale,
     required this.pageFormat,
     required this.paragraphSettings,
+    required this.assets,
     required this.controller,
     required this.focusNode,
     required this.scrollController,
@@ -27,6 +30,7 @@ class BookPageCanvas extends StatelessWidget {
   final double scale;
   final BookPageFormat pageFormat;
   final BookParagraphSettings paragraphSettings;
+  final Iterable<BookAsset> assets;
   final QuillController controller;
   final FocusNode focusNode;
   final ScrollController scrollController;
@@ -105,6 +109,7 @@ class BookPageCanvas extends StatelessWidget {
                             paragraphSettings,
                           ),
                           textSelectionThemeData: BookTypography.selectionTheme,
+                          embedBuilders: [BookImageEmbedBuilder(assets)],
                           scrollable: false,
                           autoFocus: false,
                         ),
