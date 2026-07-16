@@ -227,6 +227,48 @@ void main() {
     await tester.binding.setSurfaceSize(null);
   });
 
+  testWidgets('inserts a page break without deleting selected text', (
+    tester,
+  ) async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(),
+    );
+    await controller.load(preferredLanguage: 'ru');
+    controller.updateSectionContent([
+      {'insert': 'Текст должен сохраниться.\n'},
+    ]);
+
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pumpWidget(AuthorStudioApp(controller: controller));
+    await tester.pumpAndSettle();
+    final editor = tester.widget<QuillEditor>(find.byType(QuillEditor));
+    editor.controller.updateSelection(
+      const TextSelection(baseOffset: 0, extentOffset: 5),
+      ChangeSource.local,
+    );
+    await tester.tap(find.text('Форматирование'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('insert-book-page-break-button')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      jsonEncode(controller.activeSection!.content),
+      contains('bookPageBreak'),
+    );
+    expect(
+      richDocumentPlainText(controller.activeSection!.content),
+      'Текст должен сохраниться.\n',
+    );
+    expect(
+      find.text('Следующий текст начнётся с новой страницы'),
+      findsOneWidget,
+    );
+
+    await tester.binding.setSurfaceSize(null);
+  });
+
   testWidgets('imports an FB2 into the library and opens it in the reader', (
     tester,
   ) async {

@@ -14,6 +14,7 @@ enum BookExportBlockType {
   checkedListItem,
   uncheckedListItem,
   image,
+  pageBreak,
 }
 
 enum BookExportTextAlignment { left, center, right, justify }
@@ -90,6 +91,17 @@ abstract final class BookExportContentParser {
     for (final operation in document) {
       final insert = operation['insert'];
       if (insert is Map) {
+        if (_isPageBreak(insert)) {
+          if (runs.isNotEmpty) finish(const {});
+          blocks.add(
+            const BookExportBlock(
+              type: BookExportBlockType.pageBreak,
+              runs: [],
+            ),
+          );
+          skipEmbedNewline = true;
+          continue;
+        }
         final assetId = _imageAssetId(insert);
         if (assetId != null) {
           if (runs.isNotEmpty) finish(const {});
@@ -208,6 +220,18 @@ abstract final class BookExportContentParser {
       return value == null || value.isEmpty ? null : value;
     } on FormatException {
       return null;
+    }
+  }
+
+  static bool _isPageBreak(Map insert) {
+    if (insert['bookPageBreak'] != null) return true;
+    final custom = insert['custom'];
+    if (custom is! String) return false;
+    try {
+      final decoded = jsonDecode(custom);
+      return decoded is Map && decoded['bookPageBreak'] != null;
+    } on FormatException {
+      return false;
     }
   }
 }

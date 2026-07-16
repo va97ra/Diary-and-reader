@@ -11,12 +11,14 @@ class BookFormattingToolbar extends StatelessWidget {
     required this.controller,
     required this.paragraphSettings,
     required this.onInsertImage,
+    required this.onInsertPageBreak,
     super.key,
   });
 
   final QuillController controller;
   final BookParagraphSettings paragraphSettings;
   final VoidCallback onInsertImage;
+  final VoidCallback onInsertPageBreak;
 
   @override
   Widget build(BuildContext context) => Material(
@@ -37,6 +39,12 @@ class BookFormattingToolbar extends StatelessWidget {
           onPressed: onInsertImage,
           icon: const Icon(Icons.add_photo_alternate_outlined),
         ),
+        IconButton(
+          key: const ValueKey('insert-book-page-break-button'),
+          tooltip: AppStrings.of(context).insertPageBreak,
+          onPressed: onInsertPageBreak,
+          icon: const Icon(Icons.insert_page_break_outlined),
+        ),
         const SizedBox(height: 34, child: VerticalDivider(width: 12)),
         Expanded(
           child: QuillSimpleToolbar(
@@ -54,12 +62,14 @@ class BookFormattingSheet extends StatelessWidget {
     required this.controller,
     required this.paragraphSettings,
     required this.onInsertImage,
+    required this.onInsertPageBreak,
     super.key,
   });
 
   final QuillController controller;
   final BookParagraphSettings paragraphSettings;
   final VoidCallback onInsertImage;
+  final VoidCallback onInsertPageBreak;
 
   @override
   Widget build(BuildContext context) => SafeArea(
@@ -77,6 +87,16 @@ class BookFormattingSheet extends StatelessWidget {
               onPressed: onInsertImage,
               icon: const Icon(Icons.add_photo_alternate_outlined),
               label: Text(AppStrings.of(context).insertImage),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              key: const ValueKey('insert-book-page-break-button'),
+              onPressed: onInsertPageBreak,
+              icon: const Icon(Icons.insert_page_break_outlined),
+              label: Text(AppStrings.of(context).insertPageBreak),
             ),
           ),
           const SizedBox(height: 10),

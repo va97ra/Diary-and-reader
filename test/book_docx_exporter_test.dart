@@ -53,6 +53,7 @@ void main() {
     expect(document, contains('w:numId w:val="10"'));
     expect(document, contains('<w:drawing>'));
     expect(document, contains('r:embed="rId100"'));
+    expect(RegExp('<w:br w:type="page"/>').allMatches(document), hasLength(3));
     expect(document, contains('w:orient="landscape"'));
     expect(document, contains('<w:pgSz w:w="16838" w:h="11906"'));
     expect(
@@ -113,6 +114,10 @@ BookProject _project() {
       {'insert': '\n'},
       {
         'insert': {'bookImage': 'image-1'},
+      },
+      {'insert': '\n'},
+      {
+        'insert': {'bookPageBreak': '1'},
       },
       {'insert': '\n'},
       {'insert': 'Первый пункт'},

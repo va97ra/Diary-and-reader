@@ -16,6 +16,7 @@ import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.d
 import 'package:dnevnik/features/books/presentation/reader/book_reader_text_selection.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_typography.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_image_embed_builder.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_page_break_embed_builder.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
@@ -256,7 +257,10 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
                       scrollable: true,
                       autoFocus: false,
                       showCursor: false,
-                      embedBuilders: [BookImageEmbedBuilder(widget.assets)],
+                      embedBuilders: [
+                        BookImageEmbedBuilder(widget.assets),
+                        const BookPageBreakEmbedBuilder(showLabel: false),
+                      ],
                     ),
                   ),
                 ),
@@ -582,6 +586,15 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
           (_) => _measureCurrentDocument(request),
         );
       }
+      return;
+    }
+    final hardPageSplit = BookPagePaginator.splitAtFirstHardPageBreak(
+      document,
+      splitOffset,
+    );
+    if (hardPageSplit != null) {
+      _measuredPages.add(hardPageSplit.visible);
+      _installMeasurementDocument(hardPageSplit.overflow, request);
       return;
     }
     if (splitOffset >= lastContentOffset) {

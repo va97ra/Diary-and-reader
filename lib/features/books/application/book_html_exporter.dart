@@ -64,6 +64,7 @@ ${EpubRichTextRenderer.render(entry.section.content, imageSource: (assetId) {
     .align-justify { text-align: justify; }
     .book-image { margin: 1.2rem 0; text-align: center; }
     .book-image img { max-width: 100%; height: auto; }
+    .page-break { break-after: page; page-break-after: always; }
     ${[for (var index = 1; index <= 8; index++) '.indent-$index { margin-left: ${index * 1.5}em; }'].join('\n    ')}
     @media (max-width: 600px) { body { padding: 1.5rem 1rem; } }
   </style>

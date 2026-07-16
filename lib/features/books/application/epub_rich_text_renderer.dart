@@ -17,6 +17,11 @@ abstract final class EpubRichTextRenderer {
     }
 
     for (final block in blocks) {
+      if (block.type == BookExportBlockType.pageBreak) {
+        closeList();
+        output.writeln('<div class="page-break"></div>');
+        continue;
+      }
       if (block.type == BookExportBlockType.image) {
         closeList();
         final source = block.assetId == null

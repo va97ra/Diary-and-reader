@@ -15,6 +15,11 @@ abstract final class BookPdfContentRenderer {
     BookExportBlockType? previousType;
 
     for (final block in blocks) {
+      if (block.type == BookExportBlockType.pageBreak) {
+        output.add(pw.NewPage());
+        previousType = block.type;
+        continue;
+      }
       if (block.type == BookExportBlockType.orderedListItem) {
         orderedIndex = previousType == BookExportBlockType.orderedListItem
             ? orderedIndex + 1
@@ -121,6 +126,7 @@ abstract final class BookPdfContentRenderer {
       BookExportBlockType.checkedListItem => _checkRow(block, true, text),
       BookExportBlockType.uncheckedListItem => _checkRow(block, false, text),
       BookExportBlockType.image => pw.SizedBox(),
+      BookExportBlockType.pageBreak => pw.SizedBox(),
       _ => text,
     };
   }

@@ -32,6 +32,7 @@ class BookSectionEditor extends StatefulWidget {
     required this.compactA4Preview,
     required this.onExitCompactPreview,
     required this.onInsertImage,
+    required this.onInsertPageBreak,
     required this.showStatusBar,
     required this.saveState,
     required this.viewMode,
@@ -51,6 +52,7 @@ class BookSectionEditor extends StatefulWidget {
   final bool compactA4Preview;
   final VoidCallback onExitCompactPreview;
   final VoidCallback onInsertImage;
+  final VoidCallback onInsertPageBreak;
   final bool showStatusBar;
   final WorkspaceSaveState saveState;
   final BookPageViewMode viewMode;
@@ -300,6 +302,16 @@ class BookSectionEditorState extends State<BookSectionEditor> {
       return;
     }
 
+    final hardPageSplit = BookPagePaginator.splitAtFirstHardPageBreak(
+      document,
+      splitOffset,
+    );
+    if (hardPageSplit != null) {
+      _measuredPages.add(hardPageSplit.visible);
+      _measurementPageNumber++;
+      _installMeasurementDocument(hardPageSplit.overflow, request);
+      return;
+    }
     if (splitOffset >= lastContentOffset) {
       _finishPaginationMeasurement([..._measuredPages, document], request);
       return;
@@ -463,6 +475,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
             controller: controller,
             paragraphSettings: widget.paragraphSettings,
             onInsertImage: widget.onInsertImage,
+            onInsertPageBreak: widget.onInsertPageBreak,
           ),
         Expanded(
           child: widget.usePagedLayout

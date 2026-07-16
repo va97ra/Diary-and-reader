@@ -27,4 +27,34 @@ void main() {
 
     expect(merged, source);
   });
+
+  test('honors and preserves an author-inserted page break', () {
+    final source = [
+      {'insert': 'Текст до разрыва\n'},
+      {
+        'insert': {'bookPageBreak': '1'},
+      },
+      {'insert': '\nТекст после разрыва\n'},
+    ];
+
+    final split = BookPagePaginator.splitAtFirstHardPageBreak(source, 100);
+
+    expect(split, isNotNull);
+    expect(split!.overflow, [
+      {'insert': 'Текст после разрыва\n'},
+    ]);
+    expect(BookPagePaginator.merge([split.visible, split.overflow]), source);
+  });
+
+  test('does not apply a page break that is below measured content', () {
+    final source = [
+      {'insert': 'Длинный текст перед разрывом\n'},
+      {
+        'insert': {'bookPageBreak': '1'},
+      },
+      {'insert': '\nПродолжение\n'},
+    ];
+
+    expect(BookPagePaginator.splitAtFirstHardPageBreak(source, 5), isNull);
+  });
 }

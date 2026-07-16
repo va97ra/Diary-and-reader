@@ -5,6 +5,7 @@ import 'package:dnevnik/features/books/domain/book_page_format.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/presentation/book_typography.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_image_embed_builder.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_page_break_embed_builder.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
@@ -109,7 +110,10 @@ class BookPageCanvas extends StatelessWidget {
                             paragraphSettings,
                           ),
                           textSelectionThemeData: BookTypography.selectionTheme,
-                          embedBuilders: [BookImageEmbedBuilder(assets)],
+                          embedBuilders: [
+                            BookImageEmbedBuilder(assets),
+                            const BookPageBreakEmbedBuilder(),
+                          ],
                           scrollable: false,
                           autoFocus: false,
                         ),

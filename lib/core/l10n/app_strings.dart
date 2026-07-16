@@ -151,6 +151,9 @@ class AppStrings {
   String get insertImage => _text('insertImage');
   String get imageInserted => _text('imageInserted');
   String get imageInsertFailed => _text('imageInsertFailed');
+  String get insertPageBreak => _text('insertPageBreak');
+  String get pageBreak => _text('pageBreak');
+  String get pageBreakInserted => _text('pageBreakInserted');
   String get reader => _text('reader');
   String get tableOfContents => _text('tableOfContents');
   String get readingSettings => _text('readingSettings');
@@ -423,6 +426,9 @@ class AppStrings {
       'imageInserted': 'Изображение добавлено в рукопись',
       'imageInsertFailed':
           'Не удалось добавить изображение. Поддерживаются PNG, JPEG, GIF и WebP до 20 МБ.',
+      'insertPageBreak': 'Вставить разрыв страницы',
+      'pageBreak': 'Разрыв страницы',
+      'pageBreakInserted': 'Следующий текст начнётся с новой страницы',
       'reader': 'Читать книгу',
       'tableOfContents': 'Оглавление',
       'readingSettings': 'Настройки чтения',
@@ -705,6 +711,9 @@ class AppStrings {
       'imageInserted': 'Image added to the manuscript',
       'imageInsertFailed':
           'Could not add the image. PNG, JPEG, GIF, and WebP up to 20 MB are supported.',
+      'insertPageBreak': 'Insert page break',
+      'pageBreak': 'Page break',
+      'pageBreakInserted': 'The following text will start on a new page',
       'reader': 'Read book',
       'tableOfContents': 'Table of contents',
       'readingSettings': 'Reading settings',

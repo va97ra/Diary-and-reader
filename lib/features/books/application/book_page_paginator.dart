@@ -14,6 +14,29 @@ class BookPageSplit {
 abstract final class BookPagePaginator {
   static const _softPageBreakAttribute = '_bookSoftPageBreak';
 
+  /// Returns the first author-inserted page break that fits inside the
+  /// measured page. The break stays in the manuscript, while its following
+  /// content starts on a new page.
+  static BookPageSplit? splitAtFirstHardPageBreak(
+    RichDocument source,
+    int measuredSplitOffset,
+  ) {
+    final splitOffset = _firstHardPageBreakEnd(source);
+    if (splitOffset == null || splitOffset > measuredSplitOffset) return null;
+    final documentLength = _length(source);
+    final visible = _slice(source, 0, splitOffset);
+    final overflow = splitOffset < documentLength
+        ? _slice(source, splitOffset, documentLength)
+        : emptyRichDocument();
+    if (!_endsWithNewline(visible)) {
+      visible.add(<String, dynamic>{'insert': '\n'});
+    }
+    if (!_endsWithNewline(overflow)) {
+      overflow.add(<String, dynamic>{'insert': '\n'});
+    }
+    return BookPageSplit(visible: visible, overflow: overflow);
+  }
+
   static BookPageSplit split(RichDocument source, int splitOffset) {
     final documentLength = _length(source);
     final safeOffset = splitOffset.clamp(1, documentLength - 1);
@@ -85,6 +108,37 @@ abstract final class BookPagePaginator {
         final insert = operation['insert'];
         return sum + (insert is String ? insert.length : 1);
       });
+
+  static int? _firstHardPageBreakEnd(RichDocument source) {
+    var position = 0;
+    for (var index = 0; index < source.length; index++) {
+      final operation = source[index];
+      final insert = operation['insert'];
+      final operationLength = insert is String ? insert.length : 1;
+      if (insert is Map && _isHardPageBreak(insert)) {
+        var end = position + 1;
+        if (index + 1 < source.length) {
+          final nextInsert = source[index + 1]['insert'];
+          if (nextInsert is String && nextInsert.startsWith('\n')) end++;
+        }
+        return end;
+      }
+      position += operationLength;
+    }
+    return null;
+  }
+
+  static bool _isHardPageBreak(Map insert) {
+    if (insert['bookPageBreak'] != null) return true;
+    final custom = insert['custom'];
+    if (custom is! String) return false;
+    try {
+      final decoded = jsonDecode(custom);
+      return decoded is Map && decoded['bookPageBreak'] != null;
+    } on FormatException {
+      return false;
+    }
+  }
 
   static RichDocument _slice(RichDocument source, int start, int end) {
     final result = <Map<String, dynamic>>[];

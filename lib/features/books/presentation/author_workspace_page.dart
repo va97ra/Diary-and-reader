@@ -135,6 +135,7 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
                           compactA4Preview: !isTablet && _isA4Preview,
                           onExitCompactPreview: _toggleA4Preview,
                           onInsertImage: _insertImage,
+                          onInsertPageBreak: _insertPageBreak,
                           showStatusBar: !_isFocusMode,
                           saveState: widget.controller.saveState,
                           viewMode: project.layoutSettings.viewMode,
@@ -307,6 +308,10 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
           Navigator.pop(sheetContext);
           _insertImage();
         },
+        onInsertPageBreak: () {
+          Navigator.pop(sheetContext);
+          _insertPageBreak();
+        },
       ),
     );
   }
@@ -336,6 +341,24 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
     widget.controller.addAsset(asset);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(AppStrings.of(context).imageInserted)),
+    );
+  }
+
+  void _insertPageBreak() {
+    final controller = _editorController;
+    if (controller == null) return;
+    final offset = controller.selection.extentOffset.clamp(
+      0,
+      controller.document.length - 1,
+    );
+    controller.replaceText(
+      offset,
+      0,
+      BlockEmbed.custom(const CustomBlockEmbed('bookPageBreak', '1')),
+      TextSelection.collapsed(offset: offset + 1),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppStrings.of(context).pageBreakInserted)),
     );
   }
 

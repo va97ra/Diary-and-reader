@@ -47,6 +47,9 @@ abstract final class MarkdownRichTextRenderer {
         case BookExportBlockType.image:
           output.writeln('![image](asset:${block.assetId ?? ''})\n');
           break;
+        case BookExportBlockType.pageBreak:
+          output.writeln('<div style="break-after: page;"></div>\n');
+          break;
       }
     }
     return output.toString().trimRight();

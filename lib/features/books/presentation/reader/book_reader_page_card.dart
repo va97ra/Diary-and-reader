@@ -6,6 +6,7 @@ import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_typography.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_image_embed_builder.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_page_break_embed_builder.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
@@ -121,7 +122,10 @@ class BookReaderPageCard extends StatelessWidget {
                   scrollable: false,
                   autoFocus: false,
                   showCursor: false,
-                  embedBuilders: [BookImageEmbedBuilder(assets)],
+                  embedBuilders: [
+                    BookImageEmbedBuilder(assets),
+                    const BookPageBreakEmbedBuilder(showLabel: false),
+                  ],
                 ),
               ),
             ),

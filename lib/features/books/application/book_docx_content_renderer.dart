@@ -167,6 +167,7 @@ $body  </w:body>
   }
 
   String _block(BookExportBlock block, int? numberingId) {
+    if (block.type == BookExportBlockType.pageBreak) return _pageBreak();
     if (block.type == BookExportBlockType.image) {
       return _imageParagraph(block.assetId);
     }

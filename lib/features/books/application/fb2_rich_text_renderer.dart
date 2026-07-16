@@ -16,6 +16,10 @@ abstract final class Fb2RichTextRenderer {
         }
         continue;
       }
+      if (block.type == BookExportBlockType.pageBreak) {
+        output.writeln('      <empty-line/>');
+        continue;
+      }
       if (block.runs.isEmpty) {
         output.writeln('      <empty-line/>');
         continue;
@@ -54,6 +58,8 @@ abstract final class Fb2RichTextRenderer {
           }
           break;
         case BookExportBlockType.image:
+          break;
+        case BookExportBlockType.pageBreak:
           break;
       }
     }

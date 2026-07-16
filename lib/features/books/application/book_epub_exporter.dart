@@ -251,6 +251,7 @@ a { color: inherit; }
 .check { font-family: sans-serif; }
 .book-image { margin: 1.2em 0; text-align: center; }
 .book-image img { max-width: 100%; height: auto; }
+.page-break { break-after: page; page-break-after: always; }
 ${[for (var index = 1; index <= 8; index++) '.indent-$index { margin-left: ${index * 1.5}em; }'].join('\n')}
 ''';
   }
