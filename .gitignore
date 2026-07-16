@@ -17,6 +17,9 @@ android/.gradle/
 android/app/debug/
 android/app/profile/
 android/app/release/
+android/key.properties
+android/*.jks
+android/*.keystore
 ios/Flutter/.last_build_id
 windows/flutter/ephemeral/
 
@@ -24,5 +27,6 @@ windows/flutter/ephemeral/
 *.log
 *.local
 output/
+dist/
 .DS_Store
 Thumbs.db

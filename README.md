@@ -50,6 +50,11 @@ flutter build apk --debug
 `main` и каждого pull request. Версия Flutter закреплена на `3.44.6`, чтобы
 локальная и автоматическая сборки давали одинаковый результат.
 
+Подготовка подписанного Android App Bundle и переносимого Windows-пакета
+описана в [чек-листе первого релиза](docs/release-checklist.md). Release-сборка
+Android намеренно останавливается, если закрытый upload keystore не настроен:
+так debug-ключ не сможет случайно попасть в публикуемое приложение.
+
 ## Идентификаторы приложения
 
 - Android package / iOS bundle: `app.dnevnik`.

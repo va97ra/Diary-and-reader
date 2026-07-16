@@ -1,5 +1,5 @@
 name: dnevnik
-description: "A private bilingual diary built with Flutter."
+description: "An adaptive book-writing studio and ebook reader built with Flutter."
 publish_to: 'none'
 version: 1.0.0+1
 
