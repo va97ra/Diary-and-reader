@@ -145,6 +145,8 @@ class AppStrings {
   String get reader => _text('reader');
   String get tableOfContents => _text('tableOfContents');
   String get readingSettings => _text('readingSettings');
+  String get focusReading => _text('focusReading');
+  String get exitFocusReading => _text('exitFocusReading');
   String get readerTheme => _text('readerTheme');
   String get lightTheme => _text('lightTheme');
   String get sepiaTheme => _text('sepiaTheme');
@@ -397,6 +399,8 @@ class AppStrings {
       'reader': 'Читать книгу',
       'tableOfContents': 'Оглавление',
       'readingSettings': 'Настройки чтения',
+      'focusReading': 'Скрыть панели',
+      'exitFocusReading': 'Показать панели',
       'readerTheme': 'Тема',
       'lightTheme': 'Светлая',
       'sepiaTheme': 'Сепия',
@@ -659,6 +663,8 @@ class AppStrings {
       'reader': 'Read book',
       'tableOfContents': 'Table of contents',
       'readingSettings': 'Reading settings',
+      'focusReading': 'Hide controls',
+      'exitFocusReading': 'Show controls',
       'readerTheme': 'Theme',
       'lightTheme': 'Light',
       'sepiaTheme': 'Sepia',

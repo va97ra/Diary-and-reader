@@ -169,6 +169,23 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const ValueKey('reader-contents')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('reader-focus-mode-button')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('reader-exit-focus-mode')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('reader-progress')), findsNothing);
+    expect(find.byKey(const ValueKey('reader-next-section')), findsNothing);
+    expect(find.byKey(const ValueKey('reader-contents-button')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('reader-exit-focus-mode')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('reader-focus-mode-button')),
+      findsOneWidget,
+    );
     await tester.tap(find.byKey(const ValueKey('reader-contents-button')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('reader-contents')), findsOneWidget);

@@ -47,6 +47,7 @@ class _BookReaderPageState extends State<BookReaderPage> {
   double _sectionProgress = 0;
   BookReaderTextSelection? _textSelection;
   int _clearSelectionVersion = 0;
+  bool _isFocusMode = false;
 
   List<BookSection> get _sections => widget.project.sections;
   BookSection get _section => _sections[_activeIndex];
@@ -111,46 +112,83 @@ class _BookReaderPageState extends State<BookReaderPage> {
           builder: (context, constraints) {
             final showContents = constraints.maxWidth >= 1050;
             return PopScope(
-              onPopInvokedWithResult: (_, _) => _saveProgress(),
+              canPop: !_isFocusMode,
+              onPopInvokedWithResult: (didPop, _) {
+                _saveProgress();
+                if (!didPop && _isFocusMode) {
+                  setState(() => _isFocusMode = false);
+                }
+              },
               child: Scaffold(
-                appBar: _buildAppBar(context, showContents),
-                body: Column(
+                appBar: _isFocusMode
+                    ? null
+                    : _buildAppBar(context, showContents),
+                body: Stack(
                   children: [
-                    LinearProgressIndicator(
-                      key: const ValueKey('reader-progress'),
-                      value: _overallProgress,
-                      minHeight: 3,
-                    ),
-                    Expanded(
-                      child: Row(
+                    Positioned.fill(
+                      child: Column(
                         children: [
-                          if (showContents)
-                            SizedBox(
-                              width: 300,
-                              child: Material(
-                                color: palette.surface,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                      child: _navigationPanel(
-                                        context,
-                                        closeAfterSelection: false,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                          if (!_isFocusMode)
+                            LinearProgressIndicator(
+                              key: const ValueKey('reader-progress'),
+                              value: _overallProgress,
+                              minHeight: 3,
                             ),
                           Expanded(
-                            child: _buildReadingSurface(context, palette),
+                            child: Row(
+                              children: [
+                                if (showContents && !_isFocusMode)
+                                  SizedBox(
+                                    width: 300,
+                                    child: Material(
+                                      color: palette.surface,
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(
+                                            child: _navigationPanel(
+                                              context,
+                                              closeAfterSelection: false,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                Expanded(
+                                  child: _buildReadingSurface(context, palette),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
                     ),
+                    if (_isFocusMode)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: SafeArea(
+                          child: Material(
+                            color: palette.surface.withValues(alpha: 0.84),
+                            elevation: 2,
+                            shape: const CircleBorder(),
+                            child: IconButton(
+                              key: const ValueKey('reader-exit-focus-mode'),
+                              tooltip: AppStrings.of(context).exitFocusReading,
+                              visualDensity: VisualDensity.compact,
+                              onPressed: _toggleFocusMode,
+                              icon: const Icon(Icons.fullscreen_exit),
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
-                bottomNavigationBar: _buildNavigationBar(context, palette),
+                bottomNavigationBar: _isFocusMode
+                    ? null
+                    : _buildNavigationBar(context, palette),
               ),
             );
           },
@@ -180,6 +218,12 @@ class _BookReaderPageState extends State<BookReaderPage> {
         ],
       ),
       actions: [
+        IconButton(
+          key: const ValueKey('reader-focus-mode-button'),
+          tooltip: strings.focusReading,
+          onPressed: _toggleFocusMode,
+          icon: const Icon(Icons.fullscreen),
+        ),
         IconButton(
           key: const ValueKey('reader-search-button'),
           tooltip: strings.searchInBook,
@@ -211,6 +255,11 @@ class _BookReaderPageState extends State<BookReaderPage> {
         ),
       ],
     );
+  }
+
+  void _toggleFocusMode() {
+    _clearTextSelection();
+    setState(() => _isFocusMode = !_isFocusMode);
   }
 
   Widget _buildReadingSurface(
