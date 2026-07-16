@@ -323,10 +323,13 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
       return;
     }
     final selection = controller.selection;
-    final offset = selection.start.clamp(0, controller.document.length - 1);
+    final offset = selection.extentOffset.clamp(
+      0,
+      controller.document.length - 1,
+    );
     controller.replaceText(
       offset,
-      selection.end - selection.start,
+      0,
       BlockEmbed.custom(CustomBlockEmbed('bookImage', asset.id)),
       TextSelection.collapsed(offset: offset + 1),
     );

@@ -41,7 +41,10 @@ abstract final class BookDocxExporter {
       ..add(
         ArchiveFile.string(
           'word/_rels/document.xml.rels',
-          BookDocxPackageParts.documentRelationships(content.relationships),
+          BookDocxPackageParts.documentRelationships(
+            content.relationships,
+            content.images.map((image) => image.relationship).toList(),
+          ),
         ),
       )
       ..add(
@@ -77,6 +80,15 @@ abstract final class BookDocxExporter {
       ..add(
         ArchiveFile.string('word/footer1.xml', BookDocxPackageParts.footer),
       );
+    for (final image in content.images) {
+      archive.add(
+        ArchiveFile(
+          'word/${image.relationship.target}',
+          image.asset.bytes.length,
+          image.asset.bytes,
+        ),
+      );
+    }
 
     return BookExportArtifact(
       bytes: Uint8List.fromList(

@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:dnevnik/features/books/application/book_docx_exporter.dart';
+import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
@@ -35,6 +37,7 @@ void main() {
         'word/fontTable.xml',
         'word/header1.xml',
         'word/footer1.xml',
+        'word/media/image-1.png',
       ]),
     );
 
@@ -48,6 +51,8 @@ void main() {
     expect(document, contains('<w:u w:val="single"/>'));
     expect(document, contains('[x] '));
     expect(document, contains('w:numId w:val="10"'));
+    expect(document, contains('<w:drawing>'));
+    expect(document, contains('r:embed="rId100"'));
     expect(document, contains('w:orient="landscape"'));
     expect(document, contains('<w:pgSz w:w="16838" w:h="11906"'));
     expect(
@@ -58,6 +63,8 @@ void main() {
     final relationships = _text(files['word/_rels/document.xml.rels']!);
     expect(relationships, contains('Target="https://example.com/book"'));
     expect(relationships, contains('TargetMode="External"'));
+    expect(relationships, contains('Target="media/image-1.png"'));
+    expect(relationships, contains('/relationships/image'));
 
     final styles = _text(files['word/styles.xml']!);
     expect(styles, contains('w:styleId="BodyText"'));
@@ -102,6 +109,10 @@ BookProject _project() {
       {
         'insert': 'Жирный и подчёркнутый текст',
         'attributes': {'bold': true, 'underline': true},
+      },
+      {'insert': '\n'},
+      {
+        'insert': {'bookImage': 'image-1'},
       },
       {'insert': '\n'},
       {'insert': 'Первый пункт'},
@@ -156,7 +167,19 @@ BookProject _project() {
       lineHeight: 1.5,
       paragraphIndentMm: 5,
     ),
+    assets: [
+      BookAsset(
+        id: 'image-1',
+        mediaType: 'image/png',
+        bytes: _png,
+        sourcePath: 'pixel.png',
+      ),
+    ],
   );
 }
+
+final Uint8List _png = base64Decode(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+);
 
 String _text(ArchiveFile file) => utf8.decode(file.content);

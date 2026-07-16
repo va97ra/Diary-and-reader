@@ -7,12 +7,23 @@ class BookDocxHyperlinkRelationship {
   final String target;
 }
 
+class BookDocxImageRelationship {
+  const BookDocxImageRelationship({required this.id, required this.target});
+
+  final String id;
+  final String target;
+}
+
 abstract final class BookDocxPackageParts {
   static const contentTypes =
       '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
   <Default Extension="xml" ContentType="application/xml"/>
+  <Default Extension="png" ContentType="image/png"/>
+  <Default Extension="jpg" ContentType="image/jpeg"/>
+  <Default Extension="gif" ContentType="image/gif"/>
+  <Default Extension="webp" ContentType="image/webp"/>
   <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
   <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
   <Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
@@ -36,11 +47,18 @@ abstract final class BookDocxPackageParts {
 
   static String documentRelationships(
     List<BookDocxHyperlinkRelationship> hyperlinks,
+    List<BookDocxImageRelationship> images,
   ) {
     final external = hyperlinks
         .map(
           (link) =>
               '  <Relationship Id="${docxEscapeXml(link.id)}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="${docxEscapeXml(link.target)}" TargetMode="External"/>',
+        )
+        .join('\n');
+    final embedded = images
+        .map(
+          (image) =>
+              '  <Relationship Id="${docxEscapeXml(image.id)}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${docxEscapeXml(image.target)}"/>',
         )
         .join('\n');
     return '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -51,7 +69,7 @@ abstract final class BookDocxPackageParts {
   <Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/fontTable" Target="fontTable.xml"/>
   <Relationship Id="rId5" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>
   <Relationship Id="rId6" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>
-${external.isEmpty ? '' : '$external\n'}</Relationships>
+${external.isEmpty ? '' : '$external\n'}${embedded.isEmpty ? '' : '$embedded\n'}</Relationships>
 ''';
   }
 

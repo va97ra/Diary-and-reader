@@ -1,8 +1,22 @@
+import 'dart:math' as math;
+
 import 'package:dnevnik/features/books/application/book_docx_package_parts.dart';
 import 'package:dnevnik/features/books/application/book_export_content.dart';
+import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
+import 'package:pdf/widgets.dart' as pw;
+
+class BookDocxEmbeddedImage {
+  const BookDocxEmbeddedImage({
+    required this.relationship,
+    required this.asset,
+  });
+
+  final BookDocxImageRelationship relationship;
+  final BookAsset asset;
+}
 
 class BookDocxRenderedContent {
   const BookDocxRenderedContent({
@@ -10,12 +24,14 @@ class BookDocxRenderedContent {
     required this.relationships,
     required this.decimalNumberingIds,
     required this.bulletNumberingIds,
+    required this.images,
   });
 
   final String documentXml;
   final List<BookDocxHyperlinkRelationship> relationships;
   final List<int> decimalNumberingIds;
   final List<int> bulletNumberingIds;
+  final List<BookDocxEmbeddedImage> images;
 }
 
 abstract final class BookDocxContentRenderer {
@@ -33,6 +49,8 @@ class _DocxRenderContext {
   final _relationshipByTarget = <String, String>{};
   final _decimalNumberingIds = <int>[];
   final _bulletNumberingIds = <int>[];
+  final _images = <BookDocxEmbeddedImage>[];
+  final _imageByAssetId = <String, BookDocxEmbeddedImage>{};
   var _nextRelationshipId = 100;
   var _nextNumberingId = 10;
 
@@ -46,7 +64,7 @@ class _DocxRenderContext {
     body.writeln(BookDocxPackageParts.sectionProperties(project));
     final document =
         '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
   <w:body>
 $body  </w:body>
 </w:document>
@@ -56,6 +74,7 @@ $body  </w:body>
       relationships: List.unmodifiable(_relationships),
       decimalNumberingIds: List.unmodifiable(_decimalNumberingIds),
       bulletNumberingIds: List.unmodifiable(_bulletNumberingIds),
+      images: List.unmodifiable(_images),
     );
   }
 
@@ -148,6 +167,9 @@ $body  </w:body>
   }
 
   String _block(BookExportBlock block, int? numberingId) {
+    if (block.type == BookExportBlockType.image) {
+      return _imageParagraph(block.assetId);
+    }
     final settings = project.paragraphSettings;
     final paragraphProperties = _paragraphProperties(
       block,
@@ -277,6 +299,54 @@ $body  </w:body>
       '<w:r><w:rPr>${bold ? '<w:b/>' : ''}</w:rPr><w:t xml:space="preserve">${_text(text)}</w:t></w:r>';
 
   String _pageBreak() => '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+
+  String _imageParagraph(String? assetId) {
+    final asset = project.assetById(assetId ?? '');
+    if (asset == null || !asset.isRenderableImage) return '';
+    final embedded = _imageByAssetId.putIfAbsent(asset.id, () {
+      final extension = switch (asset.mediaType.toLowerCase()) {
+        'image/png' => 'png',
+        'image/jpeg' => 'jpg',
+        'image/gif' => 'gif',
+        'image/webp' => 'webp',
+        _ => 'bin',
+      };
+      final relationship = BookDocxImageRelationship(
+        id: 'rId${_nextRelationshipId++}',
+        target: 'media/image-${_images.length + 1}.$extension',
+      );
+      final value = BookDocxEmbeddedImage(
+        relationship: relationship,
+        asset: asset,
+      );
+      _images.add(value);
+      return value;
+    });
+    var width = 640.0;
+    var height = 480.0;
+    try {
+      final image = pw.MemoryImage(asset.bytes);
+      width = (image.width ?? 640).toDouble();
+      height = (image.height ?? 480).toDouble();
+    } catch (_) {}
+    const maxWidth = 5486400.0;
+    const maxHeight = 4572000.0;
+    final naturalWidth = math.max(1.0, width * 9525);
+    final naturalHeight = math.max(1.0, height * 9525);
+    final scale = math.min(
+      1.0,
+      math.min(maxWidth / naturalWidth, maxHeight / naturalHeight),
+    );
+    final cx = (naturalWidth * scale).round();
+    final cy = (naturalHeight * scale).round();
+    final drawingId = _images.indexOf(embedded) + 1;
+    final name = docxEscapeXml(
+      embedded.asset.sourcePath.isEmpty
+          ? 'Image $drawingId'
+          : embedded.asset.sourcePath,
+    );
+    return '<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="$cx" cy="$cy"/><wp:docPr id="$drawingId" name="$name"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="$drawingId" name="$name"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${embedded.relationship.id}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="$cx" cy="$cy"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>';
+  }
 
   int _outlineLevel(BookSection section) {
     if (section.type == BookSectionType.part) return 0;
