@@ -29,7 +29,7 @@ if (releaseTaskRequested && !releaseSigningConfigured) {
 }
 
 android {
-    namespace = "app.dnevnik"
+    namespace = "com.va97ra.literia"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -39,7 +39,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "app.dnevnik"
+        applicationId = "com.va97ra.literia"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

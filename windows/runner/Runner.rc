@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904B0"
         BEGIN
-            VALUE "CompanyName", "Dnevnik" "\0"
-            VALUE "FileDescription", "Дневник" "\0"
+            VALUE "CompanyName", "Literia" "\0"
+            VALUE "FileDescription", "Литерия" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "dnevnik" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 Dnevnik. All rights reserved." "\0"
-            VALUE "OriginalFilename", "dnevnik.exe" "\0"
-            VALUE "ProductName", "Дневник" "\0"
+            VALUE "InternalName", "literia" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Literia. All rights reserved." "\0"
+            VALUE "OriginalFilename", "literia.exe" "\0"
+            VALUE "ProductName", "Литерия" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

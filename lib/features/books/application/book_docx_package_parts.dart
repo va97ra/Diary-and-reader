@@ -82,7 +82,7 @@ ${external.isEmpty ? '' : '$external\n'}${embedded.isEmpty ? '' : '$embedded\n'}
   <dc:creator>${docxEscapeXml(metadata.author)}</dc:creator>
   <cp:keywords>${docxEscapeXml([metadata.genre, metadata.series].where((value) => value.trim().isNotEmpty).join(', '))}</cp:keywords>
   <dc:description>${docxEscapeXml(metadata.description)}</dc:description>
-  <cp:lastModifiedBy>Dnevnik Author Studio</cp:lastModifiedBy>
+  <cp:lastModifiedBy>Literia Author Studio</cp:lastModifiedBy>
   <dcterms:created xsi:type="dcterms:W3CDTF">${_wordDate(project.createdAt)}</dcterms:created>
   <dcterms:modified xsi:type="dcterms:W3CDTF">${_wordDate(project.updatedAt)}</dcterms:modified>
 </cp:coreProperties>
@@ -92,7 +92,7 @@ ${external.isEmpty ? '' : '$external\n'}${embedded.isEmpty ? '' : '$embedded\n'}
   static const appProperties =
       '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">
-  <Application>Dnevnik Author Studio</Application>
+  <Application>Literia Author Studio</Application>
   <DocSecurity>0</DocSecurity>
   <ScaleCrop>false</ScaleCrop>
   <Company></Company>

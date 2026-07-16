@@ -21,10 +21,10 @@ abstract final class BookPdfExporter {
       theme: theme,
       title: project.metadata.title,
       author: _optional(project.metadata.author),
-      creator: 'Dnevnik Author Studio',
+      creator: 'Literia Author Studio',
       subject: _optional(project.metadata.description),
       keywords: _optional(project.metadata.genre),
-      producer: 'Dnevnik Author Studio',
+      producer: 'Literia Author Studio',
     );
     final pageFormat = formatFor(project);
     document.addPage(_titlePage(project, pageFormat));

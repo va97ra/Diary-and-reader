@@ -284,7 +284,7 @@ class AppStrings {
 
   static const _values = <String, Map<String, String>>{
     'ru': {
-      'appTitle': 'Мой дневник',
+      'appTitle': 'Литерия',
       'quote': 'Путешествие в тысячу миль начинается с одного шага.',
       'openBook': 'Открыть книгу',
       'entries': 'Записи',
@@ -313,7 +313,7 @@ class AppStrings {
       'exportData': 'Экспортировать',
       'importData': 'Импортировать',
       'exportSuccess': 'Резервная копия сохранена',
-      'importSuccess': 'Дневник восстановлен из файла',
+      'importSuccess': 'Данные восстановлены из файла',
       'importFailed': 'Не удалось прочитать файл дневника',
       'confirmImport': 'Текущие записи будут заменены данными из файла.',
       'millimeters': 'мм',
@@ -569,7 +569,7 @@ class AppStrings {
           'В браузере хранятся пять последних снимков каждой книги. Для долговременного хранения сохраняйте резервные копии в файл.',
     },
     'en': {
-      'appTitle': 'My diary',
+      'appTitle': 'Literia',
       'quote': 'A journey of a thousand miles begins with a single step.',
       'openBook': 'Open book',
       'entries': 'Entries',

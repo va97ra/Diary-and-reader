@@ -7,7 +7,7 @@ $ErrorActionPreference = "Stop"
 $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $releaseDirectory = Join-Path $projectRoot "build\windows\x64\runner\Release"
 $distributionDirectory = Join-Path $projectRoot "dist"
-$packageName = "Dnevnik-$Version-windows-x64"
+$packageName = "Literia-$Version-windows-x64"
 $stagingDirectory = Join-Path $distributionDirectory $packageName
 $archivePath = Join-Path $distributionDirectory "$packageName.zip"
 

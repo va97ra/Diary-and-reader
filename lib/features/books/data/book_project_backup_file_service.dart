@@ -14,7 +14,7 @@ class BookProjectBackupFileService implements BookProjectBackupFileGateway {
   const BookProjectBackupFileService();
 
   static const _archiveType = XTypeGroup(
-    label: 'Dnevnik book project',
+    label: 'Literia book project',
     extensions: ['json'],
     mimeTypes: ['application/json'],
     uniformTypeIdentifiers: ['public.json'],

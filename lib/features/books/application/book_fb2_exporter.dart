@@ -54,8 +54,8 @@ abstract final class BookFb2Exporter {
       ${_sequence(metadata.series)}
     </title-info>
     <document-info>
-      ${_author(metadata.author, fallback: 'Дневник')}
-      <program-used>Дневник — авторская студия</program-used>
+      ${_author(metadata.author, fallback: 'Литерия')}
+      <program-used>Литерия — авторская студия</program-used>
       <date value="$date">$date</date>
       <id>${escapeXml(project.id)}</id>
       <version>1.0</version>

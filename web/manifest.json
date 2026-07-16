@@ -1,11 +1,11 @@
 {
-    "name": "Мой дневник",
-    "short_name": "Дневник",
+    "name": "Литерия",
+    "short_name": "Литерия",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#07152F",
     "theme_color": "#07152F",
-    "description": "Личный двуязычный дневник на Flutter.",
+    "description": "Авторская студия и читалка для книг.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
