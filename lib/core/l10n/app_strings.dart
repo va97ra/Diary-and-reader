@@ -96,6 +96,12 @@ class AppStrings {
   String get revision => _text('revision');
   String get complete => _text('complete');
   String get editor => _text('editor');
+  String get focusWriting => _text('focusWriting');
+  String get exitFocusWriting => _text('exitFocusWriting');
+  String get a4Preview => _text('a4Preview');
+  String get comfortableWriting => _text('comfortableWriting');
+  String get a4PreviewHint => _text('a4PreviewHint');
+  String get moreActions => _text('moreActions');
   String get moveUp => _text('moveUp');
   String get moveDown => _text('moveDown');
   String get deleteSection => _text('deleteSection');
@@ -349,6 +355,13 @@ class AppStrings {
       'revision': 'Редактура',
       'complete': 'Готово',
       'editor': 'Редактор',
+      'focusWriting': 'Скрыть панели',
+      'exitFocusWriting': 'Показать панели',
+      'a4Preview': 'Предпросмотр A4',
+      'comfortableWriting': 'Удобный набор',
+      'a4PreviewHint':
+          'Точная разметка A4: поля, переносы и страницы пересчитаны под печатный лист.',
+      'moreActions': 'Другие действия',
       'moveUp': 'Переместить выше',
       'moveDown': 'Переместить ниже',
       'deleteSection': 'Удалить раздел',
@@ -613,6 +626,13 @@ class AppStrings {
       'revision': 'Revision',
       'complete': 'Complete',
       'editor': 'Editor',
+      'focusWriting': 'Hide panels',
+      'exitFocusWriting': 'Show panels',
+      'a4Preview': 'A4 preview',
+      'comfortableWriting': 'Comfortable writing',
+      'a4PreviewHint':
+          'Exact A4 layout: margins, line wrapping, and pages use the print sheet.',
+      'moreActions': 'More actions',
       'moveUp': 'Move up',
       'moveDown': 'Move down',
       'deleteSection': 'Delete section',

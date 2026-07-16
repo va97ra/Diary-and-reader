@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:dnevnik/app/author_studio_app.dart';
@@ -26,7 +27,6 @@ void main() {
       MemoryAuthorWorkspaceRepository(),
     );
     await controller.load(preferredLanguage: 'ru');
-
     await tester.binding.setSurfaceSize(const Size(1920, 1080));
     await tester.pumpWidget(AuthorStudioApp(controller: controller));
     await tester.pumpAndSettle();
@@ -58,13 +58,54 @@ void main() {
       MemoryAuthorWorkspaceRepository(),
     );
     await controller.load(preferredLanguage: 'ru');
+    final mobileContent = <Map<String, dynamic>>[
+      {'insert': 'Абзац, набранный на смартфоне.\n'},
+    ];
+    controller.updateSectionContent(mobileContent);
 
     await tester.binding.setSurfaceSize(const Size(390, 844));
     await tester.pumpWidget(AuthorStudioApp(controller: controller));
     await tester.pumpAndSettle();
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('editor-bottom-navigation')),
+      findsOneWidget,
+    );
     expect(find.text('Редактор'), findsOneWidget);
     expect(find.textContaining('Лист A4 1 из 1'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('mobile-a4-preview-button')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('editor-focus-mode-button')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('editor-exit-focus-mode')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('editor-bottom-navigation')),
+      findsNothing,
+    );
+    expect(find.byKey(const ValueKey('book-editor-status-bar')), findsNothing);
+    expect(find.byKey(const ValueKey('mobile-page-navigation')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('editor-exit-focus-mode')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('mobile-a4-preview-button')));
+    await _pumpUntil(tester, find.byKey(const ValueKey('book-page-1')));
+    expect(find.textContaining('Точная разметка A4'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('mobile-a4-preview-button')));
+    await tester.pumpAndSettle();
+    expect(
+      jsonEncode(controller.activeSection!.content),
+      jsonEncode(mobileContent),
+    );
+    expect(
+      find.byKey(const ValueKey('mobile-page-navigation')),
+      findsOneWidget,
+    );
 
     await tester.binding.setSurfaceSize(null);
   });
@@ -126,8 +167,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('export-book-button')));
-    await tester.pumpAndSettle();
+    await _openExportSheet(tester);
     expect(find.text('Экспорт книги'), findsOneWidget);
     expect(find.text('EPUB 3.3 (.epub)'), findsOneWidget);
     expect(find.text('Печатный PDF (.pdf)'), findsOneWidget);
@@ -156,8 +196,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('export-book-button')));
-    await tester.pumpAndSettle();
+    await _openExportSheet(tester);
     expect(find.byKey(const ValueKey('export-book-docx')), findsOneWidget);
 
     await tester.ensureVisible(find.byKey(const ValueKey('export-book-docx')));
@@ -188,8 +227,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('export-book-button')));
-    await tester.pumpAndSettle();
+    await _openExportSheet(tester);
     expect(find.text('Для электронных читалок'), findsOneWidget);
     expect(find.text('Для печати и редактирования'), findsOneWidget);
     expect(find.text('Открытые текстовые форматы'), findsOneWidget);
@@ -230,8 +268,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('export-book-button')));
-    await tester.pumpAndSettle();
+    await _openExportSheet(tester);
     await tester.ensureVisible(find.byKey(const ValueKey('export-book-pdf')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('export-book-pdf')));
@@ -357,6 +394,30 @@ void main() {
     expect(editorContains('Заменяемый вариант'), isFalse);
     await tester.binding.setSurfaceSize(null);
   });
+}
+
+Future<void> _openExportSheet(WidgetTester tester) async {
+  final directButton = find.byKey(const ValueKey('export-book-button'));
+  if (directButton.evaluate().isNotEmpty) {
+    await tester.tap(directButton);
+  } else {
+    await tester.tap(find.byKey(const ValueKey('mobile-workspace-menu')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Экспорт книги'));
+  }
+  await tester.pumpAndSettle();
+}
+
+Future<void> _pumpUntil(
+  WidgetTester tester,
+  Finder finder, {
+  int attempts = 80,
+}) async {
+  for (var attempt = 0; attempt < attempts; attempt++) {
+    await tester.pump(const Duration(milliseconds: 50));
+    if (finder.evaluate().isNotEmpty) return;
+  }
+  expect(finder, findsWidgets);
 }
 
 class _MemoryBookExportSaver implements BookExportFileSaver {

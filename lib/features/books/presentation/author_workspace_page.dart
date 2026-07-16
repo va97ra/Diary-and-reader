@@ -21,14 +21,14 @@ import 'package:dnevnik/features/books/presentation/book_pdf_preview_page.dart';
 import 'package:dnevnik/features/books/presentation/book_version_history_sheet.dart';
 import 'package:dnevnik/features/books/presentation/imported_book_page.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_page.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_editor_navigation_bar.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_formatting_toolbar.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_navigator.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_properties_panel.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_section_editor.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_workspace_app_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
-
-enum _ProjectDataAction { history, backup, restore }
 
 class AuthorWorkspacePage extends StatefulWidget {
   const AuthorWorkspacePage({
@@ -52,10 +52,11 @@ class AuthorWorkspacePage extends StatefulWidget {
 
 class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
   QuillController? _editorController;
+  bool _isFocusMode = false;
+  bool _isA4Preview = false;
 
   @override
   Widget build(BuildContext context) {
-    final strings = AppStrings.of(context);
     final project = widget.controller.activeProject!;
     if (project.isReadOnly) {
       return ImportedBookPage(
@@ -69,141 +70,153 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
       builder: (context, constraints) {
         final isDesktop = constraints.maxWidth >= 1500;
         final isTablet = constraints.maxWidth >= 700;
-        return Scaffold(
-          appBar: AppBar(
-            titleSpacing: 20,
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        return PopScope(
+          canPop: !_isFocusMode,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop && _isFocusMode) {
+              setState(() => _isFocusMode = false);
+            }
+          },
+          child: Scaffold(
+            appBar: _isFocusMode
+                ? null
+                : BookWorkspaceAppBar(
+                    bookTitle: project.metadata.title,
+                    sectionTitle: section.title,
+                    isDesktop: isDesktop,
+                    isTablet: isTablet,
+                    isA4Preview: _isA4Preview,
+                    languageCode: widget.controller.languageCode,
+                    onFocusMode: _toggleFocusMode,
+                    onToggleA4Preview: _toggleA4Preview,
+                    onExport: _showExportSheet,
+                    onOpenReader: _openReader,
+                    onProjectDataAction: _handleProjectDataAction,
+                    onCompactAction: _handleCompactWorkspaceAction,
+                    onToggleLanguage: _toggleLanguage,
+                    onProperties: _showProperties,
+                  ),
+            body: Stack(
               children: [
-                Text(project.metadata.title),
-                Text(
-                  section.title,
-                  style: Theme.of(context).textTheme.bodySmall,
+                Positioned.fill(
+                  child: Row(
+                    children: [
+                      if (isTablet && !_isFocusMode)
+                        SizedBox(
+                          width: isDesktop ? 290 : 250,
+                          child: BookNavigator(
+                            controller: widget.controller,
+                            onImportBook: _importBook,
+                          ),
+                        ),
+                      Expanded(
+                        child: BookSectionEditor(
+                          key: ValueKey(section.id),
+                          section: section,
+                          pageFormat: project.layoutSettings.pageFormat,
+                          paragraphSettings: project.paragraphSettings,
+                          showToolbar: isTablet && !_isFocusMode,
+                          usePagedLayout: isTablet || _isA4Preview,
+                          showStatusBar: !_isFocusMode,
+                          saveState: widget.controller.saveState,
+                          viewMode: project.layoutSettings.viewMode,
+                          onViewModeChanged: (viewMode) =>
+                              widget.controller.updateLayoutSettings(
+                                project.layoutSettings.copyWith(
+                                  viewMode: viewMode,
+                                ),
+                              ),
+                          onTitleChanged: widget.controller.updateSectionTitle,
+                          onContentChanged:
+                              widget.controller.updateSectionContent,
+                          onControllerReady: (controller) =>
+                              _editorController = controller,
+                        ),
+                      ),
+                      if (isDesktop && !_isFocusMode)
+                        SizedBox(
+                          width: 300,
+                          child: BookPropertiesPanel(
+                            controller: widget.controller,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
+                if (_isFocusMode)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: SafeArea(
+                      child: Material(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surface.withValues(alpha: 0.86),
+                        elevation: 2,
+                        shape: const CircleBorder(),
+                        child: IconButton(
+                          key: const ValueKey('editor-exit-focus-mode'),
+                          tooltip: AppStrings.of(context).exitFocusWriting,
+                          visualDensity: VisualDensity.compact,
+                          onPressed: _toggleFocusMode,
+                          icon: const Icon(Icons.fullscreen_exit),
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
-            actions: [
-              IconButton(
-                key: const ValueKey('export-book-button'),
-                tooltip: strings.exportBook,
-                onPressed: _showExportSheet,
-                icon: const Icon(Icons.ios_share_outlined),
-              ),
-              IconButton(
-                key: const ValueKey('open-book-reader'),
-                tooltip: strings.reader,
-                onPressed: _openReader,
-                icon: const Icon(Icons.chrome_reader_mode_outlined),
-              ),
-              PopupMenuButton<_ProjectDataAction>(
-                key: const ValueKey('project-data-menu'),
-                tooltip: strings.projectData,
-                icon: const Icon(Icons.more_vert),
-                onSelected: _handleProjectDataAction,
-                itemBuilder: (context) => [
-                  PopupMenuItem(
-                    value: _ProjectDataAction.history,
-                    child: ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.history),
-                      title: Text(strings.versionHistory),
-                    ),
+            bottomNavigationBar: _isFocusMode || isTablet
+                ? null
+                : BookEditorNavigationBar(
+                    onManuscript: _showManuscript,
+                    onFormatting: _showFormatting,
                   ),
-                  PopupMenuItem(
-                    value: _ProjectDataAction.backup,
-                    child: ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.download_outlined),
-                      title: Text(strings.backupProject),
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: _ProjectDataAction.restore,
-                    child: ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.upload_file_outlined),
-                      title: Text(strings.restoreProjectBackup),
-                    ),
-                  ),
-                ],
-              ),
-              IconButton(
-                tooltip: strings.language,
-                onPressed: () => widget.controller.setLanguage(
-                  widget.controller.languageCode == 'ru' ? 'en' : 'ru',
-                ),
-                icon: Text(widget.controller.languageCode.toUpperCase()),
-              ),
-              if (!isDesktop)
-                IconButton(
-                  tooltip: strings.properties,
-                  onPressed: _showProperties,
-                  icon: const Icon(Icons.tune),
-                ),
-            ],
           ),
-          body: Row(
-            children: [
-              if (isTablet)
-                SizedBox(
-                  width: isDesktop ? 290 : 250,
-                  child: BookNavigator(
-                    controller: widget.controller,
-                    onImportBook: _importBook,
-                  ),
-                ),
-              Expanded(
-                child: BookSectionEditor(
-                  key: ValueKey(section.id),
-                  section: section,
-                  pageFormat: project.layoutSettings.pageFormat,
-                  paragraphSettings: project.paragraphSettings,
-                  showToolbar: isTablet,
-                  saveState: widget.controller.saveState,
-                  viewMode: project.layoutSettings.viewMode,
-                  onViewModeChanged: (viewMode) =>
-                      widget.controller.updateLayoutSettings(
-                        project.layoutSettings.copyWith(viewMode: viewMode),
-                      ),
-                  onTitleChanged: widget.controller.updateSectionTitle,
-                  onContentChanged: widget.controller.updateSectionContent,
-                  onControllerReady: (controller) =>
-                      _editorController = controller,
-                ),
-              ),
-              if (isDesktop)
-                SizedBox(
-                  width: 300,
-                  child: BookPropertiesPanel(controller: widget.controller),
-                ),
-            ],
-          ),
-          bottomNavigationBar: isTablet
-              ? null
-              : NavigationBar(
-                  selectedIndex: 1,
-                  onDestinationSelected: (index) {
-                    if (index == 0) _showManuscript();
-                    if (index == 2) _showFormatting();
-                  },
-                  destinations: [
-                    NavigationDestination(
-                      icon: const Icon(Icons.account_tree_outlined),
-                      label: strings.manuscript,
-                    ),
-                    NavigationDestination(
-                      icon: const Icon(Icons.edit_outlined),
-                      label: strings.editor,
-                    ),
-                    NavigationDestination(
-                      icon: const Icon(Icons.text_format),
-                      label: strings.formatting,
-                    ),
-                  ],
-                ),
         );
       },
     );
+  }
+
+  Future<void> _handleCompactWorkspaceAction(
+    BookCompactWorkspaceAction action,
+  ) {
+    switch (action) {
+      case BookCompactWorkspaceAction.export:
+        return _showExportSheet();
+      case BookCompactWorkspaceAction.properties:
+        return _showProperties();
+      case BookCompactWorkspaceAction.history:
+        return _showVersionHistory();
+      case BookCompactWorkspaceAction.backup:
+        return _backupProject();
+      case BookCompactWorkspaceAction.restore:
+        return _restoreProjectBackup();
+      case BookCompactWorkspaceAction.language:
+        _toggleLanguage();
+        return Future.value();
+    }
+  }
+
+  void _toggleLanguage() => widget.controller.setLanguage(
+    widget.controller.languageCode == 'ru' ? 'en' : 'ru',
+  );
+
+  void _toggleFocusMode() => setState(() => _isFocusMode = !_isFocusMode);
+
+  void _toggleA4Preview() {
+    final enabled = !_isA4Preview;
+    setState(() => _isA4Preview = enabled);
+    if (!enabled) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(AppStrings.of(context).a4PreviewHint),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
   }
 
   Future<void> _showManuscript() => showModalBottomSheet<void>(
@@ -298,13 +311,13 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
     }
   }
 
-  Future<void> _handleProjectDataAction(_ProjectDataAction action) async {
+  Future<void> _handleProjectDataAction(BookProjectDataAction action) async {
     switch (action) {
-      case _ProjectDataAction.history:
+      case BookProjectDataAction.history:
         return _showVersionHistory();
-      case _ProjectDataAction.backup:
+      case BookProjectDataAction.backup:
         return _backupProject();
-      case _ProjectDataAction.restore:
+      case BookProjectDataAction.restore:
         return _restoreProjectBackup();
     }
   }

@@ -26,6 +26,8 @@ class BookSectionEditor extends StatefulWidget {
     required this.onTitleChanged,
     required this.onContentChanged,
     required this.showToolbar,
+    required this.usePagedLayout,
+    required this.showStatusBar,
     required this.saveState,
     required this.viewMode,
     required this.onViewModeChanged,
@@ -39,6 +41,8 @@ class BookSectionEditor extends StatefulWidget {
   final ValueChanged<String> onTitleChanged;
   final ValueChanged<RichDocument> onContentChanged;
   final bool showToolbar;
+  final bool usePagedLayout;
+  final bool showStatusBar;
   final WorkspaceSaveState saveState;
   final BookPageViewMode viewMode;
   final ValueChanged<BookPageViewMode> onViewModeChanged;
@@ -86,7 +90,13 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     _statistics = ManuscriptStatistics.fromDocument(widget.section.content);
     _lastManuscriptSignature = jsonEncode(widget.section.content);
     _createPageControllers([widget.section.content]);
+    _usesPagedLayout = widget.usePagedLayout;
     widget.onControllerReady?.call(controller);
+    if (_usesPagedLayout) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _schedulePagination(),
+      );
+    }
   }
 
   @override
@@ -99,6 +109,9 @@ class BookSectionEditorState extends State<BookSectionEditor> {
         selection: TextSelection.collapsed(offset: widget.section.title.length),
       );
       _measurementTitleController.text = widget.section.title;
+    }
+    if (oldWidget.usePagedLayout && !widget.usePagedLayout) {
+      _collapseToMobileDocument();
     }
     final incomingSignature = jsonEncode(widget.section.content);
     final contentChanged = incomingSignature != _lastManuscriptSignature;
@@ -117,6 +130,17 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     _statistics = ManuscriptStatistics.fromDocument(manuscript);
     widget.onControllerReady?.call(controller);
     _schedulePagination();
+  }
+
+  void _collapseToMobileDocument() {
+    final manuscript = BookPagePaginator.merge(_pageDocuments);
+    _cancelPaginationMeasurement(rebuild: false);
+    _disposePageControllers();
+    _createPageControllers([manuscript]);
+    _activePage = 0;
+    _lastManuscriptSignature = jsonEncode(manuscript);
+    _statistics = ManuscriptStatistics.fromDocument(manuscript);
+    widget.onControllerReady?.call(controller);
   }
 
   void _createPageControllers(
@@ -402,8 +426,8 @@ class BookSectionEditorState extends State<BookSectionEditor> {
 
   @override
   Widget build(BuildContext context) {
-    final pagedLayoutChanged = _usesPagedLayout != widget.showToolbar;
-    _usesPagedLayout = widget.showToolbar;
+    final pagedLayoutChanged = _usesPagedLayout != widget.usePagedLayout;
+    _usesPagedLayout = widget.usePagedLayout;
     if (pagedLayoutChanged && _usesPagedLayout) _schedulePagination();
 
     return Column(
@@ -414,7 +438,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
             paragraphSettings: widget.paragraphSettings,
           ),
         Expanded(
-          child: widget.showToolbar
+          child: widget.usePagedLayout
               ? _buildPagedEditorWithMeasurement()
               : BookMobileEditor(
                   controller: controller,
@@ -432,18 +456,20 @@ class BookSectionEditorState extends State<BookSectionEditor> {
                   onNextPage: _activePage < _controllers.length - 1
                       ? () => _selectPage(_activePage + 1)
                       : null,
+                  showPageNavigation: widget.showStatusBar,
                 ),
         ),
-        BookEditorStatusBar(
-          statistics: _statistics,
-          activePage: _activePage + 1,
-          pageCount: _controllers.length,
-          targetWords: widget.section.targetWords,
-          saveState: widget.saveState,
-          viewMode: widget.viewMode,
-          onViewModeChanged: widget.onViewModeChanged,
-          showViewModeSelector: widget.showToolbar,
-        ),
+        if (widget.showStatusBar)
+          BookEditorStatusBar(
+            statistics: _statistics,
+            activePage: _activePage + 1,
+            pageCount: _controllers.length,
+            targetWords: widget.section.targetWords,
+            saveState: widget.saveState,
+            viewMode: widget.viewMode,
+            onViewModeChanged: widget.onViewModeChanged,
+            showViewModeSelector: widget.showToolbar,
+          ),
       ],
     );
   }

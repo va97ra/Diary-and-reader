@@ -19,6 +19,7 @@ class BookMobileEditor extends StatelessWidget {
     required this.paragraphSettings,
     required this.onPreviousPage,
     required this.onNextPage,
+    required this.showPageNavigation,
     super.key,
   });
 
@@ -33,6 +34,7 @@ class BookMobileEditor extends StatelessWidget {
   final BookParagraphSettings paragraphSettings;
   final VoidCallback? onPreviousPage;
   final VoidCallback? onNextPage;
+  final bool showPageNavigation;
 
   @override
   Widget build(BuildContext context) => ColoredBox(
@@ -80,29 +82,34 @@ class BookMobileEditor extends StatelessWidget {
               ),
             ),
           ),
-          Row(
-            children: [
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                onPressed: onPreviousPage,
-                icon: const Icon(Icons.chevron_left),
-              ),
-              Expanded(
-                child: Text(
-                  '${AppStrings.of(context).a4Sheet(pageNumber, pageCount)} · '
-                  '${pageFormat.widthMm.toInt()}×'
-                  '${pageFormat.heightMm.toInt()} мм',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.blueGrey, fontSize: 12),
+          if (showPageNavigation)
+            Row(
+              key: const ValueKey('mobile-page-navigation'),
+              children: [
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  onPressed: onPreviousPage,
+                  icon: const Icon(Icons.chevron_left),
                 ),
-              ),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                onPressed: onNextPage,
-                icon: const Icon(Icons.chevron_right),
-              ),
-            ],
-          ),
+                Expanded(
+                  child: Text(
+                    '${AppStrings.of(context).a4Sheet(pageNumber, pageCount)} · '
+                    '${pageFormat.widthMm.toInt()}×'
+                    '${pageFormat.heightMm.toInt()} мм',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.blueGrey,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  onPressed: onNextPage,
+                  icon: const Icon(Icons.chevron_right),
+                ),
+              ],
+            ),
         ],
       ),
     ),

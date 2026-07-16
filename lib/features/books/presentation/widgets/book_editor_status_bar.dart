@@ -40,6 +40,7 @@ class BookEditorStatusBar extends StatelessWidget {
     );
 
     return Material(
+      key: const ValueKey('book-editor-status-bar'),
       color: AppTheme.surface,
       child: LayoutBuilder(
         builder: (context, constraints) {
