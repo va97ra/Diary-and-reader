@@ -95,8 +95,34 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('mobile-a4-preview-button')));
     await _pumpUntil(tester, find.byKey(const ValueKey('book-page-1')));
     expect(find.textContaining('Точная разметка A4'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('mobile-a4-page-preview')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('mobile-a4-edit-button')), findsOneWidget);
+
+    final previewRect = tester.getRect(
+      find.byKey(const ValueKey('book-page-1')),
+    );
+    expect(previewRect.width, greaterThan(340));
+
+    await tester.tap(find.byKey(const ValueKey('mobile-a4-edit-button')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('mobile-writing-editor')), findsOneWidget);
+    expect(find.byKey(const ValueKey('book-page-1')), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('mobile-a4-preview-button')));
+    await _pumpUntil(tester, find.byKey(const ValueKey('book-page-1')));
+    await tester.tap(find.byKey(const ValueKey('editor-focus-mode-button')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('editor-exit-focus-mode')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('book-page-1')), findsNothing);
+    expect(find.byKey(const ValueKey('mobile-writing-editor')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('editor-exit-focus-mode')));
     await tester.pumpAndSettle();
     expect(
       jsonEncode(controller.activeSection!.content),

@@ -27,6 +27,8 @@ class BookSectionEditor extends StatefulWidget {
     required this.onContentChanged,
     required this.showToolbar,
     required this.usePagedLayout,
+    required this.compactA4Preview,
+    required this.onExitCompactPreview,
     required this.showStatusBar,
     required this.saveState,
     required this.viewMode,
@@ -42,6 +44,8 @@ class BookSectionEditor extends StatefulWidget {
   final ValueChanged<RichDocument> onContentChanged;
   final bool showToolbar;
   final bool usePagedLayout;
+  final bool compactA4Preview;
+  final VoidCallback onExitCompactPreview;
   final bool showStatusBar;
   final WorkspaceSaveState saveState;
   final BookPageViewMode viewMode;
@@ -510,10 +514,15 @@ class BookSectionEditorState extends State<BookSectionEditor> {
   Widget _buildPagedEditor() => ColoredBox(
     color: const Color(0xFF141824),
     child: LayoutBuilder(
-      builder: (context, constraints) => switch (widget.viewMode) {
-        BookPageViewMode.continuous => _buildContinuousPages(constraints),
-        BookPageViewMode.singlePage => _buildSinglePage(constraints),
-        BookPageViewMode.spread => _buildPageSpread(constraints),
+      builder: (context, constraints) {
+        if (widget.compactA4Preview) {
+          return _buildSinglePage(constraints, compact: true);
+        }
+        return switch (widget.viewMode) {
+          BookPageViewMode.continuous => _buildContinuousPages(constraints),
+          BookPageViewMode.singlePage => _buildSinglePage(constraints),
+          BookPageViewMode.spread => _buildPageSpread(constraints),
+        };
       },
     ),
   );
@@ -537,13 +546,17 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     );
   }
 
-  Widget _buildSinglePage(BoxConstraints constraints) => _buildPageStage(
-    key: const ValueKey('single-page-view'),
-    constraints: constraints,
-    pageIndices: [_activePage],
-    previousPage: _activePage > 0 ? _activePage - 1 : null,
-    nextPage: _activePage < _controllers.length - 1 ? _activePage + 1 : null,
-  );
+  Widget _buildSinglePage(BoxConstraints constraints, {bool compact = false}) =>
+      _buildPageStage(
+        key: ValueKey(compact ? 'mobile-a4-page-preview' : 'single-page-view'),
+        constraints: constraints,
+        pageIndices: [_activePage],
+        previousPage: _activePage > 0 ? _activePage - 1 : null,
+        nextPage: _activePage < _controllers.length - 1
+            ? _activePage + 1
+            : null,
+        compact: compact,
+      );
 
   Widget _buildPageSpread(BoxConstraints constraints) {
     final firstPage = (_activePage ~/ 2) * 2;
@@ -565,9 +578,11 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     required List<int> pageIndices,
     required int? previousPage,
     required int? nextPage,
+    bool compact = false,
   }) {
-    const horizontalPadding = 76.0;
-    const verticalPadding = 36.0;
+    final horizontalPadding = compact ? 24.0 : 76.0;
+    final verticalPadding = compact ? 24.0 : 36.0;
+    final compactControlsHeight = compact ? 64.0 : 0.0;
     const pageGap = 18.0;
     final naturalWidth =
         widget.pageFormat.width * pageIndices.length +
@@ -575,55 +590,104 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     final widthScale =
         (constraints.maxWidth - horizontalPadding) / naturalWidth;
     final heightScale =
-        (constraints.maxHeight - verticalPadding) / widget.pageFormat.height;
+        (constraints.maxHeight - verticalPadding - compactControlsHeight) /
+        widget.pageFormat.height;
     final scale = math
         .min(1, math.min(widthScale, heightScale))
         .clamp(0.1, 1.0)
         .toDouble();
     final strings = AppStrings.of(context);
 
+    final pages = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var index = 0; index < pageIndices.length; index++) ...[
+          if (index > 0) const SizedBox(width: pageGap),
+          IgnorePointer(
+            ignoring: compact,
+            child: _buildPage(pageIndices[index], scale),
+          ),
+        ],
+      ],
+    );
+
     return Stack(
       key: key,
       children: [
-        Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var index = 0; index < pageIndices.length; index++) ...[
-                if (index > 0) const SizedBox(width: pageGap),
-                _buildPage(pageIndices[index], scale),
+        if (compact)
+          Positioned.fill(
+            bottom: compactControlsHeight,
+            child: Center(child: pages),
+          )
+        else
+          Center(child: pages),
+        if (compact)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 8,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (previousPage != null)
+                  IconButton.filledTonal(
+                    key: const ValueKey('book-page-previous'),
+                    tooltip: strings.previousPage,
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => _selectPage(previousPage),
+                    icon: const Icon(Icons.chevron_left),
+                  ),
+                const SizedBox(width: 12),
+                FilledButton.tonalIcon(
+                  key: const ValueKey('mobile-a4-edit-button'),
+                  onPressed: widget.onExitCompactPreview,
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  label: Text(strings.comfortableWriting),
+                ),
+                const SizedBox(width: 12),
+                if (nextPage != null)
+                  IconButton.filledTonal(
+                    key: const ValueKey('book-page-next'),
+                    tooltip: strings.nextPage,
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => _selectPage(nextPage),
+                    icon: const Icon(Icons.chevron_right),
+                  ),
               ],
-            ],
-          ),
-        ),
-        Positioned(
-          left: 12,
-          top: 0,
-          bottom: 0,
-          child: Center(
-            child: IconButton.filledTonal(
-              key: const ValueKey('book-page-previous'),
-              tooltip: strings.previousPage,
-              onPressed: previousPage == null
-                  ? null
-                  : () => _selectPage(previousPage),
-              icon: const Icon(Icons.chevron_left),
+            ),
+          )
+        else if (!compact) ...[
+          Positioned(
+            left: 12,
+            top: 0,
+            bottom: 0,
+            child: Center(
+              child: IconButton.filledTonal(
+                key: const ValueKey('book-page-previous'),
+                tooltip: strings.previousPage,
+                onPressed: previousPage == null
+                    ? null
+                    : () => _selectPage(previousPage),
+                icon: const Icon(Icons.chevron_left),
+              ),
             ),
           ),
-        ),
-        Positioned(
-          right: 12,
-          top: 0,
-          bottom: 0,
-          child: Center(
-            child: IconButton.filledTonal(
-              key: const ValueKey('book-page-next'),
-              tooltip: strings.nextPage,
-              onPressed: nextPage == null ? null : () => _selectPage(nextPage),
-              icon: const Icon(Icons.chevron_right),
+          Positioned(
+            right: 12,
+            top: 0,
+            bottom: 0,
+            child: Center(
+              child: IconButton.filledTonal(
+                key: const ValueKey('book-page-next'),
+                tooltip: strings.nextPage,
+                onPressed: nextPage == null
+                    ? null
+                    : () => _selectPage(nextPage),
+                icon: const Icon(Icons.chevron_right),
+              ),
             ),
           ),
-        ),
+        ],
       ],
     );
   }

@@ -22,6 +22,7 @@ import 'package:dnevnik/features/books/presentation/book_version_history_sheet.d
 import 'package:dnevnik/features/books/presentation/imported_book_page.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_page.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_editor_navigation_bar.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_focus_mode_bar.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_formatting_toolbar.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_navigator.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_properties_panel.dart';
@@ -96,9 +97,10 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
                     onToggleLanguage: _toggleLanguage,
                     onProperties: _showProperties,
                   ),
-            body: Stack(
+            body: Column(
               children: [
-                Positioned.fill(
+                if (_isFocusMode) BookFocusModeBar(onExit: _toggleFocusMode),
+                Expanded(
                   child: Row(
                     children: [
                       if (isTablet && !_isFocusMode)
@@ -117,6 +119,8 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
                           paragraphSettings: project.paragraphSettings,
                           showToolbar: isTablet && !_isFocusMode,
                           usePagedLayout: isTablet || _isA4Preview,
+                          compactA4Preview: !isTablet && _isA4Preview,
+                          onExitCompactPreview: _toggleA4Preview,
                           showStatusBar: !_isFocusMode,
                           saveState: widget.controller.saveState,
                           viewMode: project.layoutSettings.viewMode,
@@ -143,27 +147,6 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
                     ],
                   ),
                 ),
-                if (_isFocusMode)
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: SafeArea(
-                      child: Material(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.surface.withValues(alpha: 0.86),
-                        elevation: 2,
-                        shape: const CircleBorder(),
-                        child: IconButton(
-                          key: const ValueKey('editor-exit-focus-mode'),
-                          tooltip: AppStrings.of(context).exitFocusWriting,
-                          visualDensity: VisualDensity.compact,
-                          onPressed: _toggleFocusMode,
-                          icon: const Icon(Icons.fullscreen_exit),
-                        ),
-                      ),
-                    ),
-                  ),
               ],
             ),
             bottomNavigationBar: _isFocusMode || isTablet
@@ -202,7 +185,10 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
     widget.controller.languageCode == 'ru' ? 'en' : 'ru',
   );
 
-  void _toggleFocusMode() => setState(() => _isFocusMode = !_isFocusMode);
+  void _toggleFocusMode() => setState(() {
+    if (!_isFocusMode && _isA4Preview) _isA4Preview = false;
+    _isFocusMode = !_isFocusMode;
+  });
 
   void _toggleA4Preview() {
     final enabled = !_isA4Preview;

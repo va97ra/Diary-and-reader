@@ -38,6 +38,7 @@ class BookMobileEditor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ColoredBox(
+    key: const ValueKey('mobile-writing-editor'),
     color: const Color(0xFF141824),
     child: Container(
       margin: const EdgeInsets.all(8),
