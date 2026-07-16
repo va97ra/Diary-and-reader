@@ -30,6 +30,8 @@ class BookReaderSectionView extends StatefulWidget {
     required this.highlights,
     required this.onTextSelection,
     required this.clearSelectionVersion,
+    this.onNextSectionRequested,
+    this.onPreviousSectionRequested,
     super.key,
   });
 
@@ -42,6 +44,8 @@ class BookReaderSectionView extends StatefulWidget {
   final List<BookReaderHighlight> highlights;
   final ValueChanged<BookReaderTextSelection?> onTextSelection;
   final int clearSelectionVersion;
+  final VoidCallback? onNextSectionRequested;
+  final VoidCallback? onPreviousSectionRequested;
 
   @override
   State<BookReaderSectionView> createState() => _BookReaderSectionViewState();
@@ -68,6 +72,7 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
   int _paginationRequest = 0;
   int _measurementRetries = 0;
   bool _isPaginating = false;
+  bool _continuousDragActive = false;
   _ReaderPageGeometry? _geometry;
   _ReaderPageGeometry? _completedGeometry;
   BookReaderViewMode _effectiveMode = BookReaderViewMode.continuous;
@@ -235,21 +240,24 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
               Divider(color: widget.palette.divider, height: 1),
               const SizedBox(height: 18),
               Expanded(
-                child: QuillEditor(
-                  key: ValueKey('reader-document-${widget.section.id}'),
-                  controller: _continuousController,
-                  focusNode: _continuousFocusNode,
-                  scrollController: _continuousScrollController,
-                  config: QuillEditorConfig(
-                    padding: EdgeInsets.zero,
-                    customStyles: BookReaderTypography.styles(
-                      widget.settings,
-                      widget.palette,
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: _handleContinuousScrollNotification,
+                  child: QuillEditor(
+                    key: ValueKey('reader-document-${widget.section.id}'),
+                    controller: _continuousController,
+                    focusNode: _continuousFocusNode,
+                    scrollController: _continuousScrollController,
+                    config: QuillEditorConfig(
+                      padding: EdgeInsets.zero,
+                      customStyles: BookReaderTypography.styles(
+                        widget.settings,
+                        widget.palette,
+                      ),
+                      scrollable: true,
+                      autoFocus: false,
+                      showCursor: false,
+                      embedBuilders: [BookImageEmbedBuilder(widget.assets)],
                     ),
-                    scrollable: true,
-                    autoFocus: false,
-                    showCursor: false,
-                    embedBuilders: [BookImageEmbedBuilder(widget.assets)],
                   ),
                 ),
               ),
@@ -361,7 +369,9 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
             child: IconButton.filledTonal(
               key: const ValueKey('reader-previous-page'),
               tooltip: strings.previousReaderPage,
-              onPressed: previous == null ? null : () => _selectPage(previous),
+              onPressed: previous == null
+                  ? widget.onPreviousSectionRequested
+                  : () => _selectPage(previous),
               icon: const Icon(Icons.chevron_left),
             ),
           ),
@@ -374,7 +384,9 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
             child: IconButton.filledTonal(
               key: const ValueKey('reader-next-page'),
               tooltip: strings.nextReaderPage,
-              onPressed: next == null ? null : () => _selectPage(next),
+              onPressed: next == null
+                  ? widget.onNextSectionRequested
+                  : () => _selectPage(next),
               icon: const Icon(Icons.chevron_right),
             ),
           ),
@@ -417,6 +429,24 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
       const Duration(milliseconds: 350),
       () => widget.onProgressChanged(_progress),
     );
+  }
+
+  bool _handleContinuousScrollNotification(ScrollNotification notification) {
+    if (notification is ScrollStartNotification &&
+        notification.dragDetails != null) {
+      _continuousDragActive = true;
+    }
+    if (notification is! ScrollEndNotification) return false;
+
+    final wasUserScroll = _continuousDragActive;
+    _continuousDragActive = false;
+    final reachedEnd =
+        notification.metrics.maxScrollExtent > 0 &&
+        notification.metrics.extentAfter <= 1;
+    if (wasUserScroll && reachedEnd) {
+      widget.onNextSectionRequested?.call();
+    }
+    return false;
   }
 
   void _selectPage(int page) {

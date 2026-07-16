@@ -231,6 +231,12 @@ class _BookReaderPageState extends State<BookReaderPage> {
               .toList(),
           onTextSelection: _handleTextSelection,
           clearSelectionVersion: _clearSelectionVersion,
+          onNextSectionRequested: _activeIndex < _sections.length - 1
+              ? _goToNextSection
+              : null,
+          onPreviousSectionRequested: _activeIndex > 0
+              ? _goToPreviousSectionEnd
+              : null,
         ),
       ),
       if (_textSelection case final selection?)
@@ -332,6 +338,18 @@ class _BookReaderPageState extends State<BookReaderPage> {
   );
 
   void _goToIndex(int index) => _goToLocation(_sections[index].id, 0);
+
+  void _goToNextSection() {
+    if (_activeIndex >= _sections.length - 1) return;
+    _sectionProgress = 1;
+    _saveProgress();
+    _goToLocation(_sections[_activeIndex + 1].id, 0);
+  }
+
+  void _goToPreviousSectionEnd() {
+    if (_activeIndex <= 0) return;
+    _goToLocation(_sections[_activeIndex - 1].id, 1);
+  }
 
   Future<void> _showContents(BuildContext themedContext) =>
       showModalBottomSheet<void>(

@@ -27,6 +27,7 @@ class BookProject {
     this.kind = BookProjectKind.manuscript,
     this.sourceFormat = '',
     this.sourceFileName = '',
+    this.collectionName = '',
     List<BookAsset> assets = const [],
     this.coverAssetId,
     BookReaderAnnotations? readerAnnotations,
@@ -147,6 +148,7 @@ class BookProject {
           BookProjectKind.manuscript,
       sourceFormat: json['sourceFormat']?.toString() ?? '',
       sourceFileName: json['sourceFileName']?.toString() ?? '',
+      collectionName: json['collectionName']?.toString() ?? '',
       assets: (json['assets'] as List<dynamic>? ?? const [])
           .whereType<Map>()
           .map(
@@ -173,6 +175,7 @@ class BookProject {
   final BookProjectKind kind;
   final String sourceFormat;
   final String sourceFileName;
+  final String collectionName;
   final List<BookAsset> _assets;
   final String? coverAssetId;
 
@@ -210,6 +213,7 @@ class BookProject {
     BookProjectKind? kind,
     String? sourceFormat,
     String? sourceFileName,
+    String? collectionName,
     List<BookAsset>? assets,
     String? coverAssetId,
     bool clearCoverAsset = false,
@@ -230,6 +234,7 @@ class BookProject {
     kind: kind ?? this.kind,
     sourceFormat: sourceFormat ?? this.sourceFormat,
     sourceFileName: sourceFileName ?? this.sourceFileName,
+    collectionName: collectionName ?? this.collectionName,
     assets: assets ?? _assets,
     coverAssetId: clearCoverAsset ? null : coverAssetId ?? this.coverAssetId,
   );
@@ -249,6 +254,7 @@ class BookProject {
     'kind': kind.name,
     'sourceFormat': sourceFormat,
     'sourceFileName': sourceFileName,
+    'collectionName': collectionName,
     'assets': _assets.map((asset) => asset.toJson()).toList(),
     'coverAssetId': coverAssetId,
     'documentFormatVersion': _currentDocumentFormatVersion,

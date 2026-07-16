@@ -5,6 +5,7 @@ import 'package:dnevnik/features/books/application/section_tree_editor.dart';
 import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_cover_view.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_library_browser.dart';
 import 'package:flutter/material.dart';
 
 class BookNavigator extends StatelessWidget {
@@ -162,6 +163,7 @@ class BookNavigator extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.library_books_outlined),
               title: Text(strings.library),
+              onTap: () => _openLibrary(context),
               trailing: PopupMenuButton<_BookAction>(
                 key: const ValueKey('library-book-actions'),
                 onSelected: (action) => _handleBookAction(context, action),
@@ -206,6 +208,17 @@ class BookNavigator extends StatelessWidget {
       AppStrings.of(context).deleteSectionQuestion,
     );
     if (confirmed) controller.deleteSection(section.id);
+  }
+
+  Future<void> _openLibrary(BuildContext context) async {
+    final selected = await BookLibraryBrowser.show(
+      context,
+      controller: controller,
+      onImportBook: onImportBook,
+    );
+    if (selected && closeAfterSelection && context.mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   Future<void> _handleBookAction(

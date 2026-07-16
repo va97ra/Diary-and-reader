@@ -49,6 +49,26 @@ class AppStrings {
   String get millimeters => _text('millimeters');
   String get studioTitle => _text('studioTitle');
   String get library => _text('library');
+  String get librarySearchHint => _text('librarySearchHint');
+  String get sortBy => _text('sortBy');
+  String get recentlyUpdated => _text('recentlyUpdated');
+  String get byTitle => _text('byTitle');
+  String get byAuthor => _text('byAuthor');
+  String get byProgress => _text('byProgress');
+  String get allBooks => _text('allBooks');
+  String get manuscripts => _text('manuscripts');
+  String get importedBooks => _text('importedBooks');
+  String get unreadBooks => _text('unreadBooks');
+  String get readingBooks => _text('readingBooks');
+  String get finishedBooks => _text('finishedBooks');
+  String get allCollections => _text('allCollections');
+  String get noCollection => _text('noCollection');
+  String get moveToCollection => _text('moveToCollection');
+  String get collectionName => _text('collectionName');
+  String get collectionHint => _text('collectionHint');
+  String get removeFromCollection => _text('removeFromCollection');
+  String get noBooksFound => _text('noBooksFound');
+  String get emptyLibrary => _text('emptyLibrary');
   String get manuscript => _text('manuscript');
   String get properties => _text('properties');
   String get newBook => _text('newBook');
@@ -278,6 +298,26 @@ class AppStrings {
       'millimeters': 'мм',
       'studioTitle': 'Авторская студия',
       'library': 'Библиотека',
+      'librarySearchHint': 'Название, автор, серия или коллекция',
+      'sortBy': 'Сортировка',
+      'recentlyUpdated': 'Недавно открытые',
+      'byTitle': 'По названию',
+      'byAuthor': 'По автору',
+      'byProgress': 'По прогрессу',
+      'allBooks': 'Все',
+      'manuscripts': 'Рукописи',
+      'importedBooks': 'Загруженные',
+      'unreadBooks': 'Не начаты',
+      'readingBooks': 'Читаю',
+      'finishedBooks': 'Прочитаны',
+      'allCollections': 'Все коллекции',
+      'noCollection': 'Без коллекции',
+      'moveToCollection': 'Добавить в коллекцию',
+      'collectionName': 'Коллекция',
+      'collectionHint': 'Например: Фантастика',
+      'removeFromCollection': 'Убрать из коллекции',
+      'noBooksFound': 'По заданным условиям книг не найдено',
+      'emptyLibrary': 'Создайте рукопись или импортируйте книгу',
       'manuscript': 'Рукопись',
       'properties': 'Свойства',
       'newBook': 'Новая книга',
@@ -520,6 +560,26 @@ class AppStrings {
       'millimeters': 'mm',
       'studioTitle': 'Author studio',
       'library': 'Library',
+      'librarySearchHint': 'Title, author, series, or collection',
+      'sortBy': 'Sort by',
+      'recentlyUpdated': 'Recently opened',
+      'byTitle': 'Title',
+      'byAuthor': 'Author',
+      'byProgress': 'Reading progress',
+      'allBooks': 'All',
+      'manuscripts': 'Manuscripts',
+      'importedBooks': 'Imported',
+      'unreadBooks': 'Not started',
+      'readingBooks': 'Reading',
+      'finishedBooks': 'Finished',
+      'allCollections': 'All collections',
+      'noCollection': 'No collection',
+      'moveToCollection': 'Add to collection',
+      'collectionName': 'Collection',
+      'collectionHint': 'For example: Science fiction',
+      'removeFromCollection': 'Remove from collection',
+      'noBooksFound': 'No books match these filters',
+      'emptyLibrary': 'Create a manuscript or import a book',
       'manuscript': 'Manuscript',
       'properties': 'Properties',
       'newBook': 'New book',

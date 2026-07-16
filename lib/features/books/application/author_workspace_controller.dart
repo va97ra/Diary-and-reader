@@ -96,6 +96,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
       kind: BookProjectKind.importedBook,
       sourceFormat: project.sourceFormat,
       sourceFileName: project.sourceFileName,
+      collectionName: project.collectionName,
       assets: project.assets,
       coverAssetId: project.coverAssetId,
     );
@@ -118,6 +119,18 @@ class AuthorWorkspaceController extends ChangeNotifier {
   void selectProject(String id) {
     if (_activeProjectId == id) return;
     _activeProjectId = id;
+    _changed();
+  }
+
+  void updateProjectCollection(String id, String collectionName) {
+    final index = _projects.indexWhere((project) => project.id == id);
+    if (index < 0) return;
+    final normalized = collectionName.trim();
+    if (_projects[index].collectionName == normalized) return;
+    _projects[index] = _projects[index].copyWith(
+      collectionName: normalized,
+      updatedAt: DateTime.now(),
+    );
     _changed();
   }
 
@@ -386,6 +399,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
       kind: current.kind,
       sourceFormat: current.sourceFormat,
       sourceFileName: current.sourceFileName,
+      collectionName: current.collectionName,
       assets: current.assets,
       coverAssetId: current.coverAssetId,
     );

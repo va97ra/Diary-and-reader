@@ -76,6 +76,7 @@ void main() {
           ),
         ],
       ),
+      collectionName: 'В работе',
     );
 
     final restored = BookProject.fromJson(withScene.toJson());
@@ -90,6 +91,7 @@ void main() {
     expect(restored.readerSettings.fontSize, 21);
     expect(restored.readerProgress.sectionId, 'scene-1');
     expect(restored.readerProgress.sectionProgress, 0.4);
+    expect(restored.collectionName, 'В работе');
     expect(
       restored.readerAnnotations.bookmarks.single.excerpt,
       'Фрагмент сцены',

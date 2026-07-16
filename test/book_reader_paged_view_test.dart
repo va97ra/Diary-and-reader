@@ -1,6 +1,7 @@
 import 'package:dnevnik/app/author_studio_app.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
+import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -106,6 +107,84 @@ void main() {
     );
     expect(find.byKey(const ValueKey('reader-spread-view')), findsNothing);
     expect(find.byKey(const ValueKey('reader-page-2')), findsNothing);
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('last reader page continues with the next chapter', (
+    tester,
+  ) async {
+    final controller = await _controllerWithLongChapter(
+      const BookReaderSettings(
+        viewMode: BookReaderViewMode.singlePage,
+        contentWidth: 620,
+      ),
+    );
+    final firstChapterId = controller.activeProject!.sections.single.id;
+    controller.addSection(BookSectionType.chapter);
+    controller.updateSectionTitle('Следующая глава');
+    controller.updateSectionContent([
+      {'insert': 'Продолжение книги без ручного выбора главы.\n'},
+    ]);
+    controller.selectSection(firstChapterId);
+
+    await tester.binding.setSurfaceSize(const Size(1280, 820));
+    await tester.pumpWidget(AuthorStudioApp(controller: controller));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('open-book-reader')));
+    await _pumpUntil(tester, find.byKey(const ValueKey('reader-page-1')));
+
+    for (var page = 0; page < 40; page++) {
+      if (controller.activeProject!.readerProgress.sectionId !=
+          firstChapterId) {
+        break;
+      }
+      await tester.tap(find.byKey(const ValueKey('reader-next-page')));
+      await tester.pumpAndSettle();
+    }
+
+    expect(
+      controller.activeProject!.readerProgress.sectionId,
+      controller.activeProject!.sections.last.id,
+    );
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('continuous reader advances after scrolling to chapter end', (
+    tester,
+  ) async {
+    final controller = await _controllerWithLongChapter(
+      const BookReaderSettings(viewMode: BookReaderViewMode.continuous),
+    );
+    final firstChapterId = controller.activeProject!.sections.single.id;
+    controller.addSection(BookSectionType.chapter);
+    controller.updateSectionTitle('Глава после прокрутки');
+    controller.updateSectionContent([
+      {'insert': 'Текст следующей главы.\n'},
+    ]);
+    controller.selectSection(firstChapterId);
+
+    await tester.binding.setSurfaceSize(const Size(1280, 700));
+    await tester.pumpWidget(AuthorStudioApp(controller: controller));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('open-book-reader')));
+    await tester.pumpAndSettle();
+    final firstDocument = find.byKey(
+      ValueKey('reader-document-$firstChapterId'),
+    );
+
+    for (var attempt = 0; attempt < 12; attempt++) {
+      if (controller.activeProject!.readerProgress.sectionId !=
+          firstChapterId) {
+        break;
+      }
+      await tester.drag(firstDocument, const Offset(0, -900));
+      await tester.pumpAndSettle();
+    }
+
+    expect(
+      controller.activeProject!.readerProgress.sectionId,
+      controller.activeProject!.sections.last.id,
+    );
     await tester.binding.setSurfaceSize(null);
   });
 }
