@@ -20,6 +20,8 @@ android/app/release/
 android/key.properties
 android/*.jks
 android/*.keystore
+pepk.jar
+pepk_out.zip
 ios/Flutter/.last_build_id
 windows/flutter/ephemeral/
 

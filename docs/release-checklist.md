@@ -12,14 +12,15 @@
 
 1. До публикации окончательно выбрать applicationId: после выхода в Google
    Play изменить его для существующего приложения нельзя.
-2. Создать закрытый upload keystore:
+2. Положить выданный магазином `pepk.jar` в корень проекта и создать
+   закрытый upload keystore вместе с зашифрованным архивом для магазина:
 
-       keytool -genkeypair -v -keystore android\upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+       .\tool\create_android_signing_key.ps1 -EncryptionKey '<ключ из кабинета магазина>'
 
-3. Скопировать android/key.properties.example в android/key.properties и
-   указать реальные пароли.
-4. Не добавлять .jks и key.properties в Git; хранить их отдельную
-   зашифрованную резервную копию.
+3. Загрузить созданный `pepk_out.zip` в кабинет магазина.
+4. Не добавлять `.keystore`, `key.properties`, `pepk.jar` и `pepk_out.zip` в
+   Git. Сохранить отдельную зашифрованную резервную копию хранилища ключей и
+   `key.properties`: без них невозможно подписывать последующие обновления.
 5. Собрать подписанный AAB:
 
        .\tool\build_android_release.ps1 -Flutter C:\Users\va97r\.flutter-sdk\flutter\bin\flutter.bat
