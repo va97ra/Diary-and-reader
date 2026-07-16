@@ -22,6 +22,7 @@ android/*.jks
 android/*.keystore
 pepk.jar
 pepk_out.zip
+upload_certificate.pem
 ios/Flutter/.last_build_id
 windows/flutter/ephemeral/
 

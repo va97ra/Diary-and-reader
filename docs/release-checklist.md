@@ -17,7 +17,8 @@
 
        .\tool\create_android_signing_key.ps1 -EncryptionKey '<ключ из кабинета магазина>'
 
-3. Загрузить созданный `pepk_out.zip` в кабинет магазина.
+3. Загрузить созданный `pepk_out.zip` и отдельный
+   `upload_certificate.pem` в соответствующие поля кабинета магазина.
 4. Не добавлять `.keystore`, `key.properties`, `pepk.jar` и `pepk_out.zip` в
    Git. Сохранить отдельную зашифрованную резервную копию хранилища ключей и
    `key.properties`: без них невозможно подписывать последующие обновления.
