@@ -30,5 +30,6 @@ windows/flutter/ephemeral/
 *.local
 output/
 dist/
+/RuStore Release/
 .DS_Store
 Thumbs.db

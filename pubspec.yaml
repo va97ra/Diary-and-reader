@@ -23,9 +23,25 @@ dependencies:
   xml: ^7.0.1
 
 dev_dependencies:
+  flutter_launcher_icons: ^0.14.4
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/branding/literia-icon-master.png
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: assets/branding/literia-icon-master.png
+    background_color: "#07152F"
+    theme_color: "#07152F"
+  windows:
+    generate: true
+    image_path: assets/branding/literia-icon-master.png
+    icon_size: 256
 
 flutter:
   uses-material-design: true
