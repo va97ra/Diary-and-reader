@@ -7,6 +7,7 @@ import 'package:dnevnik/features/books/application/book_fb2_exporter.dart';
 import 'package:dnevnik/features/books/application/book_html_exporter.dart';
 import 'package:dnevnik/features/books/application/book_import_file.dart';
 import 'package:dnevnik/features/books/application/book_import_parser.dart';
+import 'package:dnevnik/features/books/application/book_manuscript_search.dart';
 import 'package:dnevnik/features/books/application/book_markdown_exporter.dart';
 import 'package:dnevnik/features/books/application/book_pdf_font_assets.dart';
 import 'package:dnevnik/features/books/application/book_project_archive_codec.dart';
@@ -17,6 +18,7 @@ import 'package:dnevnik/features/books/data/book_pdf_asset_font_loader.dart';
 import 'package:dnevnik/features/books/data/book_project_backup_file_service.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/presentation/book_export_sheet.dart';
+import 'package:dnevnik/features/books/presentation/book_manuscript_search_sheet.dart';
 import 'package:dnevnik/features/books/presentation/book_pdf_preview_page.dart';
 import 'package:dnevnik/features/books/presentation/book_version_history_sheet.dart';
 import 'package:dnevnik/features/books/presentation/imported_book_page.dart';
@@ -53,6 +55,8 @@ class AuthorWorkspacePage extends StatefulWidget {
 
 class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
   QuillController? _editorController;
+  final _sectionEditorKeys = <String, GlobalKey<BookSectionEditorState>>{};
+  BookManuscriptMatch? _pendingSearchMatch;
   bool _isFocusMode = false;
   bool _isA4Preview = false;
 
@@ -90,6 +94,7 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
                     languageCode: widget.controller.languageCode,
                     onFocusMode: _toggleFocusMode,
                     onToggleA4Preview: _toggleA4Preview,
+                    onSearch: _showManuscriptSearch,
                     onExport: _showExportSheet,
                     onOpenReader: _openReader,
                     onProjectDataAction: _handleProjectDataAction,
@@ -113,7 +118,10 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
                         ),
                       Expanded(
                         child: BookSectionEditor(
-                          key: ValueKey(section.id),
+                          key: _sectionEditorKeys.putIfAbsent(
+                            section.id,
+                            GlobalKey<BookSectionEditorState>.new,
+                          ),
                           section: section,
                           pageFormat: project.layoutSettings.pageFormat,
                           paragraphSettings: project.paragraphSettings,
@@ -133,8 +141,7 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
                           onTitleChanged: widget.controller.updateSectionTitle,
                           onContentChanged:
                               widget.controller.updateSectionContent,
-                          onControllerReady: (controller) =>
-                              _editorController = controller,
+                          onControllerReady: _handleEditorControllerReady,
                         ),
                       ),
                       if (isDesktop && !_isFocusMode)
@@ -165,6 +172,8 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
     BookCompactWorkspaceAction action,
   ) {
     switch (action) {
+      case BookCompactWorkspaceAction.search:
+        return _showManuscriptSearch();
       case BookCompactWorkspaceAction.export:
         return _showExportSheet();
       case BookCompactWorkspaceAction.properties:
@@ -203,6 +212,59 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
           duration: const Duration(seconds: 3),
         ),
       );
+  }
+
+  Future<void> _showManuscriptSearch() async {
+    final project = widget.controller.activeProject;
+    if (project == null || project.isReadOnly) return;
+    final request = await showModalBottomSheet<BookReplaceRequest>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
+        ),
+        child: BookManuscriptSearchSheet(
+          project: project,
+          onOpenMatch: _openSearchMatch,
+        ),
+      ),
+    );
+    if (!mounted || request == null) return;
+    final count = widget.controller.replaceAllInManuscript(
+      request.query,
+      request.replacement,
+      caseSensitive: request.caseSensitive,
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppStrings.of(context).replacementsMade(count))),
+    );
+  }
+
+  void _openSearchMatch(BookManuscriptMatch match) {
+    _pendingSearchMatch = match;
+    if (_isA4Preview) setState(() => _isA4Preview = false);
+    widget.controller.selectSection(match.sectionId);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _revealSearchMatch());
+  }
+
+  void _handleEditorControllerReady(QuillController controller) {
+    _editorController = controller;
+    if (_pendingSearchMatch != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _revealSearchMatch());
+    }
+  }
+
+  void _revealSearchMatch() {
+    if (!mounted) return;
+    final match = _pendingSearchMatch;
+    final activeSection = widget.controller.activeSection;
+    if (match == null || activeSection?.id != match.sectionId) return;
+    final editor = _sectionEditorKeys[match.sectionId]?.currentState;
+    if (editor == null) return;
+    _pendingSearchMatch = null;
+    editor.revealTextRange(match.offset, match.length);
   }
 
   Future<void> _showManuscript() => showModalBottomSheet<void>(

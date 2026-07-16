@@ -14,6 +14,7 @@ import 'package:dnevnik/features/books/data/book_project_backup_file_service.dar
 import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
+import 'package:dnevnik/features/books/domain/rich_document.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -132,6 +133,48 @@ void main() {
       find.byKey(const ValueKey('mobile-page-navigation')),
       findsOneWidget,
     );
+
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('finds and replaces text across a mobile manuscript', (
+    tester,
+  ) async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(),
+    );
+    await controller.load(preferredLanguage: 'ru');
+    controller.updateSectionContent([
+      {'insert': 'Старый дом и ещё один дом.\n'},
+    ]);
+
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pumpWidget(AuthorStudioApp(controller: controller));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('mobile-workspace-menu')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Поиск и замена в рукописи'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const ValueKey('manuscript-search-field')),
+      'дом',
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Найдено совпадений: 2'), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('manuscript-replacement-field')),
+      'сад',
+    );
+    await tester.tap(find.byKey(const ValueKey('replace-all-button')));
+    await tester.pumpAndSettle();
+
+    expect(
+      richDocumentPlainText(controller.activeSection!.content),
+      'Старый сад и ещё один сад.\n',
+    );
+    expect(find.text('Выполнено замен: 2'), findsOneWidget);
 
     await tester.binding.setSurfaceSize(null);
   });

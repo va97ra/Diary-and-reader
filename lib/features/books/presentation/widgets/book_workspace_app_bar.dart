@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 enum BookProjectDataAction { history, backup, restore }
 
 enum BookCompactWorkspaceAction {
+  search,
   export,
   properties,
   history,
@@ -23,6 +24,7 @@ class BookWorkspaceAppBar extends StatelessWidget
     required this.languageCode,
     required this.onFocusMode,
     required this.onToggleA4Preview,
+    required this.onSearch,
     required this.onExport,
     required this.onOpenReader,
     required this.onProjectDataAction,
@@ -40,6 +42,7 @@ class BookWorkspaceAppBar extends StatelessWidget
   final String languageCode;
   final VoidCallback onFocusMode;
   final VoidCallback onToggleA4Preview;
+  final VoidCallback onSearch;
   final VoidCallback onExport;
   final VoidCallback onOpenReader;
   final ValueChanged<BookProjectDataAction> onProjectDataAction;
@@ -68,6 +71,13 @@ class BookWorkspaceAppBar extends StatelessWidget
         ],
       ),
       actions: [
+        if (isTablet)
+          IconButton(
+            key: const ValueKey('manuscript-search-button'),
+            tooltip: strings.findAndReplace,
+            onPressed: onSearch,
+            icon: const Icon(Icons.manage_search),
+          ),
         IconButton(
           key: const ValueKey('editor-focus-mode-button'),
           tooltip: strings.focusWriting,
@@ -168,6 +178,11 @@ class _CompactWorkspaceMenu extends StatelessWidget {
         tooltip: strings.moreActions,
         onSelected: onSelected,
         itemBuilder: (_) => [
+          _menuItem(
+            BookCompactWorkspaceAction.search,
+            Icons.manage_search,
+            strings.findAndReplace,
+          ),
           _menuItem(
             BookCompactWorkspaceAction.export,
             Icons.ios_share_outlined,

@@ -337,6 +337,23 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     widget.onControllerReady?.call(controller);
   }
 
+  void revealTextRange(int globalOffset, int length) {
+    final target = _selectionForDocuments(_pageDocuments, globalOffset);
+    if (target.page != _activePage) {
+      setState(() => _activePage = target.page);
+      widget.onControllerReady?.call(controller);
+    }
+    final end = (target.offset + length).clamp(
+      target.offset,
+      controller.document.length - 1,
+    );
+    controller.updateSelection(
+      TextSelection(baseOffset: target.offset, extentOffset: end),
+      ChangeSource.local,
+    );
+    _focusNodes[_activePage].requestFocus();
+  }
+
   int _globalSelectionOffset(List<RichDocument> documents) {
     var offset = 0;
     for (var index = 0; index < _activePage; index++) {

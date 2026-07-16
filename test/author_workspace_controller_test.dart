@@ -11,6 +11,7 @@ import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
 import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
+import 'package:dnevnik/features/books/domain/rich_document.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/memory_author_workspace_repository.dart';
@@ -66,6 +67,31 @@ void main() {
       2500,
     );
     expect(controller.saveState, WorkspaceSaveState.saved);
+  });
+
+  test('replaces text across the manuscript and persists the result', () async {
+    final repository = MemoryAuthorWorkspaceRepository();
+    final controller = AuthorWorkspaceController(repository);
+    await controller.load(preferredLanguage: 'ru');
+    controller.updateSectionContent([
+      {'insert': 'Первый герой. Герой вернулся.\n'},
+    ]);
+    controller.addSection(BookSectionType.chapter);
+    controller.updateSectionContent([
+      {'insert': 'Ещё один герой.\n'},
+    ]);
+
+    final count = controller.replaceAllInManuscript('герой', 'персонаж');
+    await controller.flush();
+
+    expect(count, 3);
+    expect(
+      repository.snapshot!.activeProject!.sections
+          .map((section) => section.content)
+          .map(richDocumentPlainText)
+          .join(),
+      isNot(contains('герой')),
+    );
   });
 
   test('persists project paragraph settings', () async {

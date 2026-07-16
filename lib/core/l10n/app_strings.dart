@@ -182,6 +182,13 @@ class AppStrings {
   String get clearSearch => _text('clearSearch');
   String get searchHint => _text('searchHint');
   String get nothingFound => _text('nothingFound');
+  String get findAndReplace => _text('findAndReplace');
+  String get manuscriptSearchHint => _text('manuscriptSearchHint');
+  String get replaceWith => _text('replaceWith');
+  String get replaceAll => _text('replaceAll');
+  String get caseSensitive => _text('caseSensitive');
+  String matchesFound(int count) => '${_text('matchesFound')}: $count';
+  String replacementsMade(int count) => '${_text('replacementsMade')}: $count';
   String get readerViewMode => _text('readerViewMode');
   String get continuousReading => _text('continuousReading');
   String get singlePageReading => _text('singlePageReading');
@@ -444,6 +451,13 @@ class AppStrings {
       'clearSearch': 'Очистить поиск',
       'searchHint': 'Введите минимум два символа для поиска по всей книге',
       'nothingFound': 'Совпадений не найдено',
+      'findAndReplace': 'Поиск и замена в рукописи',
+      'manuscriptSearchHint': 'Введите минимум два символа',
+      'replaceWith': 'Заменить на',
+      'replaceAll': 'Заменить всё',
+      'caseSensitive': 'Учитывать регистр',
+      'matchesFound': 'Найдено совпадений',
+      'replacementsMade': 'Выполнено замен',
       'readerViewMode': 'Режим чтения',
       'continuousReading': 'Лента',
       'singlePageReading': 'Страница',
@@ -715,6 +729,13 @@ class AppStrings {
       'clearSearch': 'Clear search',
       'searchHint': 'Enter at least two characters to search the whole book',
       'nothingFound': 'No matches found',
+      'findAndReplace': 'Find and replace in manuscript',
+      'manuscriptSearchHint': 'Enter at least two characters',
+      'replaceWith': 'Replace with',
+      'replaceAll': 'Replace all',
+      'caseSensitive': 'Match case',
+      'matchesFound': 'Matches found',
+      'replacementsMade': 'Replacements made',
       'readerViewMode': 'Reading mode',
       'continuousReading': 'Scroll',
       'singlePageReading': 'Page',

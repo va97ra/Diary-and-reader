@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 
+import 'package:dnevnik/features/books/application/book_manuscript_search.dart';
 import 'package:dnevnik/features/books/application/section_tree_editor.dart';
 import 'package:dnevnik/features/books/application/workspace_save_state.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_repository.dart';
@@ -226,6 +227,38 @@ class AuthorWorkspaceController extends ChangeNotifier {
     _markDirty();
     notifyListeners();
     _scheduleSave();
+  }
+
+  int replaceAllInManuscript(
+    String query,
+    String replacement, {
+    bool caseSensitive = false,
+  }) {
+    final project = activeProject;
+    if (project == null || project.isReadOnly || query.isEmpty) return 0;
+    var replacementCount = 0;
+    final sections = project.sections.map((section) {
+      final result = BookManuscriptSearch.replaceAll(
+        section.content,
+        query,
+        replacement,
+        caseSensitive: caseSensitive,
+      );
+      replacementCount += result.count;
+      return result.count == 0
+          ? section
+          : section.copyWith(
+              content: result.document,
+              updatedAt: DateTime.now(),
+            );
+    }).toList();
+    if (replacementCount == 0) return 0;
+    _replaceActiveProject(
+      (current) =>
+          current.copyWith(sections: sections, updatedAt: DateTime.now()),
+    );
+    _changed();
+    return replacementCount;
   }
 
   void updateSectionStatus(DraftStatus status) {
