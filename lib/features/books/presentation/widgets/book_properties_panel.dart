@@ -1,10 +1,8 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
-import 'package:dnevnik/core/theme/app_theme.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_page_settings_section.dart';
-import 'package:dnevnik/features/books/presentation/widgets/book_paragraph_settings_section.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -20,7 +18,7 @@ class BookPropertiesPanel extends StatelessWidget {
     final metadata = project.metadata;
     final section = project.activeSection!;
     return Material(
-      color: AppTheme.surface,
+      color: Theme.of(context).colorScheme.surface,
       child: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(18),
@@ -99,10 +97,6 @@ class BookPropertiesPanel extends StatelessWidget {
             const Divider(),
             const SizedBox(height: 12),
             BookPageSettingsSection(controller: controller),
-            const SizedBox(height: 24),
-            const Divider(),
-            const SizedBox(height: 12),
-            BookParagraphSettingsSection(controller: controller),
             const SizedBox(height: 24),
           ],
         ),

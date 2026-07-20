@@ -1,4 +1,5 @@
 import 'package:dnevnik/features/books/domain/book_project.dart';
+import 'package:dnevnik/features/books/domain/book_reading_progress.dart';
 
 enum BookLibraryFilter {
   all,
@@ -76,15 +77,7 @@ class BookLibraryQuery {
 }
 
 double readingProgress(BookProject project) {
-  if (project.sections.isEmpty) return 0;
-  final activeIndex = project.sections.indexWhere(
-    (section) => section.id == project.readerProgress.sectionId,
-  );
-  if (activeIndex < 0) return 0;
-  return ((activeIndex + project.readerProgress.sectionProgress) /
-          project.sections.length)
-      .clamp(0, 1)
-      .toDouble();
+  return bookReadingProgress(project.sections, project.readerProgress);
 }
 
 String _text(String value) => value.trim().toLowerCase();

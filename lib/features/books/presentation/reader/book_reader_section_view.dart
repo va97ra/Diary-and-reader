@@ -224,48 +224,28 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
             widget.settings.horizontalPadding,
             8,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.section.title,
-                style: TextStyle(
-                  color: widget.palette.ink,
-                  fontFamily: widget.settings.fontFamily,
-                  fontSize: widget.settings.fontSize * 1.75,
-                  height: 1.2,
-                  fontWeight: FontWeight.w600,
+          child: NotificationListener<ScrollNotification>(
+            onNotification: _handleContinuousScrollNotification,
+            child: QuillEditor(
+              key: ValueKey('reader-document-${widget.section.id}'),
+              controller: _continuousController,
+              focusNode: _continuousFocusNode,
+              scrollController: _continuousScrollController,
+              config: QuillEditorConfig(
+                padding: EdgeInsets.zero,
+                customStyles: BookReaderTypography.styles(
+                  widget.settings,
+                  widget.palette,
                 ),
+                scrollable: true,
+                autoFocus: false,
+                showCursor: false,
+                embedBuilders: [
+                  BookImageEmbedBuilder(widget.assets),
+                  const BookPageBreakEmbedBuilder(showLabel: false),
+                ],
               ),
-              const SizedBox(height: 18),
-              Divider(color: widget.palette.divider, height: 1),
-              const SizedBox(height: 18),
-              Expanded(
-                child: NotificationListener<ScrollNotification>(
-                  onNotification: _handleContinuousScrollNotification,
-                  child: QuillEditor(
-                    key: ValueKey('reader-document-${widget.section.id}'),
-                    controller: _continuousController,
-                    focusNode: _continuousFocusNode,
-                    scrollController: _continuousScrollController,
-                    config: QuillEditorConfig(
-                      padding: EdgeInsets.zero,
-                      customStyles: BookReaderTypography.styles(
-                        widget.settings,
-                        widget.palette,
-                      ),
-                      scrollable: true,
-                      autoFocus: false,
-                      showCursor: false,
-                      embedBuilders: [
-                        BookImageEmbedBuilder(widget.assets),
-                        const BookPageBreakEmbedBuilder(showLabel: false),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -314,7 +294,6 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
                   child: BookReaderPageCard(
                     width: geometry.width,
                     height: geometry.height,
-                    sectionTitle: widget.section.title,
                     pageNumber: 1,
                     pageCount: 1,
                     settings: widget.settings,
@@ -403,7 +382,6 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
       BookReaderPageCard(
         width: geometry.width,
         height: geometry.height,
-        sectionTitle: widget.section.title,
         pageNumber: index + 1,
         pageCount: _pageControllers.length,
         settings: widget.settings,

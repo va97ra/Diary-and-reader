@@ -7,20 +7,32 @@ abstract final class AppTheme {
   static const paper = Color(0xFFFDFBF7);
   static const ink = Color(0xFF334155);
 
-  static ThemeData get dark => ThemeData(
+  static ThemeData get light => _theme(Brightness.light);
+
+  static ThemeData get dark => _theme(Brightness.dark);
+
+  static ThemeData _theme(Brightness brightness) => ThemeData(
     useMaterial3: true,
-    brightness: Brightness.dark,
+    brightness: brightness,
     colorScheme: ColorScheme.fromSeed(
       seedColor: accent,
-      brightness: Brightness.dark,
-      surface: surface,
+      brightness: brightness,
+      surface: brightness == Brightness.dark
+          ? surface
+          : const Color(0xFFFFFBF3),
     ),
-    scaffoldBackgroundColor: background,
+    scaffoldBackgroundColor: brightness == Brightness.dark
+        ? background
+        : const Color(0xFFF5EBDD),
     fontFamily: 'Segoe UI',
     inputDecorationTheme: const InputDecorationTheme(
       border: InputBorder.none,
       filled: false,
     ),
-    dialogTheme: const DialogThemeData(backgroundColor: surface),
+    dialogTheme: DialogThemeData(
+      backgroundColor: brightness == Brightness.dark
+          ? surface
+          : const Color(0xFFFFFBF3),
+    ),
   );
 }

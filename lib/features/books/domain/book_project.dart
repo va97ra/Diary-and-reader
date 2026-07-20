@@ -27,6 +27,10 @@ class BookProject {
     this.kind = BookProjectKind.manuscript,
     this.sourceFormat = '',
     this.sourceFileName = '',
+    this.sourceStoredPath = '',
+    this.sourceFingerprint = '',
+    this.sourceExternalUri = '',
+    this.sourceFileSize = 0,
     this.collectionName = '',
     List<BookAsset> assets = const [],
     this.coverAssetId,
@@ -148,6 +152,12 @@ class BookProject {
           BookProjectKind.manuscript,
       sourceFormat: json['sourceFormat']?.toString() ?? '',
       sourceFileName: json['sourceFileName']?.toString() ?? '',
+      sourceStoredPath: json['sourceStoredPath']?.toString() ?? '',
+      sourceFingerprint: json['sourceFingerprint']?.toString() ?? '',
+      sourceExternalUri: json['sourceExternalUri']?.toString() ?? '',
+      sourceFileSize: json['sourceFileSize'] is num
+          ? (json['sourceFileSize'] as num).toInt().clamp(0, 1 << 62).toInt()
+          : 0,
       collectionName: json['collectionName']?.toString() ?? '',
       assets: (json['assets'] as List<dynamic>? ?? const [])
           .whereType<Map>()
@@ -175,6 +185,10 @@ class BookProject {
   final BookProjectKind kind;
   final String sourceFormat;
   final String sourceFileName;
+  final String sourceStoredPath;
+  final String sourceFingerprint;
+  final String sourceExternalUri;
+  final int sourceFileSize;
   final String collectionName;
   final List<BookAsset> _assets;
   final String? coverAssetId;
@@ -213,6 +227,11 @@ class BookProject {
     BookProjectKind? kind,
     String? sourceFormat,
     String? sourceFileName,
+    String? sourceStoredPath,
+    String? sourceFingerprint,
+    String? sourceExternalUri,
+    int? sourceFileSize,
+    bool clearStoredSource = false,
     String? collectionName,
     List<BookAsset>? assets,
     String? coverAssetId,
@@ -234,6 +253,14 @@ class BookProject {
     kind: kind ?? this.kind,
     sourceFormat: sourceFormat ?? this.sourceFormat,
     sourceFileName: sourceFileName ?? this.sourceFileName,
+    sourceStoredPath: clearStoredSource
+        ? ''
+        : sourceStoredPath ?? this.sourceStoredPath,
+    sourceFingerprint: sourceFingerprint ?? this.sourceFingerprint,
+    sourceExternalUri: sourceExternalUri ?? this.sourceExternalUri,
+    sourceFileSize: clearStoredSource
+        ? 0
+        : sourceFileSize ?? this.sourceFileSize,
     collectionName: collectionName ?? this.collectionName,
     assets: assets ?? _assets,
     coverAssetId: clearCoverAsset ? null : coverAssetId ?? this.coverAssetId,
@@ -254,6 +281,10 @@ class BookProject {
     'kind': kind.name,
     'sourceFormat': sourceFormat,
     'sourceFileName': sourceFileName,
+    'sourceStoredPath': sourceStoredPath,
+    'sourceFingerprint': sourceFingerprint,
+    'sourceExternalUri': sourceExternalUri,
+    'sourceFileSize': sourceFileSize,
     'collectionName': collectionName,
     'assets': _assets.map((asset) => asset.toJson()).toList(),
     'coverAssetId': coverAssetId,

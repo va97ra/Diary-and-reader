@@ -14,7 +14,6 @@ class BookReaderPageCard extends StatelessWidget {
   const BookReaderPageCard({
     required this.width,
     required this.height,
-    required this.sectionTitle,
     required this.pageNumber,
     required this.pageCount,
     required this.settings,
@@ -31,7 +30,6 @@ class BookReaderPageCard extends StatelessWidget {
 
   final double width;
   final double height;
-  final String sectionTitle;
   final int pageNumber;
   final int pageCount;
   final BookReaderSettings settings;
@@ -79,35 +77,6 @@ class BookReaderPageCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          SizedBox(
-            height: 30,
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    sectionTitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: pageNumber == 1 ? palette.ink : palette.mutedInk,
-                      fontFamily: settings.fontFamily,
-                      fontSize: pageNumber == 1
-                          ? math.min(24, settings.fontSize * 1.2)
-                          : 12,
-                      fontWeight: pageNumber == 1 ? FontWeight.w600 : null,
-                    ),
-                  ),
-                ),
-                if (!isMeasurement)
-                  Text(
-                    AppStrings.of(context).readerPageOf(pageNumber, pageCount),
-                    style: TextStyle(color: palette.mutedInk, fontSize: 11),
-                  ),
-              ],
-            ),
-          ),
-          Divider(color: palette.divider, height: 1),
-          const SizedBox(height: 12),
           Expanded(
             child: ClipRect(
               key: viewportKey,
@@ -129,6 +98,20 @@ class BookReaderPageCard extends StatelessWidget {
                 ),
               ),
             ),
+          ),
+          SizedBox(
+            height: 16,
+            child: isMeasurement
+                ? null
+                : Align(
+                    alignment: Alignment.bottomRight,
+                    child: Text(
+                      AppStrings.of(
+                        context,
+                      ).readerPageOf(pageNumber, pageCount),
+                      style: TextStyle(color: palette.mutedInk, fontSize: 11),
+                    ),
+                  ),
           ),
         ],
       ),

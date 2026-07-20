@@ -1,14 +1,17 @@
+import 'package:dnevnik/app/literia_home_shell.dart';
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/core/theme/app_theme.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
+import 'package:dnevnik/features/books/application/book_device_catalog.dart';
 import 'package:dnevnik/features/books/application/book_image_file.dart';
 import 'package:dnevnik/features/books/application/book_pdf_font_assets.dart';
+import 'package:dnevnik/features/books/application/book_source_storage.dart';
 import 'package:dnevnik/features/books/data/book_export_file_service.dart';
 import 'package:dnevnik/features/books/data/book_image_file_service.dart';
 import 'package:dnevnik/features/books/data/book_import_file_service.dart';
 import 'package:dnevnik/features/books/data/book_pdf_asset_font_loader.dart';
 import 'package:dnevnik/features/books/data/book_project_backup_file_service.dart';
-import 'package:dnevnik/features/books/presentation/author_workspace_page.dart';
+import 'package:dnevnik/features/books/domain/literia_app_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -21,6 +24,8 @@ class AuthorStudioApp extends StatelessWidget {
     this.pdfFontLoader = const BookPdfAssetFontLoader(),
     this.importFileGateway = const BookImportFileService(),
     this.imageFileGateway = const BookImageFileService(),
+    this.sourceStorage = const EphemeralBookSourceStorage(),
+    this.deviceCatalog = const UnsupportedBookDeviceCatalog(),
     super.key,
   });
 
@@ -30,6 +35,8 @@ class AuthorStudioApp extends StatelessWidget {
   final BookPdfFontLoader pdfFontLoader;
   final BookImportFileGateway importFileGateway;
   final BookImageFileGateway imageFileGateway;
+  final BookSourceStorage sourceStorage;
+  final BookDeviceCatalogGateway deviceCatalog;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -45,14 +52,22 @@ class AuthorStudioApp extends StatelessWidget {
         FlutterQuillLocalizations.delegate,
       ],
       onGenerateTitle: (context) => AppStrings.of(context).studioTitle,
-      theme: AppTheme.dark,
-      home: AuthorWorkspacePage(
+      themeMode: switch (controller.themePreference) {
+        LiteriaThemePreference.system => ThemeMode.system,
+        LiteriaThemePreference.light => ThemeMode.light,
+        LiteriaThemePreference.dark => ThemeMode.dark,
+      },
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      home: LiteriaHomeShell(
         controller: controller,
         exportFileSaver: exportFileSaver,
         backupFileGateway: backupFileGateway,
         pdfFontLoader: pdfFontLoader,
         importFileGateway: importFileGateway,
         imageFileGateway: imageFileGateway,
+        sourceStorage: sourceStorage,
+        deviceCatalog: deviceCatalog,
       ),
     ),
   );

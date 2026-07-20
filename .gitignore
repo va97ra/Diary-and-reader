@@ -32,5 +32,9 @@ windows/flutter/ephemeral/
 output/
 dist/
 /RuStore Release/
+/.omo/
+/.playwright-mcp/
+/tmp/
+/dnevnik-desktop-home.png
 .DS_Store
 Thumbs.db

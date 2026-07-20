@@ -48,6 +48,57 @@ class AppStrings {
   String get confirmImport => _text('confirmImport');
   String get millimeters => _text('millimeters');
   String get studioTitle => _text('studioTitle');
+  String get homeTagline => _text('homeTagline');
+  String get write => _text('write');
+  String get writeSubtitle => _text('writeSubtitle');
+  String get read => _text('read');
+  String get readSubtitle => _text('readSubtitle');
+  String get settings => _text('settings');
+  String get settingsSubtitle => _text('settingsSubtitle');
+  String get continueWriting => _text('continueWriting');
+  String get continueReading => _text('continueReading');
+  String get createFirstManuscript => _text('createFirstManuscript');
+  String get importFirstBook => _text('importFirstBook');
+  String get manuscriptLibrary => _text('manuscriptLibrary');
+  String get readingLibrary => _text('readingLibrary');
+  String get createBook => _text('createBook');
+  String get supportedBookFormats => _text('supportedBookFormats');
+  String get emptyManuscripts => _text('emptyManuscripts');
+  String get emptyReadingLibrary => _text('emptyReadingLibrary');
+  String get appearance => _text('appearance');
+  String get systemTheme => _text('systemTheme');
+  String get help => _text('help');
+  String get about => _text('about');
+  String get bookStorage => _text('bookStorage');
+  String get bookStorageSubtitle => _text('bookStorageSubtitle');
+  String get totalBookData => _text('totalBookData');
+  String get storedOriginals => _text('storedOriginals');
+  String get processedBooks => _text('processedBooks');
+  String get freeSpace => _text('freeSpace');
+  String get storedOriginal => _text('storedOriginal');
+  String get originalNotStored => _text('originalNotStored');
+  String get deleteStoredOriginal => _text('deleteStoredOriginal');
+  String get deleteBooksCompletely => _text('deleteBooksCompletely');
+  String get clearTemporaryFiles => _text('clearTemporaryFiles');
+  String get originalDeleteWarning => _text('originalDeleteWarning');
+  String get completeDeleteWarning => _text('completeDeleteWarning');
+  String get temporaryFilesCleared => _text('temporaryFilesCleared');
+  String get originalFilesDeleted => _text('originalFilesDeleted');
+  String get booksDeleted => _text('booksDeleted');
+  String get bySize => _text('bySize');
+  String get byLastRead => _text('byLastRead');
+  String get structure => _text('structure');
+  String get undo => _text('undo');
+  String get redo => _text('redo');
+  String get writerSettings => _text('writerSettings');
+  String get writerFormatting => _text('writerFormatting');
+  String get onboarding => _text('onboarding');
+  String get quickStart => _text('quickStart');
+  String get quickStartBody => _text('quickStartBody');
+  String get understood => _text('understood');
+  String get more => _text('more');
+  String get previewBook => _text('previewBook');
+  String get resetSettings => _text('resetSettings');
   String get library => _text('library');
   String get librarySearchHint => _text('librarySearchHint');
   String get sortBy => _text('sortBy');
@@ -73,6 +124,22 @@ class AppStrings {
   String get properties => _text('properties');
   String get newBook => _text('newBook');
   String get importEbook => _text('importEbook');
+  String get importBooks => _text('importBooks');
+  String get findOnDevice => _text('findOnDevice');
+  String get foundOnDevice => _text('foundOnDevice');
+  String get addBookFolder => _text('addBookFolder');
+  String get refresh => _text('refresh');
+  String get addSelected => _text('addSelected');
+  String get removeFolder => _text('removeFolder');
+  String get noBookFolders => _text('noBookFolders');
+  String get noDeviceBooks => _text('noDeviceBooks');
+  String get alreadyInLibrary => _text('alreadyInLibrary');
+  String get notAdded => _text('notAdded');
+  String get noAccess => _text('noAccess');
+  String get savingBooks => _text('savingBooks');
+  String get duplicateBooksSkipped => _text('duplicateBooksSkipped');
+  String get someBooksFailed => _text('someBooksFailed');
+  String get notEnoughStorage => _text('notEnoughStorage');
   String get importEbookHint => _text('importEbookHint');
   String get importedBook => _text('importedBook');
   String get importedBookHint => _text('importedBookHint');
@@ -168,6 +235,8 @@ class AppStrings {
   String get textWidth => _text('textWidth');
   String get previousSection => _text('previousSection');
   String get nextSection => _text('nextSection');
+  String get previousShort => _text('previousShort');
+  String get nextShort => _text('nextShort');
   String get readingProgress => _text('readingProgress');
   String get contentsShort => _text('contentsShort');
   String get bookmarks => _text('bookmarks');
@@ -317,7 +386,61 @@ class AppStrings {
       'importFailed': 'Не удалось прочитать файл дневника',
       'confirmImport': 'Текущие записи будут заменены данными из файла.',
       'millimeters': 'мм',
-      'studioTitle': 'Авторская студия',
+      'studioTitle': 'Литерия',
+      'homeTagline': 'Ваши книги — от первой строки до последней страницы',
+      'write': 'Писать',
+      'writeSubtitle': 'Создавайте и оформляйте свои книги',
+      'read': 'Читать',
+      'readSubtitle': 'Загружайте и читайте книги',
+      'settings': 'Настройки',
+      'settingsSubtitle': 'Внешний вид, язык и данные',
+      'continueWriting': 'Продолжить писать',
+      'continueReading': 'Продолжить чтение',
+      'createFirstManuscript': 'Создать первую рукопись',
+      'importFirstBook': 'Загрузить первую книгу',
+      'manuscriptLibrary': 'Мои рукописи',
+      'readingLibrary': 'Мои книги',
+      'createBook': 'Создать книгу',
+      'supportedBookFormats': 'EPUB, FB2 и FB2.ZIP без DRM',
+      'emptyManuscripts': 'Здесь появятся книги, которые вы пишете',
+      'emptyReadingLibrary': 'Здесь появятся загруженные книги',
+      'appearance': 'Оформление приложения',
+      'systemTheme': 'Как в системе',
+      'help': 'Как пользоваться',
+      'about': 'О приложении',
+      'bookStorage': 'Хранилище книг',
+      'bookStorageSubtitle': 'Оригиналы книг и занимаемое место',
+      'totalBookData': 'Всего данных книг',
+      'storedOriginals': 'Сохранённые оригиналы',
+      'processedBooks': 'Текст, изображения и обложки',
+      'freeSpace': 'Свободно на устройстве',
+      'storedOriginal': 'Оригинал сохранён',
+      'originalNotStored': 'Оригинал не сохранён',
+      'deleteStoredOriginal': 'Удалить сохранённый оригинал',
+      'deleteBooksCompletely': 'Удалить книги полностью',
+      'clearTemporaryFiles': 'Очистить временные файлы',
+      'originalDeleteWarning':
+          'Точный исходный EPUB, FB2 или ZIP будет удалён. Книга, прогресс, закладки и заметки останутся.',
+      'completeDeleteWarning':
+          'Книги, их главы, изображения, прогресс, закладки, заметки и сохранённые оригиналы будут удалены.',
+      'temporaryFilesCleared': 'Временные файлы очищены',
+      'originalFilesDeleted': 'Сохранённые оригиналы удалены',
+      'booksDeleted': 'Выбранные книги удалены',
+      'bySize': 'По размеру',
+      'byLastRead': 'По последнему чтению',
+      'structure': 'Структура',
+      'undo': 'Отменить',
+      'redo': 'Повторить',
+      'writerSettings': 'Настройки рукописи',
+      'writerFormatting': 'Оформление',
+      'onboarding': 'Обучение',
+      'quickStart': 'Быстрый старт',
+      'quickStartBody':
+          '«Писать» открывает ваши рукописи, «Читать» — загруженные книги. Все настройки текущего режима находятся на нижней панели.',
+      'understood': 'Понятно',
+      'more': 'Ещё',
+      'previewBook': 'Предпросмотр книги',
+      'resetSettings': 'Сбросить настройки',
       'library': 'Библиотека',
       'librarySearchHint': 'Название, автор, серия или коллекция',
       'sortBy': 'Сортировка',
@@ -342,7 +465,24 @@ class AppStrings {
       'manuscript': 'Рукопись',
       'properties': 'Свойства',
       'newBook': 'Новая книга',
-      'importEbook': 'Импортировать книгу для чтения',
+      'importEbook': 'Загрузить книгу',
+      'importBooks': 'Загрузить книги',
+      'findOnDevice': 'Найти на устройстве',
+      'foundOnDevice': 'Найдено новых книг',
+      'addBookFolder': 'Добавить папку',
+      'refresh': 'Обновить',
+      'addSelected': 'Добавить выбранные',
+      'removeFolder': 'Удалить папку из поиска',
+      'noBookFolders':
+          'Добавьте папку с книгами — Литерия запомнит её и будет проверять автоматически.',
+      'noDeviceBooks': 'В выбранных папках новых книг не найдено',
+      'alreadyInLibrary': 'Уже в библиотеке',
+      'notAdded': 'Не добавлена',
+      'noAccess': 'Нет доступа',
+      'savingBooks': 'Сохраняем книги в Литерии…',
+      'duplicateBooksSkipped': 'Повторные книги пропущены',
+      'someBooksFailed': 'Некоторые файлы не удалось прочитать',
+      'notEnoughStorage': 'Недостаточно свободного места',
       'importEbookHint': 'Поддерживаются EPUB, FB2 и FB2.ZIP без DRM',
       'importedBook': 'Импортированная книга',
       'importedBookHint':
@@ -443,6 +583,8 @@ class AppStrings {
       'textWidth': 'Ширина текста',
       'previousSection': 'Предыдущий раздел',
       'nextSection': 'Следующий раздел',
+      'previousShort': 'Назад',
+      'nextShort': 'Вперёд',
       'readingProgress': 'Прогресс чтения',
       'section': 'Раздел',
       'contentsShort': 'Главы',
@@ -558,7 +700,7 @@ class AppStrings {
           'Удалить этот снимок без возможности восстановления?',
       'safetyVersionLabel': 'Автоматически перед восстановлением',
       'backupProject': 'Сохранить резервную копию',
-      'restoreProjectBackup': 'Восстановить из файла',
+      'restoreProjectBackup': 'Восстановить проект из резервной копии',
       'projectBackupSaved': 'Резервная копия проекта сохранена',
       'projectBackupFailed': 'Не удалось сохранить резервную копию',
       'projectRestored': 'Проект восстановлен из резервной копии',
@@ -602,7 +744,61 @@ class AppStrings {
       'importFailed': 'The diary file could not be read',
       'confirmImport': 'Current entries will be replaced by the imported file.',
       'millimeters': 'mm',
-      'studioTitle': 'Author studio',
+      'studioTitle': 'Literia',
+      'homeTagline': 'Your books, from the first line to the last page',
+      'write': 'Write',
+      'writeSubtitle': 'Create and format your own books',
+      'read': 'Read',
+      'readSubtitle': 'Import and enjoy your books',
+      'settings': 'Settings',
+      'settingsSubtitle': 'Appearance, language, and data',
+      'continueWriting': 'Continue writing',
+      'continueReading': 'Continue reading',
+      'createFirstManuscript': 'Create your first manuscript',
+      'importFirstBook': 'Import your first book',
+      'manuscriptLibrary': 'My manuscripts',
+      'readingLibrary': 'My books',
+      'createBook': 'Create book',
+      'supportedBookFormats': 'DRM-free EPUB, FB2, and FB2.ZIP',
+      'emptyManuscripts': 'Books you write will appear here',
+      'emptyReadingLibrary': 'Imported books will appear here',
+      'appearance': 'App appearance',
+      'systemTheme': 'Use system setting',
+      'help': 'How to use Literia',
+      'about': 'About',
+      'bookStorage': 'Book storage',
+      'bookStorageSubtitle': 'Original books and occupied space',
+      'totalBookData': 'Total book data',
+      'storedOriginals': 'Stored originals',
+      'processedBooks': 'Text, images, and covers',
+      'freeSpace': 'Free device space',
+      'storedOriginal': 'Original stored',
+      'originalNotStored': 'Original not stored',
+      'deleteStoredOriginal': 'Delete stored original',
+      'deleteBooksCompletely': 'Delete books completely',
+      'clearTemporaryFiles': 'Clear temporary files',
+      'originalDeleteWarning':
+          'The exact EPUB, FB2, or ZIP source will be deleted. The book, progress, bookmarks, and notes will remain.',
+      'completeDeleteWarning':
+          'The books, chapters, images, progress, bookmarks, notes, and stored originals will be deleted.',
+      'temporaryFilesCleared': 'Temporary files cleared',
+      'originalFilesDeleted': 'Stored originals deleted',
+      'booksDeleted': 'Selected books deleted',
+      'bySize': 'By size',
+      'byLastRead': 'By last read',
+      'structure': 'Structure',
+      'undo': 'Undo',
+      'redo': 'Redo',
+      'writerSettings': 'Manuscript settings',
+      'writerFormatting': 'Formatting',
+      'onboarding': 'Tutorial',
+      'quickStart': 'Quick start',
+      'quickStartBody':
+          'Write opens your manuscripts, Read opens imported books. Settings for the current mode are always on the bottom bar.',
+      'understood': 'Got it',
+      'more': 'More',
+      'previewBook': 'Preview book',
+      'resetSettings': 'Reset settings',
       'library': 'Library',
       'librarySearchHint': 'Title, author, series, or collection',
       'sortBy': 'Sort by',
@@ -627,7 +823,24 @@ class AppStrings {
       'manuscript': 'Manuscript',
       'properties': 'Properties',
       'newBook': 'New book',
-      'importEbook': 'Import a book for reading',
+      'importEbook': 'Import book',
+      'importBooks': 'Import books',
+      'findOnDevice': 'Find on device',
+      'foundOnDevice': 'New books found',
+      'addBookFolder': 'Add folder',
+      'refresh': 'Refresh',
+      'addSelected': 'Add selected',
+      'removeFolder': 'Remove folder from search',
+      'noBookFolders':
+          'Add a book folder. Literia will remember it and check it automatically.',
+      'noDeviceBooks': 'No new books were found in the selected folders',
+      'alreadyInLibrary': 'Already in library',
+      'notAdded': 'Not added',
+      'noAccess': 'No access',
+      'savingBooks': 'Saving books in Literia…',
+      'duplicateBooksSkipped': 'Duplicate books were skipped',
+      'someBooksFailed': 'Some files could not be read',
+      'notEnoughStorage': 'Not enough free space',
       'importEbookHint': 'Supports DRM-free EPUB, FB2, and FB2.ZIP files',
       'importedBook': 'Imported book',
       'importedBookHint':
@@ -728,6 +941,8 @@ class AppStrings {
       'textWidth': 'Text width',
       'previousSection': 'Previous section',
       'nextSection': 'Next section',
+      'previousShort': 'Back',
+      'nextShort': 'Next',
       'readingProgress': 'Reading progress',
       'section': 'Section',
       'contentsShort': 'Contents',
@@ -840,7 +1055,7 @@ class AppStrings {
       'deleteVersionQuestion': 'Delete this snapshot permanently?',
       'safetyVersionLabel': 'Automatic snapshot before restore',
       'backupProject': 'Save backup copy',
-      'restoreProjectBackup': 'Restore from file',
+      'restoreProjectBackup': 'Restore project from backup',
       'projectBackupSaved': 'Project backup saved',
       'projectBackupFailed': 'The backup could not be saved',
       'projectRestored': 'Project restored from backup',

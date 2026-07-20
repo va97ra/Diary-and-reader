@@ -6,12 +6,14 @@ import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
 import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
+import 'package:dnevnik/features/books/domain/book_reading_progress.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_annotation_export_sheet.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_navigation_panel.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_note_dialog.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_progress_rail.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_search_sheet.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_section_view.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_selection_bar.dart';
@@ -23,6 +25,7 @@ import 'package:flutter/services.dart';
 class BookReaderPage extends StatefulWidget {
   const BookReaderPage({
     required this.project,
+    required this.readerSettings,
     required this.onSettingsChanged,
     required this.onProgressChanged,
     required this.onAnnotationsChanged,
@@ -31,6 +34,7 @@ class BookReaderPage extends StatefulWidget {
   });
 
   final BookProject project;
+  final BookReaderSettings readerSettings;
   final ValueChanged<BookReaderSettings> onSettingsChanged;
   final ValueChanged<BookReaderProgress> onProgressChanged;
   final ValueChanged<BookReaderAnnotations> onAnnotationsChanged;
@@ -55,7 +59,7 @@ class _BookReaderPageState extends State<BookReaderPage> {
   @override
   void initState() {
     super.initState();
-    _settings = widget.project.readerSettings;
+    _settings = widget.readerSettings;
     _annotations = widget.project.readerAnnotations;
     final savedId = widget.project.readerProgress.sectionId;
     final savedIndex = _sections.indexWhere((section) => section.id == savedId);
@@ -98,8 +102,13 @@ class _BookReaderPageState extends State<BookReaderPage> {
   }
 
   double get _overallProgress {
-    if (_sections.isEmpty) return 0;
-    return ((_activeIndex + _sectionProgress) / _sections.length).clamp(0, 1);
+    return bookReadingProgress(
+      _sections,
+      BookReaderProgress(
+        sectionId: _section.id,
+        sectionProgress: _sectionProgress,
+      ),
+    );
   }
 
   @override
@@ -109,8 +118,7 @@ class _BookReaderPageState extends State<BookReaderPage> {
       data: palette.themeData(Theme.of(context)),
       child: Builder(
         builder: (context) => LayoutBuilder(
-          builder: (context, constraints) {
-            final showContents = constraints.maxWidth >= 1050;
+          builder: (context, _) {
             return PopScope(
               canPop: !_isFocusMode,
               onPopInvokedWithResult: (didPop, _) {
@@ -120,49 +128,21 @@ class _BookReaderPageState extends State<BookReaderPage> {
                 }
               },
               child: Scaffold(
-                appBar: _isFocusMode
-                    ? null
-                    : _buildAppBar(context, showContents),
+                appBar: _isFocusMode ? null : _buildAppBar(context),
                 body: Stack(
                   children: [
                     Positioned.fill(
-                      child: Column(
-                        children: [
-                          if (!_isFocusMode)
-                            LinearProgressIndicator(
-                              key: const ValueKey('reader-progress'),
-                              value: _overallProgress,
-                              minHeight: 3,
-                            ),
-                          Expanded(
-                            child: Row(
-                              children: [
-                                if (showContents && !_isFocusMode)
-                                  SizedBox(
-                                    width: 300,
-                                    child: Material(
-                                      color: palette.surface,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Expanded(
-                                            child: _navigationPanel(
-                                              context,
-                                              closeAfterSelection: false,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                Expanded(
-                                  child: _buildReadingSurface(context, palette),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                      child: _buildReadingSurface(context, palette),
+                    ),
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      child: BookReaderProgressRail(
+                        value: _overallProgress,
+                        trackColor: palette.mutedInk.withValues(alpha: 0.22),
+                        progressColor: Theme.of(context).colorScheme.primary,
+                        semanticLabel: AppStrings.of(context).readingProgress,
                       ),
                     ),
                     if (_isFocusMode)
@@ -197,7 +177,7 @@ class _BookReaderPageState extends State<BookReaderPage> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context, bool showContents) {
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
     final strings = AppStrings.of(context);
     return AppBar(
       titleSpacing: 12,
@@ -219,40 +199,33 @@ class _BookReaderPageState extends State<BookReaderPage> {
       ),
       actions: [
         IconButton(
-          key: const ValueKey('reader-focus-mode-button'),
+          key: const ValueKey('reader-hide-panels-button'),
           tooltip: strings.focusReading,
           onPressed: _toggleFocusMode,
           icon: const Icon(Icons.fullscreen),
         ),
-        IconButton(
-          key: const ValueKey('reader-search-button'),
-          tooltip: strings.searchInBook,
-          onPressed: () => _showSearch(context),
-          icon: const Icon(Icons.search),
-        ),
-        if (!showContents)
-          IconButton(
-            key: const ValueKey('reader-contents-button'),
-            tooltip: strings.tableOfContents,
-            onPressed: () => _showContents(context),
-            icon: const Icon(Icons.toc),
-          ),
-        IconButton(
-          key: const ValueKey('reader-bookmark-button'),
-          tooltip: _currentBookmark == null
-              ? strings.addBookmark
-              : strings.removeBookmark,
-          onPressed: _toggleBookmark,
-          icon: Icon(
-            _currentBookmark == null ? Icons.bookmark_border : Icons.bookmark,
+        PopupMenuButton<_ReaderMoreAction>(
+          key: const ValueKey('reader-more-menu'),
+          tooltip: strings.more,
+          onSelected: (action) {
+            if (action == _ReaderMoreAction.search) _showSearch(context);
+          },
+          itemBuilder: (_) => [
+            PopupMenuItem(
+              value: _ReaderMoreAction.search,
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.search),
+                title: Text(strings.searchInBook),
+              ),
+            ),
+          ],
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            child: Center(child: Text(strings.more)),
           ),
         ),
-        IconButton(
-          key: const ValueKey('reader-settings-button'),
-          tooltip: strings.readingSettings,
-          onPressed: () => _showSettings(context),
-          icon: const Icon(Icons.text_fields),
-        ),
+        const SizedBox(width: 4),
       ],
     );
   }
@@ -309,36 +282,55 @@ class _BookReaderPageState extends State<BookReaderPage> {
 
   Widget _buildNavigationBar(BuildContext context, BookReaderPalette palette) {
     final strings = AppStrings.of(context);
-    final percent = (_overallProgress * 100).round();
     return Material(
+      key: const ValueKey('reader-context-bar'),
       color: palette.surface,
+      elevation: 10,
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 60,
+          height: 68,
           child: Row(
             children: [
-              IconButton(
+              _ReaderAction(
                 key: const ValueKey('reader-previous-section'),
-                tooltip: strings.previousSection,
+                label: strings.previousShort,
+                semanticLabel: strings.previousSection,
                 onPressed: _activeIndex > 0
                     ? () => _goToIndex(_activeIndex - 1)
                     : null,
                 icon: const Icon(Icons.chevron_left),
               ),
-              Expanded(
-                child: Semantics(
-                  label: strings.readingProgress,
-                  child: Text(
-                    '${strings.sectionOf(_activeIndex + 1, _sections.length)} · $percent%',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: palette.mutedInk),
-                  ),
+              _ReaderAction(
+                key: const ValueKey('reader-contents-action'),
+                label: strings.contentsShort,
+                onPressed: () => _showContents(context),
+                icon: const Icon(Icons.toc),
+              ),
+              _ReaderAction(
+                key: const ValueKey('reader-settings-action'),
+                label: strings.settings,
+                onPressed: () => _showSettings(context),
+                icon: const Text(
+                  'Aa',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                ),
+                accent: true,
+              ),
+              _ReaderAction(
+                key: const ValueKey('reader-bookmark-action'),
+                label: strings.bookmark,
+                onPressed: _toggleBookmark,
+                icon: Icon(
+                  _currentBookmark == null
+                      ? Icons.bookmark_border
+                      : Icons.bookmark,
                 ),
               ),
-              IconButton(
+              _ReaderAction(
                 key: const ValueKey('reader-next-section'),
-                tooltip: strings.nextSection,
+                label: strings.nextShort,
+                semanticLabel: strings.nextSection,
                 onPressed: _activeIndex < _sections.length - 1
                     ? () => _goToIndex(_activeIndex + 1)
                     : null,
@@ -637,4 +629,63 @@ class _BookReaderPageState extends State<BookReaderPage> {
     context: themedContext,
     builder: (_) => BookReaderNoteDialog(initialText: note?.text ?? ''),
   );
+}
+
+enum _ReaderMoreAction { search }
+
+class _ReaderAction extends StatelessWidget {
+  const _ReaderAction({
+    required this.label,
+    required this.onPressed,
+    required this.icon,
+    this.accent = false,
+    this.semanticLabel,
+    super.key,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final Widget icon;
+  final bool accent;
+  final String? semanticLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null;
+    final scheme = Theme.of(context).colorScheme;
+    final color = !enabled
+        ? Theme.of(context).disabledColor
+        : accent
+        ? scheme.primary
+        : scheme.onSurfaceVariant;
+    return Expanded(
+      child: Semantics(
+        button: true,
+        enabled: enabled,
+        label: semanticLabel ?? label,
+        child: InkWell(
+          onTap: onPressed,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconTheme(
+                  data: IconThemeData(size: 22, color: color),
+                  child: icon,
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 10.5, color: color),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

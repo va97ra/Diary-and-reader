@@ -21,6 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/literia_test_navigation.dart';
 import 'support/memory_author_workspace_repository.dart';
 
 void main() {
@@ -32,18 +33,35 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1920, 1080));
     await tester.pumpWidget(AuthorStudioApp(controller: controller));
     await tester.pumpAndSettle();
-    expect(find.text('Рукопись'), findsOneWidget);
-    expect(find.text('Свойства'), findsOneWidget);
+    await openLastManuscript(tester, controller);
+    expect(find.byKey(const ValueKey('writer-context-bar')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('editor-bottom-navigation')),
+      findsNothing,
+    );
     expect(find.byKey(const ValueKey('book-page-1')), findsOneWidget);
-    expect(find.textContaining('A4 210×297 мм'), findsOneWidget);
-    expect(find.text('Книжная'), findsOneWidget);
-    expect(find.text('Альбомная'), findsOneWidget);
-    expect(find.text('Слов: 0'), findsOneWidget);
-    expect(find.text('Сохранено'), findsOneWidget);
-    expect(find.text('Основной текст'), findsOneWidget);
+    expect(find.byKey(const ValueKey('book-editor-status-bar')), findsNothing);
+    expect(find.byKey(const ValueKey('writer-header-metrics')), findsOneWidget);
+    expect(find.textContaining('Слов: 0 · Страница 1/1'), findsOneWidget);
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('writer-header-metrics')))
+          .style
+          ?.fontSize,
+      11,
+    );
+    expect(find.text('Сохранено'), findsNothing);
     final editor = tester.widget<QuillEditor>(find.byType(QuillEditor));
     expect(editor.config.textSelectionThemeData?.cursorColor, AppTheme.ink);
 
+    await tester.tap(find.byKey(const ValueKey('writer-settings-action')));
+    await tester.pumpAndSettle();
+    expect(find.text('Настройки рукописи'), findsOneWidget);
+    expect(find.textContaining('A4 210×297 мм'), findsOneWidget);
+    expect(find.text('Книжная'), findsOneWidget);
+    expect(find.text('Альбомная'), findsOneWidget);
+    await tester.ensureVisible(find.text('Альбомная'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Альбомная'));
     await tester.pumpAndSettle();
     expect(
@@ -68,33 +86,54 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     await tester.pumpWidget(AuthorStudioApp(controller: controller));
     await tester.pumpAndSettle();
-    expect(
-      find.byKey(const ValueKey('editor-bottom-navigation')),
-      findsOneWidget,
+    await openLastManuscript(tester, controller);
+    expect(find.byKey(const ValueKey('writer-context-bar')), findsOneWidget);
+    expect(find.text('Оформление'), findsOneWidget);
+    expect(find.byIcon(Icons.more_horiz), findsNothing);
+    expect(find.text('Ещё'), findsOneWidget);
+    final moreButtonSize = tester.getSize(
+      find.byKey(const ValueKey('writer-more-menu')),
     );
-    expect(find.text('Редактор'), findsOneWidget);
+    expect(moreButtonSize.width, greaterThanOrEqualTo(48));
+    expect(moreButtonSize.height, greaterThanOrEqualTo(48));
     expect(find.textContaining('Лист A4 1 из 1'), findsOneWidget);
+    expect(find.byKey(const ValueKey('book-editor-status-bar')), findsNothing);
+    final headerMetrics = tester.widget<Text>(
+      find.byKey(const ValueKey('writer-header-metrics')),
+    );
+    expect(headerMetrics.data, '4 слов · 1/1');
+    expect(headerMetrics.style?.fontSize, 9.5);
+    final writingSurface = find.byKey(const ValueKey('mobile-writing-editor'));
+    final writingRect = tester.getRect(writingSurface);
+    expect(writingRect.left, 0);
+    expect(writingRect.width, 390);
+    expect(tester.widget<ColoredBox>(writingSurface).color, AppTheme.paper);
+    expect(
+      tester
+          .widget<Padding>(find.byKey(const ValueKey('mobile-writing-content')))
+          .padding,
+      const EdgeInsets.fromLTRB(20, 20, 20, 10),
+    );
     expect(
       find.byKey(const ValueKey('mobile-a4-preview-button')),
-      findsOneWidget,
+      findsNothing,
     );
 
-    await tester.tap(find.byKey(const ValueKey('editor-focus-mode-button')));
+    await tester.tap(find.byKey(const ValueKey('writer-hide-panels-button')));
     await tester.pumpAndSettle();
     expect(
       find.byKey(const ValueKey('editor-exit-focus-mode')),
       findsOneWidget,
     );
-    expect(
-      find.byKey(const ValueKey('editor-bottom-navigation')),
-      findsNothing,
-    );
+    expect(find.byKey(const ValueKey('writer-context-bar')), findsNothing);
     expect(find.byKey(const ValueKey('book-editor-status-bar')), findsNothing);
     expect(find.byKey(const ValueKey('mobile-page-navigation')), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('editor-exit-focus-mode')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('mobile-a4-preview-button')));
+    await tester.tap(find.byKey(const ValueKey('writer-settings-action')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('writer-a4-preview-action')));
     await _pumpUntil(tester, find.byKey(const ValueKey('book-page-1')));
     expect(find.textContaining('Точная разметка A4'), findsOneWidget);
     expect(
@@ -113,9 +152,11 @@ void main() {
     expect(find.byKey(const ValueKey('mobile-writing-editor')), findsOneWidget);
     expect(find.byKey(const ValueKey('book-page-1')), findsNothing);
 
-    await tester.tap(find.byKey(const ValueKey('mobile-a4-preview-button')));
+    await tester.tap(find.byKey(const ValueKey('writer-settings-action')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('writer-a4-preview-action')));
     await _pumpUntil(tester, find.byKey(const ValueKey('book-page-1')));
-    await tester.tap(find.byKey(const ValueKey('editor-focus-mode-button')));
+    await tester.tap(find.byKey(const ValueKey('writer-hide-panels-button')));
     await tester.pumpAndSettle();
     expect(
       find.byKey(const ValueKey('editor-exit-focus-mode')),
@@ -152,7 +193,8 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     await tester.pumpWidget(AuthorStudioApp(controller: controller));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('mobile-workspace-menu')));
+    await openLastManuscript(tester, controller);
+    await tester.tap(find.byKey(const ValueKey('writer-more-menu')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Поиск и замена в рукописи'));
     await tester.pumpAndSettle();
@@ -202,13 +244,15 @@ void main() {
       AuthorStudioApp(controller: controller, imageFileGateway: imageGateway),
     );
     await tester.pumpAndSettle();
+    await openLastManuscript(tester, controller);
     final editor = tester.widget<QuillEditor>(find.byType(QuillEditor));
     editor.controller.updateSelection(
       const TextSelection(baseOffset: 0, extentOffset: 5),
       ChangeSource.local,
     );
-    await tester.tap(find.text('Форматирование'));
+    await tester.tap(find.byKey(const ValueKey('writer-formatting-action')));
     await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
     await tester.tap(find.byKey(const ValueKey('insert-book-image-button')));
     await tester.pumpAndSettle();
 
@@ -241,12 +285,13 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     await tester.pumpWidget(AuthorStudioApp(controller: controller));
     await tester.pumpAndSettle();
+    await openLastManuscript(tester, controller);
     final editor = tester.widget<QuillEditor>(find.byType(QuillEditor));
     editor.controller.updateSelection(
       const TextSelection(baseOffset: 0, extentOffset: 5),
       ChangeSource.local,
     );
-    await tester.tap(find.text('Форматирование'));
+    await tester.tap(find.byKey(const ValueKey('writer-formatting-action')));
     await tester.pumpAndSettle();
     await tester.tap(
       find.byKey(const ValueKey('insert-book-page-break-button')),
@@ -288,9 +333,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('library-book-actions')));
+    await tester.tap(find.byKey(const ValueKey('home-read-tile')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Импортировать книгу для чтения'));
+    await tester.tap(find.byKey(const ValueKey('import-book-button')));
     await tester.pumpAndSettle();
 
     expect(gateway.openCount, 1);
@@ -298,6 +343,7 @@ void main() {
     expect(find.byKey(const ValueKey('book-image-asset-1')), findsOneWidget);
     expect(controller.projects, hasLength(2));
     expect(controller.activeProject!.kind, BookProjectKind.importedBook);
+    final importedProjectId = controller.activeProject!.id;
     expect(
       repository.snapshot!.activeProject!.sourceFileName,
       'other-book.fb2',
@@ -305,10 +351,12 @@ void main() {
 
     Navigator.of(tester.element(find.byType(BookReaderPage))).pop();
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('read-imported-book')), findsOneWidget);
-    expect(find.text('Импортированная книга'), findsWidgets);
+    expect(find.byKey(const ValueKey('reading-library')), findsOneWidget);
+    expect(
+      find.byKey(ValueKey('literia-project-$importedProjectId')),
+      findsOneWidget,
+    );
     expect(find.byKey(const ValueKey('book-cover-image')), findsWidgets);
-    expect(find.text('Изображений: 1'), findsOneWidget);
     expect(find.byType(QuillEditor), findsNothing);
     await tester.binding.setSurfaceSize(null);
   });
@@ -325,6 +373,7 @@ void main() {
       AuthorStudioApp(controller: controller, exportFileSaver: saver),
     );
     await tester.pumpAndSettle();
+    await openLastManuscript(tester, controller);
 
     await _openExportSheet(tester);
     expect(find.text('Экспорт книги'), findsOneWidget);
@@ -354,6 +403,7 @@ void main() {
       AuthorStudioApp(controller: controller, exportFileSaver: saver),
     );
     await tester.pumpAndSettle();
+    await openLastManuscript(tester, controller);
 
     await _openExportSheet(tester);
     expect(find.byKey(const ValueKey('export-book-docx')), findsOneWidget);
@@ -385,6 +435,7 @@ void main() {
       AuthorStudioApp(controller: controller, exportFileSaver: saver),
     );
     await tester.pumpAndSettle();
+    await openLastManuscript(tester, controller);
 
     await _openExportSheet(tester);
     expect(find.text('Для электронных читалок'), findsOneWidget);
@@ -426,6 +477,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await openLastManuscript(tester, controller);
 
     await _openExportSheet(tester);
     await tester.ensureVisible(find.byKey(const ValueKey('export-book-pdf')));
@@ -453,8 +505,9 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1280, 900));
     await tester.pumpWidget(AuthorStudioApp(controller: controller));
     await tester.pumpAndSettle();
+    await openLastManuscript(tester, controller);
 
-    await tester.tap(find.byKey(const ValueKey('project-data-menu')));
+    await tester.tap(find.byKey(const ValueKey('writer-more-menu')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('История версий'));
     await tester.pumpAndSettle();
@@ -488,8 +541,9 @@ void main() {
       AuthorStudioApp(controller: controller, backupFileGateway: backupGateway),
     );
     await tester.pumpAndSettle();
+    await openLastManuscript(tester, controller);
 
-    await tester.tap(find.byKey(const ValueKey('project-data-menu')));
+    await tester.tap(find.byKey(const ValueKey('writer-more-menu')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Сохранить резервную копию'));
     await tester.pumpAndSettle();
@@ -505,9 +559,9 @@ void main() {
       metadata: const BookMetadata(title: 'Восстановленная книга'),
     );
     backupGateway.archiveToOpen = BookProjectArchiveCodec.encode(imported);
-    await tester.tap(find.byKey(const ValueKey('project-data-menu')));
+    await tester.tap(find.byKey(const ValueKey('writer-more-menu')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Восстановить из файла'));
+    await tester.tap(find.text('Восстановить проект из резервной копии'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('confirm-project-restore')));
     await tester.pumpAndSettle();
@@ -536,6 +590,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1280, 900));
     await tester.pumpWidget(AuthorStudioApp(controller: controller));
     await tester.pumpAndSettle();
+    await openLastManuscript(tester, controller);
     bool editorContains(String text) => tester
         .widgetList<QuillEditor>(find.byType(QuillEditor))
         .any(
@@ -556,14 +611,9 @@ void main() {
 }
 
 Future<void> _openExportSheet(WidgetTester tester) async {
-  final directButton = find.byKey(const ValueKey('export-book-button'));
-  if (directButton.evaluate().isNotEmpty) {
-    await tester.tap(directButton);
-  } else {
-    await tester.tap(find.byKey(const ValueKey('mobile-workspace-menu')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Экспорт книги'));
-  }
+  await tester.tap(find.byKey(const ValueKey('writer-more-menu')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Экспорт книги'));
   await tester.pumpAndSettle();
 }
 

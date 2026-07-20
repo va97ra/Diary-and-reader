@@ -142,6 +142,7 @@ void main() {
     final repository = _ControlledAuthorWorkspaceRepository();
     final controller = AuthorWorkspaceController(repository);
     await controller.load(preferredLanguage: 'ru');
+    controller.addProject();
     repository.holdWrites = true;
 
     controller.updateSectionTitle('Первая версия');

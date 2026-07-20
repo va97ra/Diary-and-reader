@@ -4,7 +4,6 @@ import 'dart:math' as math;
 
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/book_page_paginator.dart';
-import 'package:dnevnik/features/books/application/workspace_save_state.dart';
 import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_page_format.dart';
 import 'package:dnevnik/features/books/domain/book_page_view_mode.dart';
@@ -12,7 +11,7 @@ import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/manuscript_statistics.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
-import 'package:dnevnik/features/books/presentation/widgets/book_editor_status_bar.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_editor_metrics.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_formatting_toolbar.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_mobile_editor.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_page_canvas.dart';
@@ -33,10 +32,9 @@ class BookSectionEditor extends StatefulWidget {
     required this.onExitCompactPreview,
     required this.onInsertImage,
     required this.onInsertPageBreak,
-    required this.showStatusBar,
-    required this.saveState,
+    required this.showPageNavigation,
     required this.viewMode,
-    required this.onViewModeChanged,
+    required this.onMetricsChanged,
     this.onControllerReady,
     super.key,
   });
@@ -53,10 +51,9 @@ class BookSectionEditor extends StatefulWidget {
   final VoidCallback onExitCompactPreview;
   final VoidCallback onInsertImage;
   final VoidCallback onInsertPageBreak;
-  final bool showStatusBar;
-  final WorkspaceSaveState saveState;
+  final bool showPageNavigation;
   final BookPageViewMode viewMode;
-  final ValueChanged<BookPageViewMode> onViewModeChanged;
+  final ValueChanged<BookEditorMetrics> onMetricsChanged;
   final ValueChanged<QuillController>? onControllerReady;
 
   @override
@@ -82,6 +79,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
   int _measurementPageNumber = 1;
   final _measuredPages = <RichDocument>[];
   RichDocument? _measurementDocument;
+  BookEditorMetrics? _lastReportedMetrics;
   QuillController? _measurementController;
   FocusNode? _measurementFocusNode;
   ScrollController? _measurementScrollController;
@@ -103,6 +101,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     _createPageControllers([widget.section.content]);
     _usesPagedLayout = widget.usePagedLayout;
     widget.onControllerReady?.call(controller);
+    _scheduleMetricsNotification();
     if (_usesPagedLayout) {
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => _schedulePagination(),
@@ -140,6 +139,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     _lastManuscriptSignature = jsonEncode(manuscript);
     _statistics = ManuscriptStatistics.fromDocument(manuscript);
     widget.onControllerReady?.call(controller);
+    _scheduleMetricsNotification();
     _schedulePagination();
   }
 
@@ -152,6 +152,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     _lastManuscriptSignature = jsonEncode(manuscript);
     _statistics = ManuscriptStatistics.fromDocument(manuscript);
     widget.onControllerReady?.call(controller);
+    _scheduleMetricsNotification();
   }
 
   void _createPageControllers(
@@ -191,6 +192,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     _lastManuscriptSignature = signature;
     _statistics = ManuscriptStatistics.fromDocument(manuscript);
     widget.onContentChanged(manuscript);
+    _scheduleMetricsNotification();
     if (_usesPagedLayout) _schedulePagination();
   }
 
@@ -199,6 +201,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     if (index < 0 || !changedNode.hasFocus || index == _activePage) return;
     setState(() => _activePage = index);
     widget.onControllerReady?.call(controller);
+    _scheduleMetricsNotification();
   }
 
   List<RichDocument> get _pageDocuments => _controllers
@@ -346,12 +349,14 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     _lastManuscriptSignature = jsonEncode(manuscript);
     widget.onContentChanged(manuscript);
     widget.onControllerReady?.call(controller);
+    _scheduleMetricsNotification();
   }
 
   void _selectPage(int page) {
     if (page < 0 || page >= _controllers.length || page == _activePage) return;
     setState(() => _activePage = page);
     widget.onControllerReady?.call(controller);
+    _scheduleMetricsNotification();
   }
 
   void revealTextRange(int globalOffset, int length) {
@@ -359,6 +364,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     if (target.page != _activePage) {
       setState(() => _activePage = target.page);
       widget.onControllerReady?.call(controller);
+      _scheduleMetricsNotification();
     }
     final end = (target.offset + length).clamp(
       target.offset,
@@ -497,22 +503,26 @@ class BookSectionEditorState extends State<BookSectionEditor> {
                   onNextPage: _activePage < _controllers.length - 1
                       ? () => _selectPage(_activePage + 1)
                       : null,
-                  showPageNavigation: widget.showStatusBar,
+                  showPageNavigation: widget.showPageNavigation,
                 ),
         ),
-        if (widget.showStatusBar)
-          BookEditorStatusBar(
-            statistics: _statistics,
-            activePage: _activePage + 1,
-            pageCount: _controllers.length,
-            targetWords: widget.section.targetWords,
-            saveState: widget.saveState,
-            viewMode: widget.viewMode,
-            onViewModeChanged: widget.onViewModeChanged,
-            showViewModeSelector: widget.showToolbar,
-          ),
       ],
     );
+  }
+
+  void _scheduleMetricsNotification() {
+    final metrics = BookEditorMetrics(
+      words: _statistics.words,
+      activePage: _activePage + 1,
+      pageCount: _controllers.length,
+    );
+    if (_lastReportedMetrics == metrics) return;
+    _lastReportedMetrics = metrics;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _lastReportedMetrics == metrics) {
+        widget.onMetricsChanged(metrics);
+      }
+    });
   }
 
   Widget _buildPagedEditorWithMeasurement() => Stack(

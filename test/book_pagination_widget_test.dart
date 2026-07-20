@@ -11,6 +11,7 @@ import 'package:dnevnik/features/books/presentation/widgets/book_section_editor.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/literia_test_navigation.dart';
 import 'support/memory_author_workspace_repository.dart';
 
 void main() {
@@ -49,6 +50,7 @@ void main() {
 
     await tester.binding.setSurfaceSize(const Size(1920, 1080));
     await tester.pumpWidget(AuthorStudioApp(controller: controller));
+    await openLastManuscript(tester, controller);
     for (var index = 0; index < 20; index++) {
       await tester.pump(const Duration(milliseconds: 100));
     }

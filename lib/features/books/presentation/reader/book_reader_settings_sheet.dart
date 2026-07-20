@@ -48,27 +48,15 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
             const SizedBox(height: 20),
             Text(strings.readerViewMode),
             const SizedBox(height: 8),
-            SegmentedButton<BookReaderViewMode>(
-              segments: [
-                ButtonSegment(
-                  value: BookReaderViewMode.continuous,
-                  icon: const Icon(Icons.view_stream_outlined),
-                  label: Text(strings.continuousReading),
-                ),
-                ButtonSegment(
-                  value: BookReaderViewMode.singlePage,
-                  icon: const Icon(Icons.crop_portrait_outlined),
-                  label: Text(strings.singlePageReading),
-                ),
-                ButtonSegment(
-                  value: BookReaderViewMode.spread,
-                  icon: const Icon(Icons.menu_book_outlined),
-                  label: Text(strings.spreadReading),
-                ),
+            _ReaderChoiceWrap<BookReaderViewMode>(
+              value: _settings.viewMode,
+              choices: [
+                (BookReaderViewMode.continuous, strings.continuousReading),
+                (BookReaderViewMode.singlePage, strings.singlePageReading),
+                (BookReaderViewMode.spread, strings.spreadReading),
               ],
-              selected: {_settings.viewMode},
-              onSelectionChanged: (selection) =>
-                  _change(_settings.copyWith(viewMode: selection.first)),
+              onChanged: (value) =>
+                  _change(_settings.copyWith(viewMode: value)),
             ),
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -80,27 +68,14 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
             const SizedBox(height: 22),
             Text(strings.readerTheme),
             const SizedBox(height: 8),
-            SegmentedButton<BookReaderTheme>(
-              segments: [
-                ButtonSegment(
-                  value: BookReaderTheme.light,
-                  icon: const Icon(Icons.light_mode_outlined),
-                  label: Text(strings.lightTheme),
-                ),
-                ButtonSegment(
-                  value: BookReaderTheme.sepia,
-                  icon: const Icon(Icons.auto_stories_outlined),
-                  label: Text(strings.sepiaTheme),
-                ),
-                ButtonSegment(
-                  value: BookReaderTheme.dark,
-                  icon: const Icon(Icons.dark_mode_outlined),
-                  label: Text(strings.darkTheme),
-                ),
+            _ReaderChoiceWrap<BookReaderTheme>(
+              value: _settings.theme,
+              choices: [
+                (BookReaderTheme.light, strings.lightTheme),
+                (BookReaderTheme.sepia, strings.sepiaTheme),
+                (BookReaderTheme.dark, strings.darkTheme),
               ],
-              selected: {_settings.theme},
-              onSelectionChanged: (selection) =>
-                  _change(_settings.copyWith(theme: selection.first)),
+              onChanged: (value) => _change(_settings.copyWith(theme: value)),
             ),
             const SizedBox(height: 22),
             DropdownButtonFormField<String>(
@@ -170,11 +145,46 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
               onChanged: (value) =>
                   _change(_settings.copyWith(verticalPadding: value)),
             ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _change(const BookReaderSettings()),
+                icon: const Icon(Icons.restart_alt),
+                label: Text(strings.resetSettings),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
+}
+
+class _ReaderChoiceWrap<T> extends StatelessWidget {
+  const _ReaderChoiceWrap({
+    required this.value,
+    required this.choices,
+    required this.onChanged,
+  });
+
+  final T value;
+  final List<(T, String)> choices;
+  final ValueChanged<T> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+    spacing: 8,
+    runSpacing: 8,
+    children: [
+      for (final choice in choices)
+        ChoiceChip(
+          label: Text(choice.$2),
+          selected: choice.$1 == value,
+          onSelected: (_) => onChanged(choice.$1),
+        ),
+    ],
+  );
 }
 
 class _ReaderSlider extends StatelessWidget {

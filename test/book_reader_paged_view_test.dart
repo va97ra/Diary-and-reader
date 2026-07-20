@@ -5,6 +5,7 @@ import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/literia_test_navigation.dart';
 import 'support/memory_author_workspace_repository.dart';
 
 void main() {
@@ -21,13 +22,15 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1280, 820));
     await tester.pumpWidget(AuthorStudioApp(controller: controller));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('open-book-reader')));
+    await openReaderPreview(tester, controller);
     await _pumpUntil(tester, find.byKey(const ValueKey('reader-page-1')));
 
     expect(
       find.byKey(const ValueKey('reader-single-page-view')),
       findsOneWidget,
     );
+    expect(find.text('Глава 1'), findsOneWidget);
+    expect(find.textContaining('Страница 1 из'), findsOneWidget);
     final nextButton = tester.widget<IconButton>(
       find.byKey(const ValueKey('reader-next-page')),
     );
@@ -42,7 +45,7 @@ void main() {
       greaterThan(0),
     );
 
-    await tester.tap(find.byKey(const ValueKey('reader-settings-button')));
+    await tester.tap(find.byKey(const ValueKey('reader-settings-action')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Лента'));
     await tester.pumpAndSettle();
@@ -72,7 +75,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1500, 900));
     await tester.pumpWidget(AuthorStudioApp(controller: controller));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('open-book-reader')));
+    await openReaderPreview(tester, controller);
     await _pumpUntil(tester, find.byKey(const ValueKey('reader-page-2')));
 
     expect(find.byKey(const ValueKey('reader-spread-view')), findsOneWidget);
@@ -98,7 +101,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     await tester.pumpWidget(AuthorStudioApp(controller: controller));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('open-book-reader')));
+    await openReaderPreview(tester, controller);
     await _pumpUntil(tester, find.byKey(const ValueKey('reader-page-1')));
 
     expect(
@@ -130,7 +133,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1280, 820));
     await tester.pumpWidget(AuthorStudioApp(controller: controller));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('open-book-reader')));
+    await openReaderPreview(tester, controller);
     await _pumpUntil(tester, find.byKey(const ValueKey('reader-page-1')));
 
     for (var page = 0; page < 40; page++) {
@@ -166,7 +169,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1280, 700));
     await tester.pumpWidget(AuthorStudioApp(controller: controller));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('open-book-reader')));
+    await openReaderPreview(tester, controller);
     await tester.pumpAndSettle();
     final firstDocument = find.byKey(
       ValueKey('reader-document-$firstChapterId'),

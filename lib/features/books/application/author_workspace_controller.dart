@@ -15,8 +15,10 @@ import 'package:dnevnik/features/books/domain/book_project_version.dart';
 import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
 import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
+import 'package:dnevnik/features/books/domain/book_scan_folder.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/book_version_repository.dart';
+import 'package:dnevnik/features/books/domain/literia_app_preferences.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 import 'package:flutter/foundation.dart';
 
@@ -34,6 +36,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
   Timer? _saveTimer;
   String? _activeProjectId;
   String _languageCode = 'ru';
+  LiteriaAppPreferences _appPreferences = const LiteriaAppPreferences();
   WorkspaceSaveState _saveState = WorkspaceSaveState.saved;
   int _changeRevision = 0;
   bool _isDisposed = false;
@@ -42,6 +45,19 @@ class AuthorWorkspaceController extends ChangeNotifier {
       UnmodifiableListView(_projects);
   String get languageCode => _languageCode;
   WorkspaceSaveState get saveState => _saveState;
+  LiteriaAppPreferences get appPreferences => _appPreferences;
+  BookReaderSettings get readerSettings => _appPreferences.readerSettings;
+  LiteriaThemePreference get themePreference => _appPreferences.theme;
+
+  BookProject? get lastManuscript => _projectById(
+    _appPreferences.lastManuscriptId,
+    fallback: (project) => !project.isReadOnly,
+  );
+
+  BookProject? get lastReading => _projectById(
+    _appPreferences.lastReadingId,
+    fallback: (project) => project.isReadOnly,
+  );
 
   BookProject? get activeProject {
     if (_projects.isEmpty) return null;
@@ -55,27 +71,26 @@ class AuthorWorkspaceController extends ChangeNotifier {
 
   Future<void> load({required String preferredLanguage}) async {
     final snapshot = await _repository.load();
-    if (snapshot == null || snapshot.projects.isEmpty) {
+    if (snapshot == null) {
       _languageCode = preferredLanguage == 'en' ? 'en' : 'ru';
-      final project = _newProject();
-      _projects.add(project);
-      _activeProjectId = project.id;
-      await flush();
       return;
     }
     _projects.addAll(snapshot.projects);
     _languageCode = snapshot.languageCode;
     _activeProjectId = snapshot.activeProjectId;
+    _appPreferences = snapshot.appPreferences;
   }
 
-  void addProject() {
+  BookProject addProject() {
     final project = _newProject();
     _projects.add(project);
     _activeProjectId = project.id;
+    _appPreferences = _appPreferences.copyWith(lastManuscriptId: project.id);
     _changed();
+    return project;
   }
 
-  void addImportedBook(BookProject project) {
+  BookProject addImportedBook(BookProject project) {
     if (project.kind != BookProjectKind.importedBook ||
         project.sections.isEmpty) {
       throw ArgumentError.value(project, 'project', 'Invalid imported book');
@@ -92,35 +107,100 @@ class AuthorWorkspaceController extends ChangeNotifier {
       updatedAt: project.updatedAt,
       layoutSettings: project.layoutSettings,
       paragraphSettings: project.paragraphSettings,
-      readerSettings: project.readerSettings,
+      readerSettings: _appPreferences.readerSettings,
       readerProgress: project.readerProgress,
       readerAnnotations: project.readerAnnotations,
       kind: BookProjectKind.importedBook,
       sourceFormat: project.sourceFormat,
       sourceFileName: project.sourceFileName,
+      sourceStoredPath: project.sourceStoredPath,
+      sourceFingerprint: project.sourceFingerprint,
+      sourceExternalUri: project.sourceExternalUri,
+      sourceFileSize: project.sourceFileSize,
       collectionName: project.collectionName,
       assets: project.assets,
       coverAssetId: project.coverAssetId,
     );
     _projects.add(imported);
     _activeProjectId = imported.id;
+    _appPreferences = _appPreferences.copyWith(lastReadingId: imported.id);
     _changed();
+    return imported;
   }
 
   void deleteProject(String id) {
     final index = _projects.indexWhere((project) => project.id == id);
     if (index < 0) return;
     _projects.removeAt(index);
-    if (_projects.isEmpty) _projects.add(_newProject());
     if (_activeProjectId == id) {
-      _activeProjectId = _projects[index.clamp(0, _projects.length - 1)].id;
+      _activeProjectId = _projects.isEmpty
+          ? null
+          : _projects[index.clamp(0, _projects.length - 1)].id;
     }
+    if (_appPreferences.lastManuscriptId == id) {
+      _appPreferences = _appPreferences.copyWith(clearLastManuscript: true);
+    }
+    if (_appPreferences.lastReadingId == id) {
+      _appPreferences = _appPreferences.copyWith(clearLastReading: true);
+    }
+    _changed();
+  }
+
+  void updateImportedBookSource({
+    required String projectId,
+    required String storedPath,
+    required String fingerprint,
+    required String externalUri,
+    required int fileSize,
+  }) {
+    final index = _projects.indexWhere((project) => project.id == projectId);
+    if (index < 0 || !_projects[index].isReadOnly) return;
+    _projects[index] = _projects[index].copyWith(
+      sourceStoredPath: storedPath,
+      sourceFingerprint: fingerprint,
+      sourceExternalUri: externalUri,
+      sourceFileSize: fileSize,
+    );
+    _changed();
+  }
+
+  void clearImportedBookStoredSource(String projectId) {
+    final index = _projects.indexWhere((project) => project.id == projectId);
+    if (index < 0 || !_projects[index].isReadOnly) return;
+    _projects[index] = _projects[index].copyWith(clearStoredSource: true);
+    _changed();
+  }
+
+  void addBookScanFolder(BookScanFolder folder) {
+    final folders = [..._appPreferences.bookScanFolders];
+    final index = folders.indexWhere((item) => item.uri == folder.uri);
+    if (index >= 0) {
+      folders[index] = folder;
+    } else {
+      folders.add(folder);
+    }
+    _appPreferences = _appPreferences.copyWith(bookScanFolders: folders);
+    _changed();
+  }
+
+  void removeBookScanFolder(String uri) {
+    final folders = _appPreferences.bookScanFolders
+        .where((folder) => folder.uri != uri)
+        .toList();
+    if (folders.length == _appPreferences.bookScanFolders.length) return;
+    _appPreferences = _appPreferences.copyWith(bookScanFolders: folders);
     _changed();
   }
 
   void selectProject(String id) {
     if (_activeProjectId == id) return;
     _activeProjectId = id;
+    final selected = _projects.where((project) => project.id == id).firstOrNull;
+    if (selected?.isReadOnly == true) {
+      _appPreferences = _appPreferences.copyWith(lastReadingId: id);
+    } else if (selected != null) {
+      _appPreferences = _appPreferences.copyWith(lastManuscriptId: id);
+    }
     _changed();
   }
 
@@ -328,12 +408,12 @@ class AuthorWorkspaceController extends ChangeNotifier {
   }
 
   void updateReaderSettings(BookReaderSettings readerSettings) {
-    _replaceActiveProject(
-      (project) => project.copyWith(
+    _appPreferences = _appPreferences.copyWith(readerSettings: readerSettings);
+    for (var index = 0; index < _projects.length; index++) {
+      _projects[index] = _projects[index].copyWith(
         readerSettings: readerSettings,
-        updatedAt: DateTime.now(),
-      ),
-    );
+      );
+    }
     _changed();
   }
 
@@ -359,6 +439,24 @@ class AuthorWorkspaceController extends ChangeNotifier {
 
   void setLanguage(String languageCode) {
     _languageCode = languageCode == 'en' ? 'en' : 'ru';
+    _changed();
+  }
+
+  void setThemePreference(LiteriaThemePreference preference) {
+    if (_appPreferences.theme == preference) return;
+    _appPreferences = _appPreferences.copyWith(theme: preference);
+    _changed();
+  }
+
+  void markOnboardingSeen() {
+    if (_appPreferences.onboardingSeen) return;
+    _appPreferences = _appPreferences.copyWith(onboardingSeen: true);
+    _changed();
+  }
+
+  void resetOnboarding() {
+    if (!_appPreferences.onboardingSeen) return;
+    _appPreferences = _appPreferences.copyWith(onboardingSeen: false);
     _changed();
   }
 
@@ -450,6 +548,10 @@ class AuthorWorkspaceController extends ChangeNotifier {
       kind: current.kind,
       sourceFormat: current.sourceFormat,
       sourceFileName: current.sourceFileName,
+      sourceStoredPath: current.sourceStoredPath,
+      sourceFingerprint: current.sourceFingerprint,
+      sourceExternalUri: current.sourceExternalUri,
+      sourceFileSize: current.sourceFileSize,
       collectionName: current.collectionName,
       assets: current.assets,
       coverAssetId: current.coverAssetId,
@@ -464,7 +566,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
     title: _languageCode == 'en' ? 'Untitled book' : 'Новая книга',
     chapterTitle: _languageCode == 'en' ? 'Chapter 1' : 'Глава 1',
     languageCode: _languageCode,
-  );
+  ).copyWith(readerSettings: _appPreferences.readerSettings);
 
   String _defaultSectionTitle(BookSectionType type) => switch (type) {
     BookSectionType.part => _languageCode == 'en' ? 'New part' : 'Новая часть',
@@ -507,6 +609,19 @@ class AuthorWorkspaceController extends ChangeNotifier {
     if (index >= 0) _projects[index] = update(_projects[index]);
   }
 
+  BookProject? _projectById(
+    String? id, {
+    required bool Function(BookProject project) fallback,
+  }) {
+    final requested = _projects
+        .where((project) => project.id == id)
+        .firstOrNull;
+    if (requested != null && fallback(requested)) return requested;
+    final candidates = _projects.where(fallback).toList()
+      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return candidates.firstOrNull;
+  }
+
   void _changed() {
     _markDirty();
     notifyListeners();
@@ -542,6 +657,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
     projects: List.unmodifiable(_projects),
     activeProjectId: _activeProjectId,
     languageCode: _languageCode,
+    appPreferences: _appPreferences,
   );
 
   @override

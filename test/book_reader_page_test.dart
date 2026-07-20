@@ -3,10 +3,12 @@ import 'package:dnevnik/features/books/application/author_workspace_controller.d
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_progress_rail.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/literia_test_navigation.dart';
 import 'support/memory_author_workspace_repository.dart';
 
 void main() {
@@ -30,17 +32,24 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1280, 900));
     await tester.pumpWidget(AuthorStudioApp(controller: controller));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('open-book-reader')));
-    await tester.pumpAndSettle();
+    await openReaderPreview(tester, controller);
 
     expect(find.byKey(const ValueKey('reader-surface')), findsOneWidget);
+    expect(find.byKey(const ValueKey('reader-context-bar')), findsOneWidget);
+    expect(find.byKey(const ValueKey('reader-contents')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('reader-contents-action')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('reader-contents')), findsOneWidget);
+    final openContents = find.byKey(const ValueKey('reader-contents'));
+    if (openContents.evaluate().isNotEmpty) {
+      Navigator.of(tester.element(openContents)).pop();
+      await tester.pumpAndSettle();
+    }
     var readerEditor = tester.widget<QuillEditor>(find.byType(QuillEditor));
     expect(
       readerEditor.controller.document.toPlainText(),
       contains('Первый текст книги.'),
     );
-    expect(find.text('Раздел 1 из 2 · 0%'), findsOneWidget);
 
     readerEditor.controller.updateSelection(
       const TextSelection(baseOffset: 0, extentOffset: 6),
@@ -71,6 +80,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(controller.activeProject!.readerAnnotations.quotes, hasLength(1));
 
+    await tester.tap(find.byKey(const ValueKey('reader-contents-action')));
+    await tester.pumpAndSettle();
     await tester.tap(
       find.byKey(const ValueKey('reader-export-annotations-button')),
     );
@@ -83,8 +94,13 @@ void main() {
       tester.element(find.byKey(const ValueKey('reader-export-markdown'))),
     ).pop();
     await tester.pumpAndSettle();
+    final remainingContents = find.byKey(const ValueKey('reader-contents'));
+    if (remainingContents.evaluate().isNotEmpty) {
+      Navigator.of(tester.element(remainingContents)).pop();
+      await tester.pumpAndSettle();
+    }
 
-    await tester.tap(find.byKey(const ValueKey('reader-bookmark-button')));
+    await tester.tap(find.byKey(const ValueKey('reader-bookmark-action')));
     await tester.pumpAndSettle();
     expect(controller.activeProject!.readerAnnotations.bookmarks, hasLength(1));
 
@@ -100,7 +116,9 @@ void main() {
       controller.activeProject!.sections.last.id,
     );
 
-    await tester.tap(find.byKey(const ValueKey('reader-search-button')));
+    await tester.tap(find.byKey(const ValueKey('reader-more-menu')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Поиск по книге'));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('reader-search-field')),
@@ -116,8 +134,8 @@ void main() {
     expect(firstChapterResult, findsOneWidget);
     await tester.tap(firstChapterResult);
     await tester.pumpAndSettle();
-    expect(find.text('Раздел 1 из 2 · 0%'), findsOneWidget);
-
+    await tester.tap(find.byKey(const ValueKey('reader-contents-action')));
+    await tester.pumpAndSettle();
     DefaultTabController.of(tester.element(find.byType(TabBar))).animateTo(3);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('reader-add-note')));
@@ -140,7 +158,11 @@ void main() {
       'Проверить начало главы',
     );
 
-    await tester.tap(find.byKey(const ValueKey('reader-settings-button')));
+    Navigator.of(
+      tester.element(find.byKey(const ValueKey('reader-surface'))),
+    ).pop();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('reader-settings-action')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Тёмная'));
     await tester.pumpAndSettle();
@@ -161,32 +183,72 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     await tester.pumpWidget(AuthorStudioApp(controller: controller));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('open-book-reader')));
-    await tester.pumpAndSettle();
+    await openReaderPreview(tester, controller);
 
     expect(
-      find.byKey(const ValueKey('reader-contents-button')),
+      find.byKey(const ValueKey('reader-contents-action')),
       findsOneWidget,
     );
+    expect(find.byIcon(Icons.more_horiz), findsNothing);
+    expect(find.text('Ещё'), findsOneWidget);
+    final moreButtonSize = tester.getSize(
+      find.byKey(const ValueKey('reader-more-menu')),
+    );
+    expect(moreButtonSize.width, greaterThanOrEqualTo(48));
+    expect(moreButtonSize.height, greaterThanOrEqualTo(48));
     expect(find.byKey(const ValueKey('reader-contents')), findsNothing);
+    expect(find.byKey(const ValueKey('reader-progress')), findsNothing);
+    expect(find.byKey(const ValueKey('reader-progress-rail')), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(const ValueKey('reader-progress-rail'))).width,
+      3,
+    );
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('reader-progress-rail'))).dx,
+      0,
+    );
+    expect(find.text('Глава 1'), findsOneWidget);
+    expect(
+      tester
+          .widget<BookReaderProgressRail>(find.byType(BookReaderProgressRail))
+          .value,
+      0,
+    );
+    final progressSemantics = tester.widget<Semantics>(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics && widget.properties.label == 'Прогресс чтения',
+      ),
+    );
+    expect(progressSemantics.properties.value, '0%');
+    expect(
+      find.ancestor(
+        of: find.byKey(const ValueKey('reader-progress-rail')),
+        matching: find.byWidgetPredicate(
+          (widget) => widget is IgnorePointer && widget.ignoring,
+        ),
+      ),
+      findsOneWidget,
+    );
 
-    await tester.tap(find.byKey(const ValueKey('reader-focus-mode-button')));
+    await tester.tap(find.byKey(const ValueKey('reader-hide-panels-button')));
     await tester.pumpAndSettle();
     expect(
       find.byKey(const ValueKey('reader-exit-focus-mode')),
       findsOneWidget,
     );
-    expect(find.byKey(const ValueKey('reader-progress')), findsNothing);
+    expect(find.byKey(const ValueKey('reader-context-bar')), findsNothing);
     expect(find.byKey(const ValueKey('reader-next-section')), findsNothing);
-    expect(find.byKey(const ValueKey('reader-contents-button')), findsNothing);
+    expect(find.byKey(const ValueKey('reader-contents-action')), findsNothing);
+    expect(find.byKey(const ValueKey('reader-progress-rail')), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('reader-exit-focus-mode')));
     await tester.pumpAndSettle();
     expect(
-      find.byKey(const ValueKey('reader-focus-mode-button')),
+      find.byKey(const ValueKey('reader-hide-panels-button')),
       findsOneWidget,
     );
-    await tester.tap(find.byKey(const ValueKey('reader-contents-button')));
+    await tester.tap(find.byKey(const ValueKey('reader-contents-action')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('reader-contents')), findsOneWidget);
 

@@ -1,13 +1,14 @@
 name: dnevnik
 description: "An adaptive book-writing studio and ebook reader built with Flutter."
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: ^3.12.2
 
 dependencies:
   archive: ^4.0.9
+  crypto: ^3.0.7
   cupertino_icons: ^1.0.9
   file_selector: ^1.1.0
   flutter:
@@ -45,7 +46,22 @@ flutter_launcher_icons:
 
 flutter:
   uses-material-design: true
+  fonts:
+    - family: PT Serif
+      fonts:
+        - asset: assets/fonts/PTSerif-Regular.ttf
+        - asset: assets/fonts/PTSerif-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/PTSerif-Italic.ttf
+          style: italic
+        - asset: assets/fonts/PTSerif-BoldItalic.ttf
+          weight: 700
+          style: italic
   assets:
+    - assets/home/desk-background.webp
+    - assets/home/notebook.webp
+    - assets/home/open-book.webp
+    - assets/home/organizer.webp
     - assets/fonts/PTSerif-Regular.ttf
     - assets/fonts/PTSerif-Bold.ttf
     - assets/fonts/PTSerif-Italic.ttf

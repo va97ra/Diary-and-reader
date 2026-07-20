@@ -1,7 +1,9 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/core/theme/app_theme.dart';
+import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/domain/book_page_format.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_paragraph_settings_section.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_paragraph_style_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -59,6 +61,7 @@ class BookFormattingToolbar extends StatelessWidget {
 
 class BookFormattingSheet extends StatelessWidget {
   const BookFormattingSheet({
+    required this.workspaceController,
     required this.controller,
     required this.paragraphSettings,
     required this.onInsertImage,
@@ -66,6 +69,7 @@ class BookFormattingSheet extends StatelessWidget {
     super.key,
   });
 
+  final AuthorWorkspaceController workspaceController;
   final QuillController controller;
   final BookParagraphSettings paragraphSettings;
   final VoidCallback onInsertImage;
@@ -73,11 +77,16 @@ class BookFormattingSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SafeArea(
-    child: Padding(
-      padding: const EdgeInsets.all(12),
+    child: SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 28),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Text(
+            AppStrings.of(context).writerFormatting,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 16),
           BookParagraphStyleSelector(controller: controller),
           const SizedBox(height: 10),
           SizedBox(
@@ -104,6 +113,10 @@ class BookFormattingSheet extends StatelessWidget {
             controller: controller,
             config: _bookToolbarConfig(paragraphSettings),
           ),
+          const SizedBox(height: 18),
+          const Divider(),
+          const SizedBox(height: 12),
+          BookParagraphSettingsSection(controller: workspaceController),
         ],
       ),
     ),
@@ -112,7 +125,7 @@ class BookFormattingSheet extends StatelessWidget {
 
 QuillSimpleToolbarConfig _bookToolbarConfig(BookParagraphSettings settings) =>
     QuillSimpleToolbarConfig(
-      multiRowsDisplay: false,
+      multiRowsDisplay: true,
       showColorButton: false,
       showBackgroundColorButton: false,
       showSearchButton: false,

@@ -35,7 +35,29 @@ class BookParagraphSettingsSection extends StatelessWidget {
               .map(
                 (preset) => DropdownMenuItem(
                   value: preset,
-                  child: Text(_presetLabel(strings, preset)),
+                  child: SizedBox(
+                    width: 210,
+                    child: Text(
+                      _presetLabel(strings, preset),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
+          selectedItemBuilder: (context) => BookParagraphPreset.values
+              .map(
+                (preset) => Align(
+                  alignment: Alignment.centerLeft,
+                  child: SizedBox(
+                    width: 210,
+                    child: Text(
+                      _presetLabel(strings, preset),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ),
               )
               .toList(),

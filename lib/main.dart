@@ -2,6 +2,8 @@ import 'dart:ui';
 
 import 'package:dnevnik/app/author_studio_app.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
+import 'package:dnevnik/features/books/data/book_device_catalog_factory.dart';
+import 'package:dnevnik/features/books/data/book_source_storage_factory.dart';
 import 'package:dnevnik/features/books/data/book_version_repository_factory.dart';
 import 'package:dnevnik/features/books/data/workspace_repository_factory.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +21,15 @@ Future<void> main() async {
   );
   final systemLanguage = PlatformDispatcher.instance.locale.languageCode;
   await controller.load(preferredLanguage: systemLanguage);
+  final sourceStorage = await createBookSourceStorage();
+  final deviceCatalog = createBookDeviceCatalog();
+  await sourceStorage.cleanup(controller.projects);
 
-  runApp(AuthorStudioApp(controller: controller));
+  runApp(
+    AuthorStudioApp(
+      controller: controller,
+      sourceStorage: sourceStorage,
+      deviceCatalog: deviceCatalog,
+    ),
+  );
 }

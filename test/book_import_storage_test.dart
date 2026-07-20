@@ -1,0 +1,109 @@
+import 'dart:io';
+
+import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
+import 'package:dnevnik/features/books/application/book_import_coordinator.dart';
+import 'package:dnevnik/features/books/application/book_import_file.dart';
+import 'package:dnevnik/features/books/data/file_book_source_storage.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'support/memory_author_workspace_repository.dart';
+
+void main() {
+  late Directory directory;
+
+  setUp(() async {
+    directory = await Directory.systemTemp.createTemp('literia-books-');
+  });
+
+  tearDown(() async {
+    if (await directory.exists()) await directory.delete(recursive: true);
+  });
+
+  test('imports a private source copy and skips a content duplicate', () async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(seedManuscript: false),
+    );
+    await controller.load(preferredLanguage: 'ru');
+    final storage = FileBookSourceStorage(supportDirectory: directory);
+    final coordinator = BookImportCoordinator(
+      controller: controller,
+      sourceStorage: storage,
+    );
+    final file = BookImportFile(
+      name: 'sample.fb2',
+      bytes: await File('test/fixtures/import_sample.fb2').readAsBytes(),
+      sourceUri: 'content://books/sample',
+    );
+
+    final first = await coordinator.import([file], availableBytes: 10000000);
+    final second = await coordinator.import([file], availableBytes: 10000000);
+
+    expect(first.imported, hasLength(1));
+    expect(second.imported, isEmpty);
+    expect(second.duplicateCount, 1);
+    final project = first.imported.single;
+    expect(project.sourceFingerprint, isNotEmpty);
+    expect(project.sourceExternalUri, 'content://books/sample');
+    expect(project.sourceFileSize, file.bytes.length);
+    final stored = File(
+      '${directory.path}${Platform.pathSeparator}'
+      '${project.sourceStoredPath.replaceAll('/', Platform.pathSeparator)}',
+    );
+    expect(await stored.readAsBytes(), file.bytes);
+  });
+
+  test('deleting only the original keeps processed book data', () async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(seedManuscript: false),
+    );
+    await controller.load(preferredLanguage: 'ru');
+    final storage = FileBookSourceStorage(supportDirectory: directory);
+    final file = BookImportFile(
+      name: 'sample.fb2',
+      bytes: await File('test/fixtures/import_sample.fb2').readAsBytes(),
+    );
+    final result = await BookImportCoordinator(
+      controller: controller,
+      sourceStorage: storage,
+    ).import([file]);
+    final project = result.imported.single;
+
+    controller.clearImportedBookStoredSource(project.id);
+    await controller.flush();
+    await storage.deleteOriginal(project);
+
+    final retained = controller.projects.single;
+    expect(retained.sections, isNotEmpty);
+    expect(retained.assets, isNotEmpty);
+    expect(retained.sourceStoredPath, isEmpty);
+    expect(retained.sourceFingerprint, isNotEmpty);
+    final overview = await storage.inspect(controller.projects);
+    expect(overview.originalBytes, 0);
+    expect(overview.processedBytes, greaterThan(0));
+  });
+
+  test('cleanup removes orphaned and temporary source directories', () async {
+    final storage = FileBookSourceStorage(supportDirectory: directory);
+    final orphan = Directory(
+      '${directory.path}${Platform.pathSeparator}library'
+      '${Platform.pathSeparator}orphan',
+    );
+    final temporary = Directory(
+      '${directory.path}${Platform.pathSeparator}library'
+      '${Platform.pathSeparator}.tmp',
+    );
+    await orphan.create(recursive: true);
+    await temporary.create(recursive: true);
+    await File(
+      '${orphan.path}${Platform.pathSeparator}source.fb2',
+    ).writeAsString('orphan');
+    await File(
+      '${temporary.path}${Platform.pathSeparator}copy.pending',
+    ).writeAsString('pending');
+
+    await storage.cleanup(const []);
+
+    expect(await orphan.exists(), isFalse);
+    expect(await temporary.exists(), isFalse);
+  });
+}

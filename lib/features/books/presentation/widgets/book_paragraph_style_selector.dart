@@ -32,17 +32,10 @@ class BookParagraphStyleSelector extends StatelessWidget {
                 .map(
                   (style) => DropdownMenuItem(
                     value: style,
-                    child: Row(
-                      children: [
-                        Icon(_icon(style), size: 17),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            _label(strings, style),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      _label(strings, style),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 )
@@ -57,16 +50,6 @@ class BookParagraphStyleSelector extends StatelessWidget {
       );
     },
   );
-
-  IconData _icon(BookParagraphStyle style) => switch (style) {
-    BookParagraphStyle.body => Icons.notes,
-    BookParagraphStyle.heading1 => Icons.title,
-    BookParagraphStyle.heading2 => Icons.text_fields,
-    BookParagraphStyle.heading3 => Icons.short_text,
-    BookParagraphStyle.quote => Icons.format_quote,
-    BookParagraphStyle.epigraph => Icons.format_align_right,
-    BookParagraphStyle.sceneBreak => Icons.more_horiz,
-  };
 
   String _label(AppStrings strings, BookParagraphStyle style) =>
       switch (style) {

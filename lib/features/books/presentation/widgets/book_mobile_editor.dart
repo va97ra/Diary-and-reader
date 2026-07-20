@@ -44,14 +44,10 @@ class BookMobileEditor extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ColoredBox(
     key: const ValueKey('mobile-writing-editor'),
-    color: const Color(0xFF141824),
-    child: Container(
-      margin: const EdgeInsets.all(8),
+    color: AppTheme.paper,
+    child: Padding(
+      key: const ValueKey('mobile-writing-content'),
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-      decoration: BoxDecoration(
-        color: AppTheme.paper,
-        borderRadius: BorderRadius.circular(5),
-      ),
       child: Column(
         children: [
           TextField(

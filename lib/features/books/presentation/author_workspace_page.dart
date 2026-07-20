@@ -6,8 +6,6 @@ import 'package:dnevnik/features/books/application/book_export_artifact.dart';
 import 'package:dnevnik/features/books/application/book_fb2_exporter.dart';
 import 'package:dnevnik/features/books/application/book_html_exporter.dart';
 import 'package:dnevnik/features/books/application/book_image_file.dart';
-import 'package:dnevnik/features/books/application/book_import_file.dart';
-import 'package:dnevnik/features/books/application/book_import_parser.dart';
 import 'package:dnevnik/features/books/application/book_manuscript_search.dart';
 import 'package:dnevnik/features/books/application/book_markdown_exporter.dart';
 import 'package:dnevnik/features/books/application/book_pdf_font_assets.dart';
@@ -15,23 +13,23 @@ import 'package:dnevnik/features/books/application/book_project_archive_codec.da
 import 'package:dnevnik/features/books/application/book_txt_exporter.dart';
 import 'package:dnevnik/features/books/data/book_export_file_service.dart';
 import 'package:dnevnik/features/books/data/book_image_file_service.dart';
-import 'package:dnevnik/features/books/data/book_import_file_service.dart';
 import 'package:dnevnik/features/books/data/book_pdf_asset_font_loader.dart';
 import 'package:dnevnik/features/books/data/book_project_backup_file_service.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
+import 'package:dnevnik/features/books/domain/manuscript_statistics.dart';
 import 'package:dnevnik/features/books/presentation/book_export_sheet.dart';
 import 'package:dnevnik/features/books/presentation/book_manuscript_search_sheet.dart';
 import 'package:dnevnik/features/books/presentation/book_pdf_preview_page.dart';
 import 'package:dnevnik/features/books/presentation/book_version_history_sheet.dart';
-import 'package:dnevnik/features/books/presentation/imported_book_page.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_page.dart';
-import 'package:dnevnik/features/books/presentation/widgets/book_editor_navigation_bar.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_editor_metrics.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_focus_mode_bar.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_formatting_toolbar.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_navigator.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_properties_panel.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_section_editor.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_workspace_app_bar.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_writer_context_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
@@ -41,7 +39,6 @@ class AuthorWorkspacePage extends StatefulWidget {
     this.exportFileSaver = const BookExportFileService(),
     this.backupFileGateway = const BookProjectBackupFileService(),
     this.pdfFontLoader = const BookPdfAssetFontLoader(),
-    this.importFileGateway = const BookImportFileService(),
     this.imageFileGateway = const BookImageFileService(),
     super.key,
   });
@@ -50,7 +47,6 @@ class AuthorWorkspacePage extends StatefulWidget {
   final BookExportFileSaver exportFileSaver;
   final BookProjectBackupFileGateway backupFileGateway;
   final BookPdfFontLoader pdfFontLoader;
-  final BookImportFileGateway importFileGateway;
   final BookImageFileGateway imageFileGateway;
 
   @override
@@ -63,21 +59,22 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
   BookManuscriptMatch? _pendingSearchMatch;
   bool _isFocusMode = false;
   bool _isA4Preview = false;
+  final _editorMetrics = <String, BookEditorMetrics>{};
 
   @override
   Widget build(BuildContext context) {
     final project = widget.controller.activeProject!;
-    if (project.isReadOnly) {
-      return ImportedBookPage(
-        controller: widget.controller,
-        onOpenReader: _openReader,
-        onImportBook: _importBook,
-      );
-    }
+    assert(!project.isReadOnly, 'Imported books open directly in the reader.');
     final section = project.activeSection!;
+    final metrics =
+        _editorMetrics[section.id] ??
+        BookEditorMetrics(
+          words: ManuscriptStatistics.fromDocument(section.content).words,
+          activePage: 1,
+          pageCount: 1,
+        );
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isDesktop = constraints.maxWidth >= 1500;
         final isTablet = constraints.maxWidth >= 700;
         return PopScope(
           canPop: !_isFocusMode,
@@ -92,19 +89,9 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
                 : BookWorkspaceAppBar(
                     bookTitle: project.metadata.title,
                     sectionTitle: section.title,
-                    isDesktop: isDesktop,
-                    isTablet: isTablet,
-                    isA4Preview: _isA4Preview,
-                    languageCode: widget.controller.languageCode,
+                    metrics: metrics,
                     onFocusMode: _toggleFocusMode,
-                    onToggleA4Preview: _toggleA4Preview,
-                    onSearch: _showManuscriptSearch,
-                    onExport: _showExportSheet,
-                    onOpenReader: _openReader,
-                    onProjectDataAction: _handleProjectDataAction,
-                    onCompactAction: _handleCompactWorkspaceAction,
-                    onToggleLanguage: _toggleLanguage,
-                    onProperties: _showProperties,
+                    onAction: _handleWorkspaceAction,
                   ),
             body: Column(
               children: [
@@ -112,14 +99,6 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
                 Expanded(
                   child: Row(
                     children: [
-                      if (isTablet && !_isFocusMode)
-                        SizedBox(
-                          width: isDesktop ? 290 : 250,
-                          child: BookNavigator(
-                            controller: widget.controller,
-                            onImportBook: _importBook,
-                          ),
-                        ),
                       Expanded(
                         child: BookSectionEditor(
                           key: _sectionEditorKeys.putIfAbsent(
@@ -130,44 +109,35 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
                           pageFormat: project.layoutSettings.pageFormat,
                           paragraphSettings: project.paragraphSettings,
                           assets: project.assets,
-                          showToolbar: isTablet && !_isFocusMode,
+                          showToolbar: false,
                           usePagedLayout: isTablet || _isA4Preview,
                           compactA4Preview: !isTablet && _isA4Preview,
                           onExitCompactPreview: _toggleA4Preview,
                           onInsertImage: _insertImage,
                           onInsertPageBreak: _insertPageBreak,
-                          showStatusBar: !_isFocusMode,
-                          saveState: widget.controller.saveState,
+                          showPageNavigation: !_isFocusMode,
                           viewMode: project.layoutSettings.viewMode,
-                          onViewModeChanged: (viewMode) =>
-                              widget.controller.updateLayoutSettings(
-                                project.layoutSettings.copyWith(
-                                  viewMode: viewMode,
-                                ),
-                              ),
+                          onMetricsChanged: (metrics) =>
+                              _handleEditorMetrics(section.id, metrics),
                           onTitleChanged: widget.controller.updateSectionTitle,
                           onContentChanged:
                               widget.controller.updateSectionContent,
                           onControllerReady: _handleEditorControllerReady,
                         ),
                       ),
-                      if (isDesktop && !_isFocusMode)
-                        SizedBox(
-                          width: 300,
-                          child: BookPropertiesPanel(
-                            controller: widget.controller,
-                          ),
-                        ),
                     ],
                   ),
                 ),
               ],
             ),
-            bottomNavigationBar: _isFocusMode || isTablet
+            bottomNavigationBar: _isFocusMode
                 ? null
-                : BookEditorNavigationBar(
-                    onManuscript: _showManuscript,
+                : BookWriterContextBar(
+                    onStructure: _showManuscript,
+                    onUndo: () => _editorController?.undo(),
+                    onRedo: () => _editorController?.redo(),
                     onFormatting: _showFormatting,
+                    onSettings: _showWriterSettings,
                   ),
           ),
         );
@@ -175,31 +145,28 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
     );
   }
 
-  Future<void> _handleCompactWorkspaceAction(
-    BookCompactWorkspaceAction action,
-  ) {
-    switch (action) {
-      case BookCompactWorkspaceAction.search:
-        return _showManuscriptSearch();
-      case BookCompactWorkspaceAction.export:
-        return _showExportSheet();
-      case BookCompactWorkspaceAction.properties:
-        return _showProperties();
-      case BookCompactWorkspaceAction.history:
-        return _showVersionHistory();
-      case BookCompactWorkspaceAction.backup:
-        return _backupProject();
-      case BookCompactWorkspaceAction.restore:
-        return _restoreProjectBackup();
-      case BookCompactWorkspaceAction.language:
-        _toggleLanguage();
-        return Future.value();
-    }
+  void _handleEditorMetrics(String sectionId, BookEditorMetrics metrics) {
+    if (_editorMetrics[sectionId] == metrics) return;
+    if (!mounted) return;
+    setState(() => _editorMetrics[sectionId] = metrics);
   }
 
-  void _toggleLanguage() => widget.controller.setLanguage(
-    widget.controller.languageCode == 'ru' ? 'en' : 'ru',
-  );
+  Future<void> _handleWorkspaceAction(BookWorkspaceAction action) {
+    switch (action) {
+      case BookWorkspaceAction.search:
+        return _showManuscriptSearch();
+      case BookWorkspaceAction.export:
+        return _showExportSheet();
+      case BookWorkspaceAction.preview:
+        return _openReader();
+      case BookWorkspaceAction.history:
+        return _showVersionHistory();
+      case BookWorkspaceAction.backup:
+        return _backupProject();
+      case BookWorkspaceAction.restore:
+        return _restoreProjectBackup();
+    }
+  }
 
   void _toggleFocusMode() => setState(() {
     if (!_isFocusMode && _isA4Preview) _isA4Preview = false;
@@ -282,17 +249,61 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
       child: BookNavigator(
         controller: widget.controller,
         closeAfterSelection: true,
-        onImportBook: _importBook,
       ),
     ),
   );
 
-  Future<void> _showProperties() => showModalBottomSheet<void>(
+  Future<void> _showWriterSettings() => showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    builder: (_) => FractionallySizedBox(
-      heightFactor: 0.82,
-      child: BookPropertiesPanel(controller: widget.controller),
+    useSafeArea: true,
+    builder: (sheetContext) => FractionallySizedBox(
+      heightFactor: 0.9,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    AppStrings.of(context).writerSettings,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                IconButton(
+                  tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                  onPressed: () => Navigator.pop(sheetContext),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: FilledButton.tonalIcon(
+              key: const ValueKey('writer-a4-preview-action'),
+              onPressed: () {
+                Navigator.pop(sheetContext);
+                _toggleA4Preview();
+              },
+              icon: Icon(
+                _isA4Preview
+                    ? Icons.edit_note_outlined
+                    : Icons.description_outlined,
+              ),
+              label: Text(
+                _isA4Preview
+                    ? AppStrings.of(context).comfortableWriting
+                    : AppStrings.of(context).a4Preview,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(child: BookPropertiesPanel(controller: widget.controller)),
+        ],
+      ),
     ),
   );
 
@@ -301,17 +312,23 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
     if (controller == null) return;
     await showModalBottomSheet<void>(
       context: context,
-      builder: (sheetContext) => BookFormattingSheet(
-        controller: controller,
-        paragraphSettings: widget.controller.activeProject!.paragraphSettings,
-        onInsertImage: () {
-          Navigator.pop(sheetContext);
-          _insertImage();
-        },
-        onInsertPageBreak: () {
-          Navigator.pop(sheetContext);
-          _insertPageBreak();
-        },
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (sheetContext) => FractionallySizedBox(
+        heightFactor: 0.9,
+        child: BookFormattingSheet(
+          workspaceController: widget.controller,
+          controller: controller,
+          paragraphSettings: widget.controller.activeProject!.paragraphSettings,
+          onInsertImage: () {
+            Navigator.pop(sheetContext);
+            _insertImage();
+          },
+          onInsertPageBreak: () {
+            Navigator.pop(sheetContext);
+            _insertPageBreak();
+          },
+        ),
       ),
     );
   }
@@ -394,41 +411,6 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
         },
       ),
     );
-  }
-
-  Future<void> _importBook() async {
-    final strings = AppStrings.of(context);
-    try {
-      final file = await widget.importFileGateway.open();
-      if (file == null || !mounted) return;
-      final project = BookImportParser.parse(file);
-      widget.controller.addImportedBook(project);
-      await widget.controller.flush();
-      if (!mounted) return;
-      _showMessage(strings.bookImported);
-      await _openReader();
-    } on BookImportException catch (error) {
-      if (!mounted) return;
-      final message = switch (error.failure) {
-        BookImportFailure.unsupportedFormat => strings.unsupportedBookFormat,
-        BookImportFailure.noReadableText => strings.noReadableBookText,
-        BookImportFailure.invalidFile => strings.bookImportFailed,
-      };
-      _showMessage(message);
-    } on Exception {
-      if (mounted) _showMessage(strings.bookImportFailed);
-    }
-  }
-
-  Future<void> _handleProjectDataAction(BookProjectDataAction action) async {
-    switch (action) {
-      case BookProjectDataAction.history:
-        return _showVersionHistory();
-      case BookProjectDataAction.backup:
-        return _backupProject();
-      case BookProjectDataAction.restore:
-        return _restoreProjectBackup();
-    }
   }
 
   Future<void> _showVersionHistory() => showModalBottomSheet<void>(
@@ -551,6 +533,7 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
       MaterialPageRoute(
         builder: (_) => BookReaderPage(
           project: project,
+          readerSettings: widget.controller.readerSettings,
           onSettingsChanged: widget.controller.updateReaderSettings,
           onProgressChanged: widget.controller.updateReaderProgress,
           onAnnotationsChanged: widget.controller.updateReaderAnnotations,

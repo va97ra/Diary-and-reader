@@ -77,6 +77,10 @@ void main() {
         ],
       ),
       collectionName: 'В работе',
+      sourceStoredPath: 'library/book/source.fb2',
+      sourceFingerprint: 'abc123',
+      sourceExternalUri: 'content://books/source',
+      sourceFileSize: 4096,
     );
 
     final restored = BookProject.fromJson(withScene.toJson());
@@ -92,6 +96,10 @@ void main() {
     expect(restored.readerProgress.sectionId, 'scene-1');
     expect(restored.readerProgress.sectionProgress, 0.4);
     expect(restored.collectionName, 'В работе');
+    expect(restored.sourceStoredPath, 'library/book/source.fb2');
+    expect(restored.sourceFingerprint, 'abc123');
+    expect(restored.sourceExternalUri, 'content://books/source');
+    expect(restored.sourceFileSize, 4096);
     expect(
       restored.readerAnnotations.bookmarks.single.excerpt,
       'Фрагмент сцены',
