@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 
-import 'package:dnevnik/features/books/application/book_manuscript_search.dart';
+import 'package:dnevnik/features/books/application/manuscript_project_editor.dart';
 import 'package:dnevnik/features/books/application/section_tree_editor.dart';
 import 'package:dnevnik/features/books/application/workspace_persistence_coordinator.dart';
 import 'package:dnevnik/features/books/application/workspace_save_state.dart';
@@ -233,20 +233,11 @@ class AuthorWorkspaceController extends ChangeNotifier {
   void addSection(BookSectionType type) {
     final project = activeProject;
     if (project == null || project.isReadOnly) return;
-    final parentId = _parentForNewSection(project, type);
-    final section = BookSection.create(
-      title: _defaultSectionTitle(type),
-      type: type,
-      parentId: parentId,
-    );
     _replaceActiveProject(
-      (current) => current.copyWith(
-        sections: SectionTreeEditor.insertAtEndOfParent(
-          current.sections,
-          section,
-        ),
-        activeSectionId: section.id,
-        updatedAt: DateTime.now(),
+      (current) => ManuscriptProjectEditor.addSection(
+        current,
+        type,
+        languageCode: _languageCode,
       ),
     );
     _changed();
@@ -255,14 +246,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
   void moveSection(String id, TreeMoveDirection direction) {
     if (activeProject?.isReadOnly ?? true) return;
     _replaceActiveProject(
-      (project) => project.copyWith(
-        sections: SectionTreeEditor.moveSubtree(
-          project.sections,
-          id,
-          direction,
-        ),
-        updatedAt: DateTime.now(),
-      ),
+      (project) => ManuscriptProjectEditor.moveSection(project, id, direction),
     );
     _changed();
   }
@@ -270,49 +254,29 @@ class AuthorWorkspaceController extends ChangeNotifier {
   void deleteSection(String id) {
     final project = activeProject;
     if (project == null || project.isReadOnly) return;
-    var sections = SectionTreeEditor.removeSubtree(project.sections, id);
-    if (sections.isEmpty) {
-      sections = [
-        BookSection.create(
-          title: _languageCode == 'en' ? 'Chapter 1' : 'Глава 1',
-          type: BookSectionType.chapter,
-        ),
-      ];
-    }
-    final activeStillExists = sections.any(
-      (section) => section.id == project.activeSectionId,
+    _replaceActiveProject(
+      (current) => ManuscriptProjectEditor.deleteSection(
+        current,
+        id,
+        languageCode: _languageCode,
+      ),
     );
-    _replaceActiveProject((current) {
-      final sectionIds = sections.map((section) => section.id).toSet();
-      final readerSectionExists = sectionIds.contains(
-        current.readerProgress.sectionId,
-      );
-      return current.copyWith(
-        sections: sections,
-        activeSectionId: activeStillExists
-            ? current.activeSectionId
-            : sections.first.id,
-        readerProgress: readerSectionExists
-            ? current.readerProgress
-            : BookReaderProgress(sectionId: sections.first.id),
-        readerAnnotations: current.readerAnnotations.retainSections(sectionIds),
-        updatedAt: DateTime.now(),
-      );
-    });
     _changed();
   }
 
   void updateSectionTitle(String title) {
     if (activeProject?.isReadOnly ?? true) return;
-    _updateActiveSection((section) => section.copyWith(title: title));
+    _replaceActiveProject(
+      (project) => ManuscriptProjectEditor.updateSectionTitle(project, title),
+    );
     _changed();
   }
 
   void updateSectionContent(RichDocument content) {
     if (activeProject?.isReadOnly ?? true) return;
-    _updateActiveSection(
-      (section) =>
-          section.copyWith(content: content, updatedAt: DateTime.now()),
+    _replaceActiveProject(
+      (project) =>
+          ManuscriptProjectEditor.updateSectionContent(project, content),
     );
     _markDirty();
     notifyListeners();
@@ -325,13 +289,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
       return;
     }
     _replaceActiveProject(
-      (current) => current.copyWith(
-        assets: [
-          ...current.assets.where((existing) => existing.id != asset.id),
-          asset,
-        ],
-        updatedAt: DateTime.now(),
-      ),
+      (current) => ManuscriptProjectEditor.addAsset(current, asset),
     );
     _changed();
   }
@@ -343,44 +301,33 @@ class AuthorWorkspaceController extends ChangeNotifier {
   }) {
     final project = activeProject;
     if (project == null || project.isReadOnly || query.isEmpty) return 0;
-    var replacementCount = 0;
-    final sections = project.sections.map((section) {
-      final result = BookManuscriptSearch.replaceAll(
-        section.content,
-        query,
-        replacement,
-        caseSensitive: caseSensitive,
-      );
-      replacementCount += result.count;
-      return result.count == 0
-          ? section
-          : section.copyWith(
-              content: result.document,
-              updatedAt: DateTime.now(),
-            );
-    }).toList();
-    if (replacementCount == 0) return 0;
-    _replaceActiveProject(
-      (current) =>
-          current.copyWith(sections: sections, updatedAt: DateTime.now()),
+    final result = ManuscriptProjectEditor.replaceAll(
+      project,
+      query,
+      replacement,
+      caseSensitive: caseSensitive,
     );
+    if (result.count == 0) return 0;
+    _replaceActiveProject((_) => result.project);
     _changed();
-    return replacementCount;
+    return result.count;
   }
 
   void updateSectionStatus(DraftStatus status) {
     if (activeProject?.isReadOnly ?? true) return;
-    _updateActiveSection(
-      (section) => section.copyWith(status: status, updatedAt: DateTime.now()),
+    _replaceActiveProject(
+      (project) => ManuscriptProjectEditor.updateSectionStatus(project, status),
     );
     _changed();
   }
 
   void updateSectionTargetWords(int targetWords) {
     if (activeProject?.isReadOnly ?? true) return;
-    _updateActiveSection(
-      (section) =>
-          section.copyWith(targetWords: targetWords, updatedAt: DateTime.now()),
+    _replaceActiveProject(
+      (project) => ManuscriptProjectEditor.updateSectionTargetWords(
+        project,
+        targetWords,
+      ),
     );
     _changed();
   }
@@ -388,8 +335,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
   void updateMetadata(BookMetadata metadata) {
     if (activeProject?.isReadOnly ?? true) return;
     _replaceActiveProject(
-      (project) =>
-          project.copyWith(metadata: metadata, updatedAt: DateTime.now()),
+      (project) => ManuscriptProjectEditor.updateMetadata(project, metadata),
     );
     _changed();
   }
@@ -397,10 +343,8 @@ class AuthorWorkspaceController extends ChangeNotifier {
   void updateLayoutSettings(BookLayoutSettings layoutSettings) {
     if (activeProject?.isReadOnly ?? true) return;
     _replaceActiveProject(
-      (project) => project.copyWith(
-        layoutSettings: layoutSettings,
-        updatedAt: DateTime.now(),
-      ),
+      (project) =>
+          ManuscriptProjectEditor.updateLayoutSettings(project, layoutSettings),
     );
     _changed();
   }
@@ -408,9 +352,9 @@ class AuthorWorkspaceController extends ChangeNotifier {
   void updateParagraphSettings(BookParagraphSettings paragraphSettings) {
     if (activeProject?.isReadOnly ?? true) return;
     _replaceActiveProject(
-      (project) => project.copyWith(
-        paragraphSettings: paragraphSettings,
-        updatedAt: DateTime.now(),
+      (project) => ManuscriptProjectEditor.updateParagraphSettings(
+        project,
+        paragraphSettings,
       ),
     );
     _changed();
@@ -564,40 +508,6 @@ class AuthorWorkspaceController extends ChangeNotifier {
     chapterTitle: _languageCode == 'en' ? 'Chapter 1' : 'Глава 1',
     languageCode: _languageCode,
   ).copyWith(readerSettings: _appPreferences.readerSettings);
-
-  String _defaultSectionTitle(BookSectionType type) => switch (type) {
-    BookSectionType.part => _languageCode == 'en' ? 'New part' : 'Новая часть',
-    BookSectionType.chapter =>
-      _languageCode == 'en' ? 'New chapter' : 'Новая глава',
-    BookSectionType.scene =>
-      _languageCode == 'en' ? 'New scene' : 'Новая сцена',
-  };
-
-  String? _parentForNewSection(BookProject project, BookSectionType type) {
-    final active = project.activeSection;
-    if (active == null || type == BookSectionType.part) return null;
-    if (type == BookSectionType.chapter) {
-      if (active.type == BookSectionType.part) return active.id;
-      if (active.type == BookSectionType.chapter) return active.parentId;
-      final parentChapter = project.sections
-          .where((section) => section.id == active.parentId)
-          .firstOrNull;
-      return parentChapter?.parentId;
-    }
-    if (active.type == BookSectionType.chapter) return active.id;
-    return active.type == BookSectionType.scene ? active.parentId : null;
-  }
-
-  void _updateActiveSection(BookSection Function(BookSection section) update) {
-    final activeId = activeProject?.activeSectionId;
-    if (activeId == null) return;
-    _replaceActiveProject((project) {
-      final sections = project.sections
-          .map((section) => section.id == activeId ? update(section) : section)
-          .toList();
-      return project.copyWith(sections: sections, updatedAt: DateTime.now());
-    });
-  }
 
   void _replaceActiveProject(BookProject Function(BookProject project) update) {
     final index = _projects.indexWhere(
