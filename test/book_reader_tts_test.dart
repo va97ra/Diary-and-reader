@@ -61,11 +61,13 @@ void main() {
     engine.complete();
     await tester.pumpAndSettle();
     expect(engine.spoken.last, contains('Второй текст'));
+    expect(engine.configuredChapters, ['Первая', 'Вторая']);
   });
 }
 
 class _FakeSpeechEngine implements BookSpeechEngine {
   final spoken = <String>[];
+  final configuredChapters = <String>[];
   void Function()? _completion;
 
   @override
@@ -73,7 +75,9 @@ class _FakeSpeechEngine implements BookSpeechEngine {
     required String languageCode,
     required double rate,
     required double pitch,
-  }) async {}
+    required String bookTitle,
+    required String chapterTitle,
+  }) async => configuredChapters.add(chapterTitle);
 
   @override
   void setCompletionHandler(void Function() handler) => _completion = handler;

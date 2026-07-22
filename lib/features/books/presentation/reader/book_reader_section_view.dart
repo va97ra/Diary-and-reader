@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:dnevnik/features/books/application/book_pagination_measurement.dart';
+import 'package:dnevnik/features/books/application/book_reader_hyphenation.dart';
 import 'package:dnevnik/features/books/application/book_reader_text_anchor.dart';
 import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
@@ -22,6 +23,7 @@ import 'package:flutter_quill/flutter_quill.dart';
 class BookReaderSectionView extends StatefulWidget {
   const BookReaderSectionView({
     required this.section,
+    required this.languageCode,
     required this.assets,
     required this.settings,
     required this.palette,
@@ -36,6 +38,7 @@ class BookReaderSectionView extends StatefulWidget {
   });
 
   final BookSection section;
+  final String languageCode;
   final List<BookAsset> assets;
   final BookReaderSettings settings;
   final BookReaderPalette palette;
@@ -63,6 +66,9 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
   final _pageViewportKeys = <GlobalKey>[];
   List<RichDocument> _pageDocuments = const [];
   List<int> _pageStartOffsets = const [];
+  List<int> _pageDisplayStartOffsets = const [];
+  late BookReaderDisplayDocument _displayDocument;
+  int _hyphenationRequest = 0;
 
   Timer? _progressTimer;
   Timer? _paginationTimer;
@@ -92,20 +98,19 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
     super.initState();
     _progress = widget.initialProgress.clamp(0, 1).toDouble();
     _pendingProgress = _progress;
+    _displayDocument = BookReaderHyphenation.identity(widget.section.content);
     _createContinuousResources();
+    _scheduleHyphenation();
     _restoreContinuousPosition();
   }
 
   void _createContinuousResources() {
     _continuousController = QuillController(
-      document: _readerDocument(widget.section.content, globalStart: 0),
+      document: _readerDocument(_displayDocument.document, displayStart: 0),
       selection: const TextSelection.collapsed(offset: 0),
       readOnly: true,
-      onSelectionChanged: (selection) => _handleTextSelection(
-        selection,
-        globalStart: 0,
-        localLength: _selectableLength(widget.section.content),
-      ),
+      onSelectionChanged: (selection) =>
+          _handleTextSelection(selection, displayStart: 0),
     );
     _continuousFocusNode = FocusNode();
     _continuousScrollController = ScrollController()
@@ -124,7 +129,12 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
           oldWidget.highlights.map((item) => item.toJson()).toList(),
         ) !=
         jsonEncode(widget.highlights.map((item) => item.toJson()).toList());
-    if (sectionChanged) {
+    final hyphenationChanged =
+        oldWidget.settings.hyphenateWords != widget.settings.hyphenateWords ||
+        oldWidget.languageCode != widget.languageCode;
+    if (sectionChanged || hyphenationChanged) {
+      _displayDocument = BookReaderHyphenation.identity(widget.section.content);
+      _scheduleHyphenation();
       _replaceContinuousResources();
       _clearVisiblePages();
       _invalidatePagination();
@@ -147,6 +157,27 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
     } else if (oldWidget.settings != widget.settings) {
       _restoreCurrentPosition();
     }
+  }
+
+  void _scheduleHyphenation() {
+    final request = ++_hyphenationRequest;
+    if (!widget.settings.hyphenateWords) return;
+    final sectionId = widget.section.id;
+    final languageCode = widget.languageCode;
+    unawaited(() async {
+      final hyphenation = await BookReaderHyphenation.forLanguage(languageCode);
+      if (!mounted ||
+          request != _hyphenationRequest ||
+          !widget.settings.hyphenateWords ||
+          widget.section.id != sectionId ||
+          widget.languageCode != languageCode) {
+        return;
+      }
+      _displayDocument = hyphenation.apply(widget.section.content);
+      _replaceContinuousResources();
+      _clearVisiblePages();
+      _invalidatePagination();
+    }());
   }
 
   bool _layoutSettingsChanged(
@@ -436,7 +467,7 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
   void _beginPagination(int request) {
     if (!mounted || request != _paginationRequest || _geometry == null) return;
     _paginationMeasurement.begin();
-    _installMeasurementDocument(widget.section.content, request);
+    _installMeasurementDocument(_displayDocument.document, request);
   }
 
   void _installMeasurementDocument(RichDocument document, int request) {
@@ -524,12 +555,13 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
     _pageViewportKeys.clear();
 
     final starts = <int>[];
-    var offset = 0;
+    final displayStarts = <int>[];
+    var displayOffset = 0;
     for (final document in documents) {
-      starts.add(offset);
-      offset += _pageContentLength(document);
-      final globalStart = starts.last;
-      _pageControllers.add(_pageController(document, globalStart));
+      displayStarts.add(displayOffset);
+      starts.add(_displayDocument.displayToOriginal(displayOffset));
+      displayOffset += _pageContentLength(document);
+      _pageControllers.add(_pageController(document, displayStarts.last));
       _pageFocusNodes.add(FocusNode());
       _pageScrollControllers.add(ScrollController());
       _pageEditorKeys.add(GlobalKey<EditorState>());
@@ -537,6 +569,7 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
     }
     _pageDocuments = documents;
     _pageStartOffsets = starts;
+    _pageDisplayStartOffsets = displayStarts;
     _completedGeometry = _geometry;
     _selectPageForProgress(_pendingProgress, rebuild: false);
     _clearMeasurement(rebuild: false);
@@ -555,19 +588,16 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
     });
   }
 
-  QuillController _pageController(RichDocument document, int globalStart) =>
+  QuillController _pageController(RichDocument document, int displayStart) =>
       QuillController(
-        document: _readerDocument(document, globalStart: globalStart),
+        document: _readerDocument(document, displayStart: displayStart),
         selection: const TextSelection.collapsed(offset: 0),
         readOnly: true,
-        onSelectionChanged: (selection) => _handleTextSelection(
-          selection,
-          globalStart: globalStart,
-          localLength: _selectableLength(document),
-        ),
+        onSelectionChanged: (selection) =>
+            _handleTextSelection(selection, displayStart: displayStart),
       );
 
-  Document _readerDocument(RichDocument source, {required int globalStart}) {
+  Document _readerDocument(RichDocument source, {required int displayStart}) {
     final document = Document.fromJson(source);
     if (widget.settings.justifyText && document.length > 1) {
       document.format(0, document.length - 1, Attribute.justifyAlignment);
@@ -582,8 +612,14 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
         excerpt: highlight.excerpt,
         sectionProgress: highlight.sectionProgress,
       );
-      final start = math.max(0, range.start - globalStart);
-      final end = math.min(localLength, range.end - globalStart);
+      final start = math.max(
+        0,
+        _displayDocument.originalToDisplay(range.start) - displayStart,
+      );
+      final end = math.min(
+        localLength,
+        _displayDocument.originalToDisplay(range.end) - displayStart,
+      );
       if (end <= start) continue;
       document.format(
         start,
@@ -601,14 +637,21 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
 
   void _handleTextSelection(
     TextSelection selection, {
-    required int globalStart,
-    required int localLength,
+    required int displayStart,
   }) {
     final plainText = richDocumentPlainText(widget.section.content);
+    final mappedSelection = TextSelection(
+      baseOffset: _displayDocument.displayToOriginal(
+        displayStart + selection.baseOffset,
+      ),
+      extentOffset: _displayDocument.displayToOriginal(
+        displayStart + selection.extentOffset,
+      ),
+    );
     final resolved = BookReaderSelectionResolver.resolve(
-      selection: selection,
-      globalStart: globalStart,
-      localLength: localLength,
+      selection: mappedSelection,
+      globalStart: 0,
+      localLength: plainText.length,
       plainText: plainText,
     );
     if (resolved != null) widget.onTextSelection(resolved);
@@ -628,7 +671,7 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
     _pageViewportKeys.clear();
     for (var index = 0; index < _pageDocuments.length; index++) {
       _pageControllers.add(
-        _pageController(_pageDocuments[index], _pageStartOffsets[index]),
+        _pageController(_pageDocuments[index], _pageDisplayStartOffsets[index]),
       );
       _pageFocusNodes.add(FocusNode());
       _pageScrollControllers.add(ScrollController());
@@ -692,6 +735,7 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
     _pageViewportKeys.clear();
     _pageDocuments = const [];
     _pageStartOffsets = const [];
+    _pageDisplayStartOffsets = const [];
     _completedGeometry = null;
     _activePage = 0;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -768,6 +812,7 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
     _progressTimer?.cancel();
     _paginationTimer?.cancel();
     _paginationRequest++;
+    _hyphenationRequest++;
     _continuousController.dispose();
     _continuousFocusNode.dispose();
     _continuousScrollController.dispose();

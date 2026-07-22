@@ -280,16 +280,20 @@ class _BookReaderPageState extends State<BookReaderPage> {
       await _speechEngine.stop();
       return;
     }
-    await _speechEngine.configure(
-      languageCode: widget.project.metadata.languageCode,
-      rate: _settings.speechRate,
-      pitch: _settings.speechPitch,
-    );
+    await _configureSpeechForSection();
     _prepareSpeechChunks(useCurrentProgress: true);
     if (_speechChunks.isEmpty) return;
     setState(() => _isSpeaking = true);
     await _speakNextChunk();
   }
+
+  Future<void> _configureSpeechForSection() => _speechEngine.configure(
+    languageCode: widget.project.metadata.languageCode,
+    rate: _settings.speechRate,
+    pitch: _settings.speechPitch,
+    bookTitle: widget.project.metadata.title,
+    chapterTitle: _section.title,
+  );
 
   void _prepareSpeechChunks({required bool useCurrentProgress}) {
     final text = richDocumentPlainText(_section.content).trim();
@@ -330,6 +334,7 @@ class _BookReaderPageState extends State<BookReaderPage> {
     }
     if (_activeIndex < _sections.length - 1) {
       _goToNextSection();
+      await _configureSpeechForSection();
       _prepareSpeechChunks(useCurrentProgress: false);
       await _speakNextChunk();
       return;
@@ -350,6 +355,7 @@ class _BookReaderPageState extends State<BookReaderPage> {
         Positioned.fill(
           child: BookReaderSectionView(
             section: _section,
+            languageCode: widget.project.metadata.languageCode,
             assets: widget.project.assets,
             settings: _settings,
             palette: palette,

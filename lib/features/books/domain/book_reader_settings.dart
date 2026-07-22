@@ -14,6 +14,7 @@ class BookReaderSettings {
     this.verticalPadding = 24,
     this.fontWeight = 400,
     this.justifyText = false,
+    this.hyphenateWords = false,
     this.centerTapControls = true,
     this.swipeChapterNavigation = true,
     this.speechRate = 0.5,
@@ -40,6 +41,7 @@ class BookReaderSettings {
         verticalPadding: _bounded(json['verticalPadding'], 12, 80, 24),
         fontWeight: _bounded(json['fontWeight'], 300, 700, 400),
         justifyText: json['justifyText'] == true,
+        hyphenateWords: json['hyphenateWords'] == true,
         centerTapControls: json['centerTapControls'] != false,
         swipeChapterNavigation: json['swipeChapterNavigation'] != false,
         speechRate: _bounded(json['speechRate'], 0.25, 0.75, 0.5),
@@ -56,6 +58,7 @@ class BookReaderSettings {
   final double verticalPadding;
   final double fontWeight;
   final bool justifyText;
+  final bool hyphenateWords;
   final bool centerTapControls;
   final bool swipeChapterNavigation;
   final double speechRate;
@@ -72,6 +75,7 @@ class BookReaderSettings {
     double? verticalPadding,
     double? fontWeight,
     bool? justifyText,
+    bool? hyphenateWords,
     bool? centerTapControls,
     bool? swipeChapterNavigation,
     double? speechRate,
@@ -90,6 +94,7 @@ class BookReaderSettings {
     verticalPadding: (verticalPadding ?? this.verticalPadding).clamp(12, 80),
     fontWeight: (fontWeight ?? this.fontWeight).clamp(300, 700),
     justifyText: justifyText ?? this.justifyText,
+    hyphenateWords: hyphenateWords ?? this.hyphenateWords,
     centerTapControls: centerTapControls ?? this.centerTapControls,
     swipeChapterNavigation:
         swipeChapterNavigation ?? this.swipeChapterNavigation,
@@ -108,6 +113,7 @@ class BookReaderSettings {
     'verticalPadding': verticalPadding,
     'fontWeight': fontWeight,
     'justifyText': justifyText,
+    'hyphenateWords': hyphenateWords,
     'centerTapControls': centerTapControls,
     'swipeChapterNavigation': swipeChapterNavigation,
     'speechRate': speechRate,
@@ -128,6 +134,7 @@ class BookReaderSettings {
           verticalPadding == other.verticalPadding &&
           fontWeight == other.fontWeight &&
           justifyText == other.justifyText &&
+          hyphenateWords == other.hyphenateWords &&
           centerTapControls == other.centerTapControls &&
           swipeChapterNavigation == other.swipeChapterNavigation &&
           speechRate == other.speechRate &&
@@ -145,6 +152,7 @@ class BookReaderSettings {
     verticalPadding,
     fontWeight,
     justifyText,
+    hyphenateWords,
     centerTapControls,
     swipeChapterNavigation,
     speechRate,
