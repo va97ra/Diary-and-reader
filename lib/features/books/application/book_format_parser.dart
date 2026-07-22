@@ -1,7 +1,7 @@
 import 'package:dnevnik/features/books/application/book_import_file.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 
-enum BookImportFormat { epub, fb2, fb2Zip }
+enum BookImportFormat { epub, fb2, fb2Zip, txt, rtf, docx, mobi }
 
 abstract interface class BookFormatParser {
   Set<BookImportFormat> get formats;

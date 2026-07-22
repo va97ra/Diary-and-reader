@@ -178,6 +178,10 @@ class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
 
   Future<void> _finishImport(BookImportBatchResult result) async {
     final strings = AppStrings.of(context);
+    if (result.items.length == 1 && result.conversionRequiredCount == 1) {
+      _showMessage(strings.conversionRequired);
+      return;
+    }
     if (result.items.length == 1 && result.imported.length == 1) {
       _showMessage(strings.bookImported);
       await _openReader(result.imported.single);
@@ -190,6 +194,7 @@ class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
         '${strings.duplicateBooksSkipped}: ${result.duplicateCount}',
       if (result.failedCount > 0)
         '${strings.someBooksFailed}: ${result.failedCount}',
+      if (result.conversionRequiredCount > 0) strings.conversionRequired,
     ];
     if (messages.isEmpty) messages.add(strings.bookImportFailed);
     _showMessage(messages.join(' · '));

@@ -87,7 +87,10 @@ abstract final class BookImportParsingSupport {
   static String baseName(String value) {
     final name = value.replaceAll('\\', '/').split('/').last;
     return name.replaceFirst(
-      RegExp(r'\.(fb2\.zip|epub|fb2|zip)$', caseSensitive: false),
+      RegExp(
+        r'\.(fb2\.zip|epub|fb2|zip|txt|rtf|docx|mobi)$',
+        caseSensitive: false,
+      ),
       '',
     );
   }

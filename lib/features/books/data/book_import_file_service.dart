@@ -19,7 +19,17 @@ class BookImportFileService implements BookBatchImportFileGateway {
 
   static const _bookTypes = XTypeGroup(
     label: 'Electronic books',
-    extensions: ['epub', 'fb2', 'zip'],
+    extensions: [
+      'epub',
+      'fb2',
+      'zip',
+      'txt',
+      'rtf',
+      'docx',
+      'mobi',
+      'doc',
+      'chm',
+    ],
     mimeTypes: [
       'application/epub+zip',
       'application/x-fictionbook+xml',
@@ -27,6 +37,12 @@ class BookImportFileService implements BookBatchImportFileGateway {
       'text/xml',
       'application/zip',
       'application/x-zip-compressed',
+      'text/plain',
+      'application/rtf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/x-mobipocket-ebook',
+      'application/msword',
+      'application/vnd.ms-htmlhelp',
       // Android's Downloads provider often assigns this generic MIME type to
       // sideloaded FB2 files. The parser still validates the extension and
       // binary signature before accepting the book.
@@ -72,7 +88,13 @@ class BookImportFileService implements BookBatchImportFileGateway {
     final lower = name.toLowerCase();
     if (lower.endsWith('.epub') ||
         lower.endsWith('.fb2') ||
-        lower.endsWith('.zip')) {
+        lower.endsWith('.zip') ||
+        lower.endsWith('.txt') ||
+        lower.endsWith('.rtf') ||
+        lower.endsWith('.docx') ||
+        lower.endsWith('.mobi') ||
+        lower.endsWith('.doc') ||
+        lower.endsWith('.chm')) {
       return name;
     }
     final base = name.contains('.')
@@ -94,6 +116,7 @@ class BookImportFileService implements BookBatchImportFileGateway {
           return '$base.fb2.zip';
         }
         if (names.contains('meta-inf/container.xml')) return '$base.epub';
+        if (names.contains('word/document.xml')) return '$base.docx';
       } on Object {
         return '$base.zip';
       }

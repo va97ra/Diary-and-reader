@@ -159,6 +159,12 @@ class MainActivity : FlutterActivity() {
             name.lowercase().endsWith(".fb2.zip") -> ".fb2.zip"
             name.lowercase().endsWith(".epub") -> ".epub"
             name.lowercase().endsWith(".fb2") -> ".fb2"
+            name.lowercase().endsWith(".txt") -> ".txt"
+            name.lowercase().endsWith(".rtf") -> ".rtf"
+            name.lowercase().endsWith(".docx") -> ".docx"
+            name.lowercase().endsWith(".mobi") -> ".mobi"
+            name.lowercase().endsWith(".doc") -> ".doc"
+            name.lowercase().endsWith(".chm") -> ".chm"
             name.lowercase().endsWith(".zip") -> ".zip"
             else -> ".book"
         }
@@ -206,7 +212,15 @@ class MainActivity : FlutterActivity() {
 
     private fun isBookName(name: String): Boolean {
         val lower = name.lowercase()
-        return lower.endsWith(".epub") || lower.endsWith(".fb2") || lower.endsWith(".zip")
+        return lower.endsWith(".epub") ||
+            lower.endsWith(".fb2") ||
+            lower.endsWith(".zip") ||
+            lower.endsWith(".txt") ||
+            lower.endsWith(".rtf") ||
+            lower.endsWith(".docx") ||
+            lower.endsWith(".mobi") ||
+            lower.endsWith(".doc") ||
+            lower.endsWith(".chm")
     }
 
     private fun Cursor.longOrZero(index: Int): Long =

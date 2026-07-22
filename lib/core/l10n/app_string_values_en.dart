@@ -47,7 +47,7 @@ const appStringValuesEn = <String, String>{
   'manuscriptLibrary': 'My manuscripts',
   'readingLibrary': 'My books',
   'createBook': 'Create book',
-  'supportedBookFormats': 'DRM-free EPUB, FB2, and FB2.ZIP',
+  'supportedBookFormats': 'DRM-free EPUB, FB2, TXT, RTF, DOCX, and MOBI',
   'emptyManuscripts': 'Books you write will appear here',
   'emptyReadingLibrary': 'Imported books will appear here',
   'appearance': 'App appearance',
@@ -153,7 +153,9 @@ const appStringValuesEn = <String, String>{
   'imagesInBook': 'Images',
   'bookImported': 'Book added to the library',
   'bookImportFailed': 'The book could not be read',
-  'unsupportedBookFormat': 'EPUB, FB2, and FB2.ZIP are supported',
+  'unsupportedBookFormat': 'This book format is not supported yet',
+  'conversionRequired':
+      'Convert legacy DOC and CHM files to DOCX or EPUB before importing',
   'noReadableBookText':
       'No readable content was found. The file may be damaged or use DRM.',
   'newPart': 'New part',
