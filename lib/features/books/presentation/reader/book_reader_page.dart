@@ -30,6 +30,7 @@ class BookReaderPage extends StatefulWidget {
     required this.onSettingsChanged,
     required this.onProgressChanged,
     required this.onAnnotationsChanged,
+    this.onReadingTimeChanged,
     this.annotationFileSaver = const BookReaderAnnotationFileService(),
     super.key,
   });
@@ -39,6 +40,7 @@ class BookReaderPage extends StatefulWidget {
   final ValueChanged<BookReaderSettings> onSettingsChanged;
   final ValueChanged<BookReaderProgress> onProgressChanged;
   final ValueChanged<BookReaderAnnotations> onAnnotationsChanged;
+  final ValueChanged<Duration>? onReadingTimeChanged;
   final BookReaderAnnotationFileSaver annotationFileSaver;
 
   @override
@@ -46,6 +48,7 @@ class BookReaderPage extends StatefulWidget {
 }
 
 class _BookReaderPageState extends State<BookReaderPage> {
+  final Stopwatch _readingStopwatch = Stopwatch();
   late BookReaderSettings _settings;
   late BookReaderAnnotations _annotations;
   late int _activeIndex;
@@ -61,6 +64,7 @@ class _BookReaderPageState extends State<BookReaderPage> {
   void initState() {
     super.initState();
     _settings = widget.readerSettings;
+    _readingStopwatch.start();
     _annotations = widget.project.readerAnnotations;
     final savedId = widget.project.readerProgress.sectionId;
     final savedIndex = _sections.indexWhere((section) => section.id == savedId);
@@ -68,6 +72,13 @@ class _BookReaderPageState extends State<BookReaderPage> {
     _sectionProgress = savedIndex < 0
         ? 0
         : widget.project.readerProgress.sectionProgress;
+  }
+
+  @override
+  void dispose() {
+    _readingStopwatch.stop();
+    widget.onReadingTimeChanged?.call(_readingStopwatch.elapsed);
+    super.dispose();
   }
 
   void _goToLocation(String sectionId, double sectionProgress) {

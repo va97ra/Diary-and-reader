@@ -1,3 +1,5 @@
+import 'package:dnevnik/features/books/domain/book_library_state.dart';
+import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_scan_folder.dart';
@@ -64,6 +66,30 @@ abstract final class WorkspaceLibraryEditor {
     collectionName: collectionName.trim(),
     updatedAt: DateTime.now(),
   );
+
+  static BookProject updateMetadata(
+    BookProject project,
+    BookMetadata metadata,
+  ) => project.copyWith(metadata: metadata, updatedAt: DateTime.now());
+
+  static BookProject updateFavorite(BookProject project, bool isFavorite) =>
+      project.copyWith(
+        libraryState: project.libraryState.copyWith(isFavorite: isFavorite),
+        updatedAt: DateTime.now(),
+      );
+
+  static BookProject updateReadingStatus(
+    BookProject project,
+    BookReadingStatus status,
+  ) => project.copyWith(
+    libraryState: project.libraryState.copyWith(readingStatus: status),
+    updatedAt: DateTime.now(),
+  );
+
+  static BookProject recordReading(BookProject project, Duration duration) =>
+      project.copyWith(
+        libraryState: project.libraryState.recordReading(duration),
+      );
 
   static LiteriaAppPreferences selectProject(
     LiteriaAppPreferences preferences,

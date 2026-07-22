@@ -2,6 +2,7 @@ import 'dart:collection';
 
 import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
+import 'package:dnevnik/features/books/domain/book_library_state.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
@@ -32,6 +33,7 @@ class BookProject {
     this.sourceExternalUri = '',
     this.sourceFileSize = 0,
     this.collectionName = '',
+    this.libraryState = const BookLibraryState(),
     List<BookAsset> assets = const [],
     this.coverAssetId,
     BookReaderAnnotations? readerAnnotations,
@@ -159,6 +161,11 @@ class BookProject {
           ? (json['sourceFileSize'] as num).toInt().clamp(0, 1 << 62).toInt()
           : 0,
       collectionName: json['collectionName']?.toString() ?? '',
+      libraryState: json['libraryState'] is Map
+          ? BookLibraryState.fromJson(
+              Map<String, dynamic>.from(json['libraryState'] as Map),
+            )
+          : const BookLibraryState(),
       assets: (json['assets'] as List<dynamic>? ?? const [])
           .whereType<Map>()
           .map(
@@ -190,6 +197,7 @@ class BookProject {
   final String sourceExternalUri;
   final int sourceFileSize;
   final String collectionName;
+  final BookLibraryState libraryState;
   final List<BookAsset> _assets;
   final String? coverAssetId;
 
@@ -233,6 +241,7 @@ class BookProject {
     int? sourceFileSize,
     bool clearStoredSource = false,
     String? collectionName,
+    BookLibraryState? libraryState,
     List<BookAsset>? assets,
     String? coverAssetId,
     bool clearCoverAsset = false,
@@ -262,6 +271,7 @@ class BookProject {
         ? 0
         : sourceFileSize ?? this.sourceFileSize,
     collectionName: collectionName ?? this.collectionName,
+    libraryState: libraryState ?? this.libraryState,
     assets: assets ?? _assets,
     coverAssetId: clearCoverAsset ? null : coverAssetId ?? this.coverAssetId,
   );
@@ -286,6 +296,7 @@ class BookProject {
     'sourceExternalUri': sourceExternalUri,
     'sourceFileSize': sourceFileSize,
     'collectionName': collectionName,
+    'libraryState': libraryState.toJson(),
     'assets': _assets.map((asset) => asset.toJson()).toList(),
     'coverAssetId': coverAssetId,
     'documentFormatVersion': _currentDocumentFormatVersion,

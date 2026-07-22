@@ -1,6 +1,7 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/application/book_library_query.dart';
+import 'package:dnevnik/features/books/domain/book_library_state.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_cover_view.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +15,7 @@ class LiteriaLibraryPage extends StatefulWidget {
     required this.onPrimaryAction,
     required this.onOpen,
     required this.onDelete,
+    required this.onAbout,
     this.onFindOnDevice,
     this.countDeviceBooks,
     super.key,
@@ -24,6 +26,7 @@ class LiteriaLibraryPage extends StatefulWidget {
   final Future<void> Function() onPrimaryAction;
   final Future<void> Function(BookProject project) onOpen;
   final Future<void> Function(BookProject project) onDelete;
+  final Future<void> Function(BookProject project) onAbout;
   final Future<void> Function()? onFindOnDevice;
   final Future<int> Function()? countDeviceBooks;
 
@@ -93,7 +96,7 @@ class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
         actions: [
           IconButton(
             key: const ValueKey('library-layout-toggle'),
-            tooltip: _showGrid ? 'Список' : 'Плитки',
+            tooltip: _showGrid ? strings.listView : strings.gridView,
             onPressed: () => setState(() => _showGrid = !_showGrid),
             icon: Icon(_showGrid ? Icons.view_list : Icons.grid_view),
           ),
@@ -106,6 +109,11 @@ class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
                 value: BookLibrarySort.recentlyUpdated,
                 child: Text(strings.recentlyUpdated),
               ),
+              if (!_writing)
+                PopupMenuItem(
+                  value: BookLibrarySort.lastRead,
+                  child: Text(strings.byLastRead),
+                ),
               PopupMenuItem(
                 value: BookLibrarySort.title,
                 child: Text(strings.byTitle),
@@ -227,6 +235,10 @@ class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
                       onOpen: () => widget.onOpen(project),
                       onDelete: () => widget.onDelete(project),
                       onMoveToCollection: () => _showCollectionDialog(project),
+                      onToggleFavorite: () => _toggleFavorite(project),
+                      onChangeReadingStatus: () =>
+                          _showReadingStatusDialog(project),
+                      onAbout: () => widget.onAbout(project),
                     );
                   },
                 ),
@@ -245,6 +257,10 @@ class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
                       onOpen: () => widget.onOpen(project),
                       onDelete: () => widget.onDelete(project),
                       onMoveToCollection: () => _showCollectionDialog(project),
+                      onToggleFavorite: () => _toggleFavorite(project),
+                      onChangeReadingStatus: () =>
+                          _showReadingStatusDialog(project),
+                      onAbout: () => widget.onAbout(project),
                     );
                   },
                 ),
@@ -308,6 +324,44 @@ class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
     widget.controller.updateProjectCollection(project.id, value);
     await widget.controller.flush();
   }
+
+  void _toggleFavorite(BookProject project) {
+    widget.controller.updateProjectFavorite(
+      project.id,
+      !project.libraryState.isFavorite,
+    );
+  }
+
+  Future<void> _showReadingStatusDialog(BookProject project) async {
+    final strings = AppStrings.of(context);
+    final status = await showDialog<BookReadingStatus>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: Text(strings.readingStatus),
+        children: [
+          RadioGroup<BookReadingStatus>(
+            groupValue: project.libraryState.readingStatus,
+            onChanged: (selected) {
+              if (selected != null) Navigator.pop(dialogContext, selected);
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final value in BookReadingStatus.values)
+                  RadioListTile<BookReadingStatus>(
+                    value: value,
+                    title: Text(_readingStatusLabel(strings, value)),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    if (status == null) return;
+    widget.controller.updateProjectReadingStatus(project.id, status);
+    await widget.controller.flush();
+  }
 }
 
 class _LibraryControls extends StatelessWidget {
@@ -339,6 +393,7 @@ class _LibraryControls extends StatelessWidget {
             BookLibraryFilter.unread,
             BookLibraryFilter.inProgress,
             BookLibraryFilter.finished,
+            BookLibraryFilter.favorites,
           ];
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
@@ -405,6 +460,7 @@ class _LibraryControls extends StatelessWidget {
         BookLibraryFilter.unread => strings.unreadBooks,
         BookLibraryFilter.inProgress => strings.readingBooks,
         BookLibraryFilter.finished => strings.finishedBooks,
+        BookLibraryFilter.favorites => strings.favoriteBooks,
         BookLibraryFilter.manuscripts => strings.manuscripts,
         BookLibraryFilter.imported => strings.importedBooks,
       };
@@ -454,6 +510,9 @@ class _LibraryCard extends StatelessWidget {
     required this.onOpen,
     required this.onDelete,
     required this.onMoveToCollection,
+    required this.onToggleFavorite,
+    required this.onChangeReadingStatus,
+    required this.onAbout,
   });
 
   final BookProject project;
@@ -461,6 +520,9 @@ class _LibraryCard extends StatelessWidget {
   final VoidCallback onOpen;
   final VoidCallback onDelete;
   final VoidCallback onMoveToCollection;
+  final VoidCallback onToggleFavorite;
+  final VoidCallback onChangeReadingStatus;
+  final VoidCallback onAbout;
 
   @override
   Widget build(BuildContext context) {
@@ -486,6 +548,19 @@ class _LibraryCard extends StatelessWidget {
                   ),
                   Positioned(
                     top: 8,
+                    left: 8,
+                    child: IconButton.filledTonal(
+                      tooltip: strings.favoriteBooks,
+                      onPressed: onToggleFavorite,
+                      icon: Icon(
+                        project.libraryState.isFavorite
+                            ? Icons.star
+                            : Icons.star_border,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 8,
                     right: 8,
                     child: PopupMenuButton<_LibraryCardAction>(
                       tooltip: strings.more,
@@ -493,11 +568,31 @@ class _LibraryCard extends StatelessWidget {
                         switch (action) {
                           case _LibraryCardAction.collection:
                             onMoveToCollection();
+                          case _LibraryCardAction.readingStatus:
+                            onChangeReadingStatus();
+                          case _LibraryCardAction.about:
+                            onAbout();
                           case _LibraryCardAction.delete:
                             onDelete();
                         }
                       },
                       itemBuilder: (_) => [
+                        PopupMenuItem(
+                          value: _LibraryCardAction.about,
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.info_outline),
+                            title: Text(strings.aboutBook),
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: _LibraryCardAction.readingStatus,
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.flag_outlined),
+                            title: Text(strings.readingStatus),
+                          ),
+                        ),
                         PopupMenuItem(
                           value: _LibraryCardAction.collection,
                           child: ListTile(
@@ -566,6 +661,9 @@ class _LibraryListTile extends StatelessWidget {
     required this.onOpen,
     required this.onDelete,
     required this.onMoveToCollection,
+    required this.onToggleFavorite,
+    required this.onChangeReadingStatus,
+    required this.onAbout,
   });
 
   final BookProject project;
@@ -573,6 +671,9 @@ class _LibraryListTile extends StatelessWidget {
   final VoidCallback onOpen;
   final VoidCallback onDelete;
   final VoidCallback onMoveToCollection;
+  final VoidCallback onToggleFavorite;
+  final VoidCallback onChangeReadingStatus;
+  final VoidCallback onAbout;
 
   @override
   Widget build(BuildContext context) {
@@ -611,20 +712,44 @@ class _LibraryListTile extends StatelessWidget {
               LinearProgressIndicator(value: readingProgress(project)),
           ],
         ),
-        trailing: PopupMenuButton<_LibraryCardAction>(
-          tooltip: strings.more,
-          onSelected: (action) => switch (action) {
-            _LibraryCardAction.collection => onMoveToCollection(),
-            _LibraryCardAction.delete => onDelete(),
-          },
-          itemBuilder: (_) => [
-            PopupMenuItem(
-              value: _LibraryCardAction.collection,
-              child: Text(strings.moveToCollection),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              tooltip: strings.favoriteBooks,
+              onPressed: onToggleFavorite,
+              icon: Icon(
+                project.libraryState.isFavorite
+                    ? Icons.star
+                    : Icons.star_border,
+              ),
             ),
-            PopupMenuItem(
-              value: _LibraryCardAction.delete,
-              child: Text(strings.deleteBook),
+            PopupMenuButton<_LibraryCardAction>(
+              tooltip: strings.more,
+              onSelected: (action) => switch (action) {
+                _LibraryCardAction.collection => onMoveToCollection(),
+                _LibraryCardAction.readingStatus => onChangeReadingStatus(),
+                _LibraryCardAction.about => onAbout(),
+                _LibraryCardAction.delete => onDelete(),
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: _LibraryCardAction.about,
+                  child: Text(strings.aboutBook),
+                ),
+                PopupMenuItem(
+                  value: _LibraryCardAction.collection,
+                  child: Text(strings.moveToCollection),
+                ),
+                PopupMenuItem(
+                  value: _LibraryCardAction.readingStatus,
+                  child: Text(strings.readingStatus),
+                ),
+                PopupMenuItem(
+                  value: _LibraryCardAction.delete,
+                  child: Text(strings.deleteBook),
+                ),
+              ],
             ),
           ],
         ),
@@ -633,4 +758,13 @@ class _LibraryListTile extends StatelessWidget {
   }
 }
 
-enum _LibraryCardAction { collection, delete }
+String _readingStatusLabel(AppStrings strings, BookReadingStatus status) =>
+    switch (status) {
+      BookReadingStatus.automatic => strings.statusAutomatic,
+      BookReadingStatus.wantToRead => strings.wantToRead,
+      BookReadingStatus.reading => strings.readingBooks,
+      BookReadingStatus.paused => strings.pausedReading,
+      BookReadingStatus.finished => strings.finishedBooks,
+    };
+
+enum _LibraryCardAction { about, collection, readingStatus, delete }
