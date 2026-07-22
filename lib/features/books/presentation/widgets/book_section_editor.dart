@@ -4,6 +4,7 @@ import 'dart:math' as math;
 
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/book_page_paginator.dart';
+import 'package:dnevnik/features/books/application/book_pagination_measurement.dart';
 import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_page_format.dart';
 import 'package:dnevnik/features/books/domain/book_page_view_mode.dart';
@@ -75,9 +76,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
   bool _usesPagedLayout = false;
   Timer? _paginationTimer;
   int _paginationRequest = 0;
-  int _measurementRetries = 0;
-  int _measurementPageNumber = 1;
-  final _measuredPages = <RichDocument>[];
+  final _paginationMeasurement = BookPaginationMeasurement(maxRetries: 6);
   RichDocument? _measurementDocument;
   BookEditorMetrics? _lastReportedMetrics;
   QuillController? _measurementController;
@@ -227,9 +226,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
 
   void _beginPaginationMeasurement(int request) {
     final manuscript = BookPagePaginator.merge(_pageDocuments);
-    _measuredPages.clear();
-    _measurementPageNumber = 1;
-    _measurementRetries = 0;
+    _paginationMeasurement.begin();
     _installMeasurementDocument(manuscript, request);
   }
 
@@ -265,14 +262,14 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     final viewportContext = _measurementViewportKey?.currentContext;
     final viewport = viewportContext?.findRenderObject();
     if (editorState == null || viewport is! RenderBox || !viewport.hasSize) {
-      if (_measurementRetries++ < 6) {
+      if (_paginationMeasurement.scheduleRetry()) {
         WidgetsBinding.instance.addPostFrameCallback(
           (_) => _measureCurrentDocument(request),
         );
       }
       return;
     }
-    _measurementRetries = 0;
+    _paginationMeasurement.resetRetries();
 
     final lineHeight =
         BookPageFormat.pointsToLogicalPixels(
@@ -297,7 +294,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     if (controller == null || document == null) return;
     final lastContentOffset = controller.document.length - 1;
     if (splitOffset <= 0) {
-      if (_measurementRetries++ < 6) {
+      if (_paginationMeasurement.scheduleRetry()) {
         WidgetsBinding.instance.addPostFrameCallback(
           (_) => _measureCurrentDocument(request),
         );
@@ -305,25 +302,18 @@ class BookSectionEditorState extends State<BookSectionEditor> {
       return;
     }
 
-    final hardPageSplit = BookPagePaginator.splitAtFirstHardPageBreak(
-      document,
-      splitOffset,
+    final step = _paginationMeasurement.advance(
+      document: document,
+      splitOffset: splitOffset,
+      lastContentOffset: lastContentOffset,
     );
-    if (hardPageSplit != null) {
-      _measuredPages.add(hardPageSplit.visible);
-      _measurementPageNumber++;
-      _installMeasurementDocument(hardPageSplit.overflow, request);
+    if (step.nextDocument case final nextDocument?) {
+      _installMeasurementDocument(nextDocument, request);
       return;
     }
-    if (splitOffset >= lastContentOffset) {
-      _finishPaginationMeasurement([..._measuredPages, document], request);
-      return;
+    if (step.completedDocuments case final completedDocuments?) {
+      _finishPaginationMeasurement(completedDocuments, request);
     }
-
-    final split = BookPagePaginator.split(document, splitOffset);
-    _measuredPages.add(split.visible);
-    _measurementPageNumber++;
-    _installMeasurementDocument(split.overflow, request);
   }
 
   void _finishPaginationMeasurement(List<RichDocument> documents, int request) {
@@ -536,7 +526,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
               child: Opacity(
                 opacity: 0,
                 child: BookPageCanvas(
-                  pageNumber: _measurementPageNumber,
+                  pageNumber: _paginationMeasurement.currentPageNumber,
                   scale: 1,
                   pageFormat: widget.pageFormat,
                   paragraphSettings: widget.paragraphSettings,

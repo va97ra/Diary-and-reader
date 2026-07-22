@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:dnevnik/core/l10n/app_strings.dart';
-import 'package:dnevnik/features/books/application/book_page_paginator.dart';
+import 'package:dnevnik/features/books/application/book_pagination_measurement.dart';
 import 'package:dnevnik/features/books/application/book_reader_text_anchor.dart';
 import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
@@ -71,7 +71,7 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
   double _pendingProgress = 0;
   int _activePage = 0;
   int _paginationRequest = 0;
-  int _measurementRetries = 0;
+  final _paginationMeasurement = BookPaginationMeasurement(maxRetries: 8);
   bool _isPaginating = false;
   int? _continuousPointer;
   double? _continuousPointerStartY;
@@ -81,7 +81,6 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
   _ReaderPageGeometry? _completedGeometry;
   BookReaderViewMode _effectiveMode = BookReaderViewMode.continuous;
 
-  final _measuredPages = <RichDocument>[];
   RichDocument? _measurementDocument;
   QuillController? _measurementController;
   FocusNode? _measurementFocusNode;
@@ -527,8 +526,7 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
 
   void _beginPagination(int request) {
     if (!mounted || request != _paginationRequest || _geometry == null) return;
-    _measuredPages.clear();
-    _measurementRetries = 0;
+    _paginationMeasurement.begin();
     _installMeasurementDocument(widget.section.content, request);
   }
 
@@ -561,14 +559,14 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
     final viewportContext = _measurementViewportKey?.currentContext;
     final viewport = viewportContext?.findRenderObject();
     if (editorState == null || viewport is! RenderBox || !viewport.hasSize) {
-      if (_measurementRetries++ < 8) {
+      if (_paginationMeasurement.scheduleRetry()) {
         WidgetsBinding.instance.addPostFrameCallback(
           (_) => _measureCurrentDocument(request),
         );
       }
       return;
     }
-    _measurementRetries = 0;
+    _paginationMeasurement.resetRetries();
     final lineHeight = widget.settings.fontSize * widget.settings.lineHeight;
     final bottomSafety = (lineHeight * 1.5).clamp(24, viewport.size.height / 3);
     final probe = viewport.localToGlobal(
@@ -582,29 +580,25 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
     if (controller == null || document == null) return;
     final lastContentOffset = controller.document.length - 1;
     if (splitOffset <= 0) {
-      if (_measurementRetries++ < 8) {
+      if (_paginationMeasurement.scheduleRetry()) {
         WidgetsBinding.instance.addPostFrameCallback(
           (_) => _measureCurrentDocument(request),
         );
       }
       return;
     }
-    final hardPageSplit = BookPagePaginator.splitAtFirstHardPageBreak(
-      document,
-      splitOffset,
+    final step = _paginationMeasurement.advance(
+      document: document,
+      splitOffset: splitOffset,
+      lastContentOffset: lastContentOffset,
     );
-    if (hardPageSplit != null) {
-      _measuredPages.add(hardPageSplit.visible);
-      _installMeasurementDocument(hardPageSplit.overflow, request);
+    if (step.nextDocument case final nextDocument?) {
+      _installMeasurementDocument(nextDocument, request);
       return;
     }
-    if (splitOffset >= lastContentOffset) {
-      _finishPagination([..._measuredPages, document], request);
-      return;
+    if (step.completedDocuments case final completedDocuments?) {
+      _finishPagination(completedDocuments, request);
     }
-    final split = BookPagePaginator.split(document, splitOffset);
-    _measuredPages.add(split.visible);
-    _installMeasurementDocument(split.overflow, request);
   }
 
   void _finishPagination(List<RichDocument> documents, int request) {
