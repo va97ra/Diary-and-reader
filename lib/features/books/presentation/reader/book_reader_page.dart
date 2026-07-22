@@ -10,6 +10,7 @@ import 'package:dnevnik/features/books/domain/book_reading_progress.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_annotation_export_sheet.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_context_bar.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_navigation_panel.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_note_dialog.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.dart';
@@ -281,65 +282,16 @@ class _BookReaderPageState extends State<BookReaderPage> {
   );
 
   Widget _buildNavigationBar(BuildContext context, BookReaderPalette palette) {
-    final strings = AppStrings.of(context);
-    return Material(
-      key: const ValueKey('reader-context-bar'),
-      color: palette.surface,
-      elevation: 10,
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 68,
-          child: Row(
-            children: [
-              _ReaderAction(
-                key: const ValueKey('reader-previous-section'),
-                label: strings.previousShort,
-                semanticLabel: strings.previousSection,
-                onPressed: _activeIndex > 0
-                    ? () => _goToIndex(_activeIndex - 1)
-                    : null,
-                icon: const Icon(Icons.chevron_left),
-              ),
-              _ReaderAction(
-                key: const ValueKey('reader-contents-action'),
-                label: strings.contentsShort,
-                onPressed: () => _showContents(context),
-                icon: const Icon(Icons.toc),
-              ),
-              _ReaderAction(
-                key: const ValueKey('reader-settings-action'),
-                label: strings.settings,
-                onPressed: () => _showSettings(context),
-                icon: const Text(
-                  'Aa',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-                ),
-                accent: true,
-              ),
-              _ReaderAction(
-                key: const ValueKey('reader-bookmark-action'),
-                label: strings.bookmark,
-                onPressed: _toggleBookmark,
-                icon: Icon(
-                  _currentBookmark == null
-                      ? Icons.bookmark_border
-                      : Icons.bookmark,
-                ),
-              ),
-              _ReaderAction(
-                key: const ValueKey('reader-next-section'),
-                label: strings.nextShort,
-                semanticLabel: strings.nextSection,
-                onPressed: _activeIndex < _sections.length - 1
-                    ? () => _goToIndex(_activeIndex + 1)
-                    : null,
-                icon: const Icon(Icons.chevron_right),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return BookReaderContextBar(
+      palette: palette,
+      canGoPrevious: _activeIndex > 0,
+      canGoNext: _activeIndex < _sections.length - 1,
+      isBookmarked: _currentBookmark != null,
+      onPrevious: () => _goToIndex(_activeIndex - 1),
+      onContents: () => _showContents(context),
+      onSettings: () => _showSettings(context),
+      onBookmark: _toggleBookmark,
+      onNext: () => _goToIndex(_activeIndex + 1),
     );
   }
 
@@ -632,60 +584,3 @@ class _BookReaderPageState extends State<BookReaderPage> {
 }
 
 enum _ReaderMoreAction { search }
-
-class _ReaderAction extends StatelessWidget {
-  const _ReaderAction({
-    required this.label,
-    required this.onPressed,
-    required this.icon,
-    this.accent = false,
-    this.semanticLabel,
-    super.key,
-  });
-
-  final String label;
-  final VoidCallback? onPressed;
-  final Widget icon;
-  final bool accent;
-  final String? semanticLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onPressed != null;
-    final scheme = Theme.of(context).colorScheme;
-    final color = !enabled
-        ? Theme.of(context).disabledColor
-        : accent
-        ? scheme.primary
-        : scheme.onSurfaceVariant;
-    return Expanded(
-      child: Semantics(
-        button: true,
-        enabled: enabled,
-        label: semanticLabel ?? label,
-        child: InkWell(
-          onTap: onPressed,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconTheme(
-                  data: IconThemeData(size: 22, color: color),
-                  child: icon,
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 10.5, color: color),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
