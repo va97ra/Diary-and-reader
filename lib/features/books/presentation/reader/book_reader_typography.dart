@@ -13,6 +13,7 @@ abstract final class BookReaderTypography {
       settings.lineHeight,
       settings.fontFamily,
       palette.ink,
+      weight: _fontWeight(settings.fontWeight),
       bottom: settings.fontSize * 0.45,
     ),
     h1: _block(
@@ -81,4 +82,12 @@ abstract final class BookReaderTypography {
     VerticalSpacing.zero,
     null,
   );
+
+  static FontWeight _fontWeight(double value) => switch (value.round()) {
+    <= 300 => FontWeight.w300,
+    <= 400 => FontWeight.w400,
+    <= 500 => FontWeight.w500,
+    <= 600 => FontWeight.w600,
+    _ => FontWeight.w700,
+  };
 }

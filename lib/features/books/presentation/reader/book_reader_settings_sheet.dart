@@ -106,6 +106,16 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
                   _change(_settings.copyWith(fontSize: value)),
             ),
             _ReaderSlider(
+              label: strings.fontWeight,
+              value: _settings.fontWeight,
+              min: 300,
+              max: 700,
+              divisions: 4,
+              displayValue: '${_settings.fontWeight.round()}',
+              onChanged: (value) =>
+                  _change(_settings.copyWith(fontWeight: value)),
+            ),
+            _ReaderSlider(
               label: strings.lineSpacing,
               value: _settings.lineHeight,
               min: 1.2,
@@ -145,6 +155,27 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
               onChanged: (value) =>
                   _change(_settings.copyWith(verticalPadding: value)),
             ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(strings.justifyText),
+              value: _settings.justifyText,
+              onChanged: (value) =>
+                  _change(_settings.copyWith(justifyText: value)),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(strings.centerTapControls),
+              value: _settings.centerTapControls,
+              onChanged: (value) =>
+                  _change(_settings.copyWith(centerTapControls: value)),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(strings.swipeChapterNavigation),
+              value: _settings.swipeChapterNavigation,
+              onChanged: (value) =>
+                  _change(_settings.copyWith(swipeChapterNavigation: value)),
+            ),
             const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
@@ -153,6 +184,29 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
                 icon: const Icon(Icons.restart_alt),
                 label: Text(strings.resetSettings),
               ),
+            ),
+            const SizedBox(height: 12),
+            Text(strings.textToSpeech),
+            const SizedBox(height: 8),
+            _ReaderSlider(
+              label: strings.speechRate,
+              value: _settings.speechRate,
+              min: 0.25,
+              max: 0.75,
+              divisions: 10,
+              displayValue: _settings.speechRate.toStringAsFixed(2),
+              onChanged: (value) =>
+                  _change(_settings.copyWith(speechRate: value)),
+            ),
+            _ReaderSlider(
+              label: strings.speechPitch,
+              value: _settings.speechPitch,
+              min: 0.5,
+              max: 1.5,
+              divisions: 10,
+              displayValue: _settings.speechPitch.toStringAsFixed(1),
+              onChanged: (value) =>
+                  _change(_settings.copyWith(speechPitch: value)),
             ),
           ],
         ),

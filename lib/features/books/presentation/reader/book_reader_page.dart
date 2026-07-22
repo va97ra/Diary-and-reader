@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/book_reader_annotation_exporter.dart';
+import 'package:dnevnik/features/books/application/book_reader_external_lookup.dart';
 import 'package:dnevnik/features/books/application/book_reader_search.dart';
+import 'package:dnevnik/features/books/application/book_speech_engine.dart';
 import 'package:dnevnik/features/books/data/book_reader_annotation_file_service.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
@@ -31,6 +35,8 @@ class BookReaderPage extends StatefulWidget {
     required this.onProgressChanged,
     required this.onAnnotationsChanged,
     this.onReadingTimeChanged,
+    this.uriLauncher = launchBookReaderUri,
+    this.speechEngine,
     this.annotationFileSaver = const BookReaderAnnotationFileService(),
     super.key,
   });
@@ -41,6 +47,8 @@ class BookReaderPage extends StatefulWidget {
   final ValueChanged<BookReaderProgress> onProgressChanged;
   final ValueChanged<BookReaderAnnotations> onAnnotationsChanged;
   final ValueChanged<Duration>? onReadingTimeChanged;
+  final BookReaderUriLauncher uriLauncher;
+  final BookSpeechEngine? speechEngine;
   final BookReaderAnnotationFileSaver annotationFileSaver;
 
   @override
@@ -49,6 +57,7 @@ class BookReaderPage extends StatefulWidget {
 
 class _BookReaderPageState extends State<BookReaderPage> {
   final Stopwatch _readingStopwatch = Stopwatch();
+  late final BookSpeechEngine _speechEngine;
   late BookReaderSettings _settings;
   late BookReaderAnnotations _annotations;
   late int _activeIndex;
@@ -56,6 +65,9 @@ class _BookReaderPageState extends State<BookReaderPage> {
   BookReaderTextSelection? _textSelection;
   int _clearSelectionVersion = 0;
   bool _isFocusMode = false;
+  bool _isSpeaking = false;
+  List<String> _speechChunks = const [];
+  int _speechChunkIndex = 0;
 
   List<BookSection> get _sections => widget.project.sections;
   BookSection get _section => _sections[_activeIndex];
@@ -64,6 +76,10 @@ class _BookReaderPageState extends State<BookReaderPage> {
   void initState() {
     super.initState();
     _settings = widget.readerSettings;
+    _speechEngine = widget.speechEngine ?? FlutterBookSpeechEngine();
+    _speechEngine.setCompletionHandler(
+      () => unawaited(_handleSpeechCompleted()),
+    );
     _readingStopwatch.start();
     _annotations = widget.project.readerAnnotations;
     final savedId = widget.project.readerProgress.sectionId;
@@ -77,6 +93,7 @@ class _BookReaderPageState extends State<BookReaderPage> {
   @override
   void dispose() {
     _readingStopwatch.stop();
+    unawaited(_speechEngine.stop());
     widget.onReadingTimeChanged?.call(_readingStopwatch.elapsed);
     super.dispose();
   }
@@ -211,6 +228,14 @@ class _BookReaderPageState extends State<BookReaderPage> {
       ),
       actions: [
         IconButton(
+          key: const ValueKey('reader-tts-action'),
+          tooltip: _isSpeaking
+              ? strings.stopReadingAloud
+              : strings.startReadingAloud,
+          onPressed: _toggleSpeech,
+          icon: Icon(_isSpeaking ? Icons.stop_circle : Icons.volume_up),
+        ),
+        IconButton(
           key: const ValueKey('reader-hide-panels-button'),
           tooltip: strings.focusReading,
           onPressed: _toggleFocusMode,
@@ -247,50 +272,134 @@ class _BookReaderPageState extends State<BookReaderPage> {
     setState(() => _isFocusMode = !_isFocusMode);
   }
 
+  Future<void> _toggleSpeech() async {
+    if (_isSpeaking) {
+      setState(() => _isSpeaking = false);
+      _speechChunks = const [];
+      _speechChunkIndex = 0;
+      await _speechEngine.stop();
+      return;
+    }
+    await _speechEngine.configure(
+      languageCode: widget.project.metadata.languageCode,
+      rate: _settings.speechRate,
+      pitch: _settings.speechPitch,
+    );
+    _prepareSpeechChunks(useCurrentProgress: true);
+    if (_speechChunks.isEmpty) return;
+    setState(() => _isSpeaking = true);
+    await _speakNextChunk();
+  }
+
+  void _prepareSpeechChunks({required bool useCurrentProgress}) {
+    final text = richDocumentPlainText(_section.content).trim();
+    final offset = useCurrentProgress
+        ? (text.length * _sectionProgress).round().clamp(0, text.length)
+        : 0;
+    _speechChunks = _splitSpeech(text.substring(offset));
+    _speechChunkIndex = 0;
+  }
+
+  List<String> _splitSpeech(String text) {
+    const limit = 3500;
+    final chunks = <String>[];
+    var remaining = text.trim();
+    while (remaining.isNotEmpty) {
+      if (remaining.length <= limit) {
+        chunks.add(remaining);
+        break;
+      }
+      var split = remaining.lastIndexOf(RegExp(r'[.!?\n ]'), limit);
+      if (split < limit ~/ 2) split = limit;
+      chunks.add(remaining.substring(0, split).trim());
+      remaining = remaining.substring(split).trimLeft();
+    }
+    return chunks.where((chunk) => chunk.isNotEmpty).toList();
+  }
+
+  Future<void> _speakNextChunk() async {
+    if (!_isSpeaking || _speechChunkIndex >= _speechChunks.length) return;
+    await _speechEngine.speak(_speechChunks[_speechChunkIndex++]);
+  }
+
+  Future<void> _handleSpeechCompleted() async {
+    if (!_isSpeaking || !mounted) return;
+    if (_speechChunkIndex < _speechChunks.length) {
+      await _speakNextChunk();
+      return;
+    }
+    if (_activeIndex < _sections.length - 1) {
+      _goToNextSection();
+      _prepareSpeechChunks(useCurrentProgress: false);
+      await _speakNextChunk();
+      return;
+    }
+    setState(() => _isSpeaking = false);
+  }
+
   Widget _buildReadingSurface(
     BuildContext context,
     BookReaderPalette palette,
-  ) => Stack(
-    children: [
-      Positioned.fill(
-        child: BookReaderSectionView(
-          section: _section,
-          assets: widget.project.assets,
-          settings: _settings,
-          palette: palette,
-          initialProgress: _sectionProgress,
-          onProgressChanged: _handleSectionProgress,
-          highlights: _annotations.highlights
-              .where((highlight) => highlight.sectionId == _section.id)
-              .toList(),
-          onTextSelection: _handleTextSelection,
-          clearSelectionVersion: _clearSelectionVersion,
-          onNextSectionRequested: _activeIndex < _sections.length - 1
-              ? _goToNextSection
-              : null,
-          onPreviousSectionRequested: _activeIndex > 0
-              ? _goToPreviousSectionEnd
-              : null,
-        ),
-      ),
-      if (_textSelection case final selection?)
-        Positioned(
-          left: 12,
-          right: 12,
-          bottom: 12,
-          child: Center(
-            child: BookReaderSelectionBar(
-              selection: selection,
-              onHighlight: _saveHighlight,
-              onSaveQuote: _saveQuote,
-              onAddNote: () => _addNoteForSelection(context),
-              onCopy: _copySelection,
-              onClose: _clearTextSelection,
-            ),
+  ) => GestureDetector(
+    behavior: HitTestBehavior.translucent,
+    onTapUp: _settings.centerTapControls
+        ? (details) => _handleReadingSurfaceTap(context, details)
+        : null,
+    child: Stack(
+      children: [
+        Positioned.fill(
+          child: BookReaderSectionView(
+            section: _section,
+            assets: widget.project.assets,
+            settings: _settings,
+            palette: palette,
+            initialProgress: _sectionProgress,
+            onProgressChanged: _handleSectionProgress,
+            highlights: _annotations.highlights
+                .where((highlight) => highlight.sectionId == _section.id)
+                .toList(),
+            onTextSelection: _handleTextSelection,
+            clearSelectionVersion: _clearSelectionVersion,
+            onNextSectionRequested: _activeIndex < _sections.length - 1
+                ? _goToNextSection
+                : null,
+            onPreviousSectionRequested: _activeIndex > 0
+                ? _goToPreviousSectionEnd
+                : null,
           ),
         ),
-    ],
+        if (_textSelection case final selection?)
+          Positioned(
+            left: 12,
+            right: 12,
+            bottom: 12,
+            child: Center(
+              child: BookReaderSelectionBar(
+                selection: selection,
+                onHighlight: _saveHighlight,
+                onSaveQuote: _saveQuote,
+                onAddNote: () => _addNoteForSelection(context),
+                onCopy: _copySelection,
+                onDictionary: () =>
+                    _openSelectionLookup(BookReaderLookupAction.dictionary),
+                onTranslate: () =>
+                    _openSelectionLookup(BookReaderLookupAction.translate),
+                onWebSearch: () =>
+                    _openSelectionLookup(BookReaderLookupAction.webSearch),
+                onClose: _clearTextSelection,
+              ),
+            ),
+          ),
+      ],
+    ),
   );
+
+  void _handleReadingSurfaceTap(BuildContext context, TapUpDetails details) {
+    if (_textSelection != null) return;
+    final width = context.size?.width ?? MediaQuery.sizeOf(context).width;
+    final position = details.localPosition.dx / width;
+    if (position >= 0.32 && position <= 0.68) _toggleFocusMode();
+  }
 
   Widget _buildNavigationBar(BuildContext context, BookReaderPalette palette) {
     return BookReaderContextBar(
@@ -478,6 +587,24 @@ class _BookReaderPageState extends State<BookReaderPage> {
     if (!mounted) return;
     _showMessage(AppStrings.of(context).selectionCopied);
     _clearTextSelection();
+  }
+
+  Future<void> _openSelectionLookup(BookReaderLookupAction action) async {
+    final selection = _textSelection;
+    if (selection == null) return;
+    final uri = BookReaderExternalLookup.uri(
+      action: action,
+      text: selection.text,
+      languageCode: widget.project.metadata.languageCode,
+    );
+    try {
+      final opened = await widget.uriLauncher(uri);
+      if (!opened && mounted) {
+        _showMessage(AppStrings.of(context).externalActionFailed);
+      }
+    } on Exception {
+      if (mounted) _showMessage(AppStrings.of(context).externalActionFailed);
+    }
   }
 
   Future<void> _addNoteForSelection(BuildContext themedContext) async {

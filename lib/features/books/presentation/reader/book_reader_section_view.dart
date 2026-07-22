@@ -155,6 +155,8 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
   ) =>
       oldSettings.fontFamily != newSettings.fontFamily ||
       oldSettings.fontSize != newSettings.fontSize ||
+      oldSettings.fontWeight != newSettings.fontWeight ||
+      oldSettings.justifyText != newSettings.justifyText ||
       oldSettings.lineHeight != newSettings.lineHeight ||
       oldSettings.contentWidth != newSettings.contentWidth ||
       oldSettings.horizontalPadding != newSettings.horizontalPadding ||
@@ -324,7 +326,8 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
   }
 
   void _handleContinuousPointerDown(PointerDownEvent event) {
-    if (_continuousPointer != null ||
+    if (!widget.settings.swipeChapterNavigation ||
+        _continuousPointer != null ||
         !_continuousScrollController.hasClients ||
         _effectiveMode != BookReaderViewMode.continuous) {
       return;
@@ -566,6 +569,9 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
 
   Document _readerDocument(RichDocument source, {required int globalStart}) {
     final document = Document.fromJson(source);
+    if (widget.settings.justifyText && document.length > 1) {
+      document.format(0, document.length - 1, Attribute.justifyAlignment);
+    }
     final localLength = _selectableLength(source);
     final fullText = richDocumentPlainText(widget.section.content);
     for (final highlight in widget.highlights) {
