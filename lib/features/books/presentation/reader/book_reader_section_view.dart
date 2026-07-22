@@ -9,15 +9,13 @@ import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_continuous_view.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_highlight_style.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_page_card.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_page_stage.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_selection_resolver.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_text_selection.dart';
-import 'package:dnevnik/features/books/presentation/reader/book_reader_typography.dart';
-import 'package:dnevnik/features/books/presentation/widgets/book_image_embed_builder.dart';
-import 'package:dnevnik/features/books/presentation/widgets/book_page_break_embed_builder.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
@@ -207,54 +205,17 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
     return widget.settings.viewMode;
   }
 
-  Widget _buildContinuousView() => ColoredBox(
-    key: const ValueKey('reader-continuous-view'),
-    color: widget.palette.background,
-    child: Center(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth:
-              widget.settings.contentWidth +
-              widget.settings.horizontalPadding * 2,
-        ),
-        child: Container(
-          key: const ValueKey('reader-surface'),
-          width: double.infinity,
-          color: widget.palette.surface,
-          padding: EdgeInsets.fromLTRB(
-            widget.settings.horizontalPadding,
-            widget.settings.verticalPadding,
-            widget.settings.horizontalPadding,
-            8,
-          ),
-          child: Listener(
-            onPointerDown: _handleContinuousPointerDown,
-            onPointerUp: _handleContinuousPointerUp,
-            onPointerCancel: (_) => _resetContinuousPointer(),
-            child: QuillEditor(
-              key: ValueKey('reader-document-${widget.section.id}'),
-              controller: _continuousController,
-              focusNode: _continuousFocusNode,
-              scrollController: _continuousScrollController,
-              config: QuillEditorConfig(
-                padding: EdgeInsets.zero,
-                customStyles: BookReaderTypography.styles(
-                  widget.settings,
-                  widget.palette,
-                ),
-                scrollable: true,
-                autoFocus: false,
-                showCursor: false,
-                embedBuilders: [
-                  BookImageEmbedBuilder(widget.assets),
-                  const BookPageBreakEmbedBuilder(showLabel: false),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    ),
+  Widget _buildContinuousView() => BookReaderContinuousView(
+    sectionId: widget.section.id,
+    settings: widget.settings,
+    palette: widget.palette,
+    assets: widget.assets,
+    controller: _continuousController,
+    focusNode: _continuousFocusNode,
+    scrollController: _continuousScrollController,
+    onPointerDown: _handleContinuousPointerDown,
+    onPointerUp: _handleContinuousPointerUp,
+    onPointerCancel: (_) => _resetContinuousPointer(),
   );
 
   Widget _buildPagedView(
