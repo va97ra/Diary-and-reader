@@ -251,6 +251,15 @@ class AppStrings {
   String get darkTheme => _text('darkTheme');
   String get readerFont => _text('readerFont');
   String get readerFontSize => _text('readerFontSize');
+  String get fontWeight => _text('fontWeight');
+  String get justifyText => _text('justifyText');
+  String get centerTapControls => _text('centerTapControls');
+  String get swipeChapterNavigation => _text('swipeChapterNavigation');
+  String get textToSpeech => _text('textToSpeech');
+  String get speechRate => _text('speechRate');
+  String get speechPitch => _text('speechPitch');
+  String get startReadingAloud => _text('startReadingAloud');
+  String get stopReadingAloud => _text('stopReadingAloud');
   String get textWidth => _text('textWidth');
   String get previousSection => _text('previousSection');
   String get nextSection => _text('nextSection');
@@ -303,6 +312,10 @@ class AppStrings {
   String get saveQuote => _text('saveQuote');
   String get addNoteToSelection => _text('addNoteToSelection');
   String get copySelection => _text('copySelection');
+  String get dictionary => _text('dictionary');
+  String get translate => _text('translate');
+  String get webSearch => _text('webSearch');
+  String get externalActionFailed => _text('externalActionFailed');
   String get closeSelectionActions => _text('closeSelectionActions');
   String get deleteHighlight => _text('deleteHighlight');
   String get deleteQuote => _text('deleteQuote');

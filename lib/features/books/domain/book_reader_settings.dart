@@ -12,6 +12,12 @@ class BookReaderSettings {
     this.contentWidth = 720,
     this.horizontalPadding = 32,
     this.verticalPadding = 24,
+    this.fontWeight = 400,
+    this.justifyText = false,
+    this.centerTapControls = true,
+    this.swipeChapterNavigation = true,
+    this.speechRate = 0.5,
+    this.speechPitch = 1,
   });
 
   factory BookReaderSettings.fromJson(Map<String, dynamic> json) =>
@@ -32,6 +38,12 @@ class BookReaderSettings {
         contentWidth: _bounded(json['contentWidth'], 480, 1000, 720),
         horizontalPadding: _bounded(json['horizontalPadding'], 16, 96, 32),
         verticalPadding: _bounded(json['verticalPadding'], 12, 80, 24),
+        fontWeight: _bounded(json['fontWeight'], 300, 700, 400),
+        justifyText: json['justifyText'] == true,
+        centerTapControls: json['centerTapControls'] != false,
+        swipeChapterNavigation: json['swipeChapterNavigation'] != false,
+        speechRate: _bounded(json['speechRate'], 0.25, 0.75, 0.5),
+        speechPitch: _bounded(json['speechPitch'], 0.5, 1.5, 1),
       );
 
   final BookReaderTheme theme;
@@ -42,6 +54,12 @@ class BookReaderSettings {
   final double contentWidth;
   final double horizontalPadding;
   final double verticalPadding;
+  final double fontWeight;
+  final bool justifyText;
+  final bool centerTapControls;
+  final bool swipeChapterNavigation;
+  final double speechRate;
+  final double speechPitch;
 
   BookReaderSettings copyWith({
     BookReaderTheme? theme,
@@ -52,6 +70,12 @@ class BookReaderSettings {
     double? contentWidth,
     double? horizontalPadding,
     double? verticalPadding,
+    double? fontWeight,
+    bool? justifyText,
+    bool? centerTapControls,
+    bool? swipeChapterNavigation,
+    double? speechRate,
+    double? speechPitch,
   }) => BookReaderSettings(
     theme: theme ?? this.theme,
     viewMode: viewMode ?? this.viewMode,
@@ -64,6 +88,13 @@ class BookReaderSettings {
       96,
     ),
     verticalPadding: (verticalPadding ?? this.verticalPadding).clamp(12, 80),
+    fontWeight: (fontWeight ?? this.fontWeight).clamp(300, 700),
+    justifyText: justifyText ?? this.justifyText,
+    centerTapControls: centerTapControls ?? this.centerTapControls,
+    swipeChapterNavigation:
+        swipeChapterNavigation ?? this.swipeChapterNavigation,
+    speechRate: (speechRate ?? this.speechRate).clamp(0.25, 0.75),
+    speechPitch: (speechPitch ?? this.speechPitch).clamp(0.5, 1.5),
   );
 
   Map<String, Object> toJson() => {
@@ -75,6 +106,12 @@ class BookReaderSettings {
     'contentWidth': contentWidth,
     'horizontalPadding': horizontalPadding,
     'verticalPadding': verticalPadding,
+    'fontWeight': fontWeight,
+    'justifyText': justifyText,
+    'centerTapControls': centerTapControls,
+    'swipeChapterNavigation': swipeChapterNavigation,
+    'speechRate': speechRate,
+    'speechPitch': speechPitch,
   };
 
   @override
@@ -88,7 +125,13 @@ class BookReaderSettings {
           lineHeight == other.lineHeight &&
           contentWidth == other.contentWidth &&
           horizontalPadding == other.horizontalPadding &&
-          verticalPadding == other.verticalPadding;
+          verticalPadding == other.verticalPadding &&
+          fontWeight == other.fontWeight &&
+          justifyText == other.justifyText &&
+          centerTapControls == other.centerTapControls &&
+          swipeChapterNavigation == other.swipeChapterNavigation &&
+          speechRate == other.speechRate &&
+          speechPitch == other.speechPitch;
 
   @override
   int get hashCode => Object.hash(
@@ -100,6 +143,12 @@ class BookReaderSettings {
     contentWidth,
     horizontalPadding,
     verticalPadding,
+    fontWeight,
+    justifyText,
+    centerTapControls,
+    swipeChapterNavigation,
+    speechRate,
+    speechPitch,
   );
 }
 
