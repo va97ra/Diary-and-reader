@@ -4,6 +4,7 @@ import 'dart:collection';
 import 'package:dnevnik/features/books/application/manuscript_project_editor.dart';
 import 'package:dnevnik/features/books/application/section_tree_editor.dart';
 import 'package:dnevnik/features/books/application/transient_book_version_repository.dart';
+import 'package:dnevnik/features/books/application/workspace_library_editor.dart';
 import 'package:dnevnik/features/books/application/workspace_persistence_coordinator.dart';
 import 'package:dnevnik/features/books/application/workspace_save_state.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_repository.dart';
@@ -98,35 +99,10 @@ class AuthorWorkspaceController extends ChangeNotifier {
   }
 
   BookProject addImportedBook(BookProject project) {
-    if (project.kind != BookProjectKind.importedBook ||
-        project.sections.isEmpty) {
-      throw ArgumentError.value(project, 'project', 'Invalid imported book');
-    }
-    final id = _projects.any((candidate) => candidate.id == project.id)
-        ? 'imported-${DateTime.now().microsecondsSinceEpoch}'
-        : project.id;
-    final imported = BookProject(
-      id: id,
-      metadata: project.metadata,
-      sections: project.sections,
-      activeSectionId: project.activeSectionId,
-      createdAt: project.createdAt,
-      updatedAt: project.updatedAt,
-      layoutSettings: project.layoutSettings,
-      paragraphSettings: project.paragraphSettings,
+    final imported = WorkspaceLibraryEditor.importedCopy(
+      project,
+      existingIds: _projects.map((candidate) => candidate.id),
       readerSettings: _appPreferences.readerSettings,
-      readerProgress: project.readerProgress,
-      readerAnnotations: project.readerAnnotations,
-      kind: BookProjectKind.importedBook,
-      sourceFormat: project.sourceFormat,
-      sourceFileName: project.sourceFileName,
-      sourceStoredPath: project.sourceStoredPath,
-      sourceFingerprint: project.sourceFingerprint,
-      sourceExternalUri: project.sourceExternalUri,
-      sourceFileSize: project.sourceFileSize,
-      collectionName: project.collectionName,
-      assets: project.assets,
-      coverAssetId: project.coverAssetId,
     );
     _projects.add(imported);
     _activeProjectId = imported.id;
@@ -144,12 +120,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
           ? null
           : _projects[index.clamp(0, _projects.length - 1)].id;
     }
-    if (_appPreferences.lastManuscriptId == id) {
-      _appPreferences = _appPreferences.copyWith(clearLastManuscript: true);
-    }
-    if (_appPreferences.lastReadingId == id) {
-      _appPreferences = _appPreferences.copyWith(clearLastReading: true);
-    }
+    _appPreferences = WorkspaceLibraryEditor.removeProject(_appPreferences, id);
     _changed();
   }
 
@@ -162,11 +133,12 @@ class AuthorWorkspaceController extends ChangeNotifier {
   }) {
     final index = _projects.indexWhere((project) => project.id == projectId);
     if (index < 0 || !_projects[index].isReadOnly) return;
-    _projects[index] = _projects[index].copyWith(
-      sourceStoredPath: storedPath,
-      sourceFingerprint: fingerprint,
-      sourceExternalUri: externalUri,
-      sourceFileSize: fileSize,
+    _projects[index] = WorkspaceLibraryEditor.updateSource(
+      _projects[index],
+      storedPath: storedPath,
+      fingerprint: fingerprint,
+      externalUri: externalUri,
+      fileSize: fileSize,
     );
     _changed();
   }
@@ -174,28 +146,28 @@ class AuthorWorkspaceController extends ChangeNotifier {
   void clearImportedBookStoredSource(String projectId) {
     final index = _projects.indexWhere((project) => project.id == projectId);
     if (index < 0 || !_projects[index].isReadOnly) return;
-    _projects[index] = _projects[index].copyWith(clearStoredSource: true);
+    _projects[index] = WorkspaceLibraryEditor.clearStoredSource(
+      _projects[index],
+    );
     _changed();
   }
 
   void addBookScanFolder(BookScanFolder folder) {
-    final folders = [..._appPreferences.bookScanFolders];
-    final index = folders.indexWhere((item) => item.uri == folder.uri);
-    if (index >= 0) {
-      folders[index] = folder;
-    } else {
-      folders.add(folder);
-    }
-    _appPreferences = _appPreferences.copyWith(bookScanFolders: folders);
+    _appPreferences = WorkspaceLibraryEditor.addScanFolder(
+      _appPreferences,
+      folder,
+    );
     _changed();
   }
 
   void removeBookScanFolder(String uri) {
-    final folders = _appPreferences.bookScanFolders
-        .where((folder) => folder.uri != uri)
-        .toList();
-    if (folders.length == _appPreferences.bookScanFolders.length) return;
-    _appPreferences = _appPreferences.copyWith(bookScanFolders: folders);
+    if (!_appPreferences.bookScanFolders.any((folder) => folder.uri == uri)) {
+      return;
+    }
+    _appPreferences = WorkspaceLibraryEditor.removeScanFolder(
+      _appPreferences,
+      uri,
+    );
     _changed();
   }
 
@@ -204,10 +176,11 @@ class AuthorWorkspaceController extends ChangeNotifier {
     unawaited(flush());
     _activeProjectId = id;
     final selected = _projects.where((project) => project.id == id).firstOrNull;
-    if (selected?.isReadOnly == true) {
-      _appPreferences = _appPreferences.copyWith(lastReadingId: id);
-    } else if (selected != null) {
-      _appPreferences = _appPreferences.copyWith(lastManuscriptId: id);
+    if (selected != null) {
+      _appPreferences = WorkspaceLibraryEditor.selectProject(
+        _appPreferences,
+        selected,
+      );
     }
     _changed();
   }
@@ -217,9 +190,9 @@ class AuthorWorkspaceController extends ChangeNotifier {
     if (index < 0) return;
     final normalized = collectionName.trim();
     if (_projects[index].collectionName == normalized) return;
-    _projects[index] = _projects[index].copyWith(
-      collectionName: normalized,
-      updatedAt: DateTime.now(),
+    _projects[index] = WorkspaceLibraryEditor.updateCollection(
+      _projects[index],
+      normalized,
     );
     _changed();
   }
