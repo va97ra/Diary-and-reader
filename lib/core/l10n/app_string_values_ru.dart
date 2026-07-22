@@ -111,6 +111,7 @@ const appStringValuesRu = <String, String>{
   'editMetadata': 'Изменить сведения',
   'readingTime': 'Время чтения',
   'lastRead': 'Последнее чтение',
+  'readingHistory': 'История чтения',
   'series': 'Серия',
   'genre': 'Жанр',
   'isbn': 'ISBN',

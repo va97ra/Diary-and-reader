@@ -125,6 +125,7 @@ class AppStrings {
   String get editMetadata => _text('editMetadata');
   String get readingTime => _text('readingTime');
   String get lastRead => _text('lastRead');
+  String get readingHistory => _text('readingHistory');
   String get series => _text('series');
   String get genre => _text('genre');
   String get isbn => _text('isbn');
