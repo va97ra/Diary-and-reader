@@ -111,6 +111,7 @@ const appStringValuesEn = <String, String>{
   'editMetadata': 'Edit details',
   'readingTime': 'Reading time',
   'lastRead': 'Last read',
+  'readingHistory': 'Reading history',
   'series': 'Series',
   'genre': 'Genre',
   'isbn': 'ISBN',

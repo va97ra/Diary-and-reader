@@ -121,6 +121,27 @@ class _BookDetailsBody extends StatelessWidget {
               strings.lastRead,
               MaterialLocalizations.of(context).formatMediumDate(lastReadAt),
             ),
+          if (project.libraryState.readingSessions.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Text(
+              strings.readingHistory,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            ...project.libraryState.readingSessions
+                .take(5)
+                .map(
+                  (session) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.history),
+                    title: Text(
+                      MaterialLocalizations.of(
+                        context,
+                      ).formatMediumDate(session.startedAt),
+                    ),
+                    subtitle: Text(_formatDuration(session.durationSeconds)),
+                  ),
+                ),
+          ],
           if (metadata.series.isNotEmpty)
             _detail(context, strings.series, metadata.series),
           if (metadata.genre.isNotEmpty)
