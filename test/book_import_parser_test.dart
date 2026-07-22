@@ -235,6 +235,21 @@ void main() {
         isFalse,
       );
     });
+
+    test('keeps imported verse lines compact inside one paragraph', () {
+      final body = XmlDocument.parse(
+        '<body><div class="poem">Первая строка<br/><span>Вторая строка</span><br/>Третья строка</div></body>',
+      ).rootElement;
+
+      final content = XmlBookContentConverter.convert(body.children);
+      final text = richDocumentPlainText(content);
+
+      expect(text, 'Первая строка\u2028Вторая строка\u2028Третья строка\n');
+      expect(
+        content.where((operation) => operation['insert'] == '\n'),
+        hasLength(1),
+      );
+    });
   });
 }
 

@@ -46,8 +46,18 @@ class BookNavigator extends StatelessWidget {
                       ],
                     ),
                   ),
+                  FilledButton.tonalIcon(
+                    key: const ValueKey('navigator-new-chapter'),
+                    onPressed: () {
+                      controller.addSection(BookSectionType.chapter);
+                      if (closeAfterSelection) Navigator.of(context).pop();
+                    },
+                    icon: const Icon(Icons.add, size: 18),
+                    label: Text(strings.newChapter),
+                  ),
+                  const SizedBox(width: 4),
                   PopupMenuButton<BookSectionType>(
-                    tooltip: strings.addPage,
+                    tooltip: strings.more,
                     onSelected: controller.addSection,
                     itemBuilder: (_) => [
                       PopupMenuItem(
@@ -59,14 +69,6 @@ class BookNavigator extends StatelessWidget {
                         ),
                       ),
                       PopupMenuItem(
-                        value: BookSectionType.chapter,
-                        child: ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.article_outlined),
-                          title: Text(strings.newChapter),
-                        ),
-                      ),
-                      PopupMenuItem(
                         value: BookSectionType.scene,
                         child: ListTile(
                           contentPadding: EdgeInsets.zero,
@@ -75,7 +77,13 @@ class BookNavigator extends StatelessWidget {
                         ),
                       ),
                     ],
-                    icon: const Icon(Icons.add_circle_outline),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        minWidth: 48,
+                        minHeight: 48,
+                      ),
+                      child: Center(child: Text(strings.more)),
+                    ),
                   ),
                 ],
               ),

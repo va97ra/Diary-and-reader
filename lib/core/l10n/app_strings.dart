@@ -154,6 +154,7 @@ class AppStrings {
   String get newChapter => _text('newChapter');
   String get newScene => _text('newScene');
   String get bookTitle => _text('bookTitle');
+  String get chapterTitle => _text('chapterTitle');
   String get author => _text('author');
   String get subtitle => _text('subtitle');
   String get description => _text('description');
@@ -499,6 +500,7 @@ class AppStrings {
       'newChapter': 'Новая глава',
       'newScene': 'Новая сцена',
       'bookTitle': 'Название книги',
+      'chapterTitle': 'Название главы',
       'author': 'Автор',
       'subtitle': 'Подзаголовок',
       'description': 'Аннотация',
@@ -857,6 +859,7 @@ class AppStrings {
       'newChapter': 'New chapter',
       'newScene': 'New scene',
       'bookTitle': 'Book title',
+      'chapterTitle': 'Chapter title',
       'author': 'Author',
       'subtitle': 'Subtitle',
       'description': 'Description',

@@ -69,6 +69,57 @@ void main() {
     expect(controller.saveState, WorkspaceSaveState.saved);
   });
 
+  test('saves during uninterrupted typing before the idle delay', () async {
+    final repository = MemoryAuthorWorkspaceRepository();
+    final controller = AuthorWorkspaceController(
+      repository,
+      saveDebounce: const Duration(milliseconds: 90),
+      maxSaveDelay: const Duration(milliseconds: 30),
+    );
+    await controller.load(preferredLanguage: 'ru');
+
+    for (var index = 0; index < 5; index++) {
+      controller.updateSectionContent([
+        {'insert': 'Непрерывный набор $index\n'},
+      ]);
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
+
+    expect(repository.saveCount, greaterThanOrEqualTo(1));
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    expect(
+      richDocumentPlainText(
+        repository.snapshot!.activeProject!.activeSection!.content,
+      ),
+      'Непрерывный набор 4\n',
+    );
+    expect(controller.saveState, WorkspaceSaveState.saved);
+    controller.dispose();
+  });
+
+  test('reports a save error and succeeds when retried', () async {
+    final repository = _RecoveringAuthorWorkspaceRepository();
+    final controller = AuthorWorkspaceController(repository);
+    await controller.load(preferredLanguage: 'ru');
+    controller.updateSectionContent(const [
+      {'insert': 'Текст для повторного сохранения\n'},
+    ]);
+
+    await controller.flush();
+    expect(controller.saveState, WorkspaceSaveState.error);
+
+    repository.failWrites = false;
+    await controller.flush();
+    expect(controller.saveState, WorkspaceSaveState.saved);
+    expect(
+      richDocumentPlainText(
+        repository.snapshot!.activeProject!.activeSection!.content,
+      ),
+      'Текст для повторного сохранения\n',
+    );
+    controller.dispose();
+  });
+
   test('replaces text across the manuscript and persists the result', () async {
     final repository = MemoryAuthorWorkspaceRepository();
     final controller = AuthorWorkspaceController(repository);
@@ -281,4 +332,22 @@ class _ControlledAuthorWorkspaceRepository
   }
 
   void completeNextWrite() => pendingWrites.removeAt(0).complete();
+}
+
+class _RecoveringAuthorWorkspaceRepository
+    implements AuthorWorkspaceRepository {
+  _RecoveringAuthorWorkspaceRepository()
+    : snapshot = MemoryAuthorWorkspaceRepository().snapshot;
+
+  AuthorWorkspaceSnapshot? snapshot;
+  bool failWrites = true;
+
+  @override
+  Future<AuthorWorkspaceSnapshot?> load() async => snapshot;
+
+  @override
+  Future<void> save(AuthorWorkspaceSnapshot nextSnapshot) async {
+    if (failWrites) throw Exception('Storage unavailable');
+    snapshot = AuthorWorkspaceSnapshot.fromJson(nextSnapshot.toJson());
+  }
 }

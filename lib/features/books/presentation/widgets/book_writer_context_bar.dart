@@ -23,7 +23,7 @@ class BookWriterContextBar extends StatelessWidget {
     final strings = AppStrings.of(context);
     return Material(
       key: const ValueKey('writer-context-bar'),
-      color: Theme.of(context).colorScheme.surface,
+      color: AppTheme.surface,
       elevation: 10,
       child: SafeArea(
         top: false,
@@ -88,10 +88,10 @@ class _Action extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = onTap != null;
     final color = !enabled
-        ? Theme.of(context).disabledColor
+        ? const Color(0xFF64748B)
         : accent
         ? AppTheme.accent
-        : Theme.of(context).colorScheme.onSurfaceVariant;
+        : const Color(0xFFE2E8F0);
     return Expanded(
       child: Semantics(
         button: true,

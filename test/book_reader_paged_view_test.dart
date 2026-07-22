@@ -190,6 +190,52 @@ void main() {
     );
     await tester.binding.setSurfaceSize(null);
   });
+
+  testWidgets('continuous reader swipes between short chapters', (
+    tester,
+  ) async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(),
+    );
+    await controller.load(preferredLanguage: 'ru');
+    controller.updateSectionContent([
+      {'insert': 'Короткая первая глава.\n'},
+    ]);
+    final firstChapterId = controller.activeSection!.id;
+    controller.addSection(BookSectionType.chapter);
+    controller.updateSectionTitle('Короткая вторая глава');
+    controller.updateSectionContent([
+      {'insert': 'Короткая вторая глава.\n'},
+    ]);
+    final secondChapterId = controller.activeSection!.id;
+    controller.selectSection(firstChapterId);
+    controller.updateReaderSettings(
+      const BookReaderSettings(viewMode: BookReaderViewMode.continuous),
+    );
+
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pumpWidget(AuthorStudioApp(controller: controller));
+    await tester.pumpAndSettle();
+    await openReaderPreview(tester, controller);
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(ValueKey('reader-document-$firstChapterId')),
+      const Offset(0, -240),
+    );
+    await tester.pumpAndSettle();
+    expect(controller.activeProject!.readerProgress.sectionId, secondChapterId);
+
+    await tester.drag(
+      find.byKey(ValueKey('reader-document-$secondChapterId')),
+      const Offset(0, 240),
+    );
+    await tester.pumpAndSettle();
+    expect(controller.activeProject!.readerProgress.sectionId, firstChapterId);
+
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.binding.setSurfaceSize(null);
+  });
 }
 
 Future<AuthorWorkspaceController> _controllerWithLongChapter(

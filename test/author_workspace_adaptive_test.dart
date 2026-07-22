@@ -50,7 +50,8 @@ void main() {
           ?.fontSize,
       11,
     );
-    expect(find.text('Сохранено'), findsNothing);
+    expect(find.byKey(const ValueKey('writer-save-status')), findsOneWidget);
+    expect(find.text('Сохранено'), findsOneWidget);
     final editor = tester.widget<QuillEditor>(find.byType(QuillEditor));
     expect(editor.config.textSelectionThemeData?.cursorColor, AppTheme.ink);
 
@@ -103,6 +104,25 @@ void main() {
     );
     expect(headerMetrics.data, '4 слов · 1/1');
     expect(headerMetrics.style?.fontSize, 9.5);
+    expect(find.byKey(const ValueKey('writer-save-status')), findsOneWidget);
+    expect(find.text('Сохранено'), findsOneWidget);
+    final writerAppBar = tester.widget<AppBar>(
+      find.byKey(const ValueKey('writer-app-bar')),
+    );
+    expect(writerAppBar.backgroundColor, AppTheme.surface);
+    expect(
+      tester
+          .widget<Material>(find.byKey(const ValueKey('writer-context-bar')))
+          .color,
+      AppTheme.surface,
+    );
+    final chapterTitle = tester.widget<Text>(
+      find.descendant(
+        of: find.byKey(const ValueKey('writer-section-title-action')),
+        matching: find.text('Глава 1'),
+      ),
+    );
+    expect(chapterTitle.style?.fontSize, 14);
     final writingSurface = find.byKey(const ValueKey('mobile-writing-editor'));
     final writingRect = tester.getRect(writingSurface);
     expect(writingRect.left, 0);
@@ -112,8 +132,9 @@ void main() {
       tester
           .widget<Padding>(find.byKey(const ValueKey('mobile-writing-content')))
           .padding,
-      const EdgeInsets.fromLTRB(20, 20, 20, 10),
+      const EdgeInsets.fromLTRB(20, 12, 20, 10),
     );
+    expect(find.byType(TextField), findsNothing);
     expect(
       find.byKey(const ValueKey('mobile-a4-preview-button')),
       findsNothing,
@@ -125,6 +146,7 @@ void main() {
       find.byKey(const ValueKey('editor-exit-focus-mode')),
       findsOneWidget,
     );
+    expect(find.byKey(const ValueKey('writer-save-status')), findsOneWidget);
     expect(find.byKey(const ValueKey('writer-context-bar')), findsNothing);
     expect(find.byKey(const ValueKey('book-editor-status-bar')), findsNothing);
     expect(find.byKey(const ValueKey('mobile-page-navigation')), findsNothing);
@@ -175,6 +197,99 @@ void main() {
       find.byKey(const ValueKey('mobile-page-navigation')),
       findsOneWidget,
     );
+
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets(
+    'keeps autosave status visible on a tablet in both orientations',
+    (tester) async {
+      final controller = AuthorWorkspaceController(
+        MemoryAuthorWorkspaceRepository(),
+      );
+      await controller.load(preferredLanguage: 'ru');
+      await tester.binding.setSurfaceSize(const Size(800, 1280));
+      await tester.pumpWidget(AuthorStudioApp(controller: controller));
+      await tester.pumpAndSettle();
+      await openLastManuscript(tester, controller);
+
+      expect(find.byKey(const ValueKey('writer-save-status')), findsOneWidget);
+      expect(find.text('Сохранено'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await tester.binding.setSurfaceSize(const Size(1280, 800));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('writer-save-status')), findsOneWidget);
+      expect(find.text('Сохранено'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await tester.binding.setSurfaceSize(null);
+    },
+  );
+
+  testWidgets('renames a manuscript by tapping its title', (tester) async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(),
+    );
+    await controller.load(preferredLanguage: 'ru');
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pumpWidget(AuthorStudioApp(controller: controller));
+    await tester.pumpAndSettle();
+    await openLastManuscript(tester, controller);
+
+    await tester.tap(find.byKey(const ValueKey('writer-book-title-action')));
+    await tester.pumpAndSettle();
+    expect(find.text('Название книги'), findsNWidgets(2));
+
+    await tester.enterText(
+      find.byKey(const ValueKey('writer-book-title-field')),
+      'Моя первая книга',
+    );
+    await tester.tap(find.byKey(const ValueKey('writer-book-title-save')));
+    await tester.pumpAndSettle();
+
+    expect(controller.activeProject!.metadata.title, 'Моя первая книга');
+    expect(find.text('Моя первая книга'), findsOneWidget);
+    expect(find.byKey(const ValueKey('writer-save-status')), findsOneWidget);
+    expect(find.text('Сохранено'), findsWidgets);
+
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('renames and starts a chapter without a large mobile field', (
+    tester,
+  ) async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(),
+    );
+    await controller.load(preferredLanguage: 'ru');
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pumpWidget(AuthorStudioApp(controller: controller));
+    await tester.pumpAndSettle();
+    await openLastManuscript(tester, controller);
+
+    expect(find.byType(TextField), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('writer-section-title-action')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('writer-section-title-field')),
+      'Встреча',
+    );
+    await tester.tap(find.byKey(const ValueKey('writer-section-title-save')));
+    await tester.pumpAndSettle();
+    expect(controller.activeSection!.title, 'Встреча');
+
+    final sectionCount = controller.activeProject!.sections.length;
+    await tester.tap(find.byKey(const ValueKey('writer-structure-action')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('navigator-new-chapter')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('navigator-new-chapter')));
+    await tester.pumpAndSettle();
+
+    expect(controller.activeProject!.sections.length, sectionCount + 1);
+    expect(controller.activeSection!.title, 'Новая глава');
+    expect(find.byType(TextField), findsNothing);
 
     await tester.binding.setSurfaceSize(null);
   });
