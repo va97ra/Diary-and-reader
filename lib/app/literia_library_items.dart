@@ -24,6 +24,7 @@ class _LibraryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
+    final progress = writing ? 0.0 : readingProgress(project);
     return Card(
       key: ValueKey('literia-project-${project.id}'),
       clipBehavior: Clip.antiAlias,
@@ -82,14 +83,15 @@ class _LibraryCard extends StatelessWidget {
                             title: Text(strings.aboutBook),
                           ),
                         ),
-                        PopupMenuItem(
-                          value: _LibraryCardAction.readingStatus,
-                          child: ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: const Icon(Icons.flag_outlined),
-                            title: Text(strings.readingStatus),
+                        if (!writing)
+                          PopupMenuItem(
+                            value: _LibraryCardAction.readingStatus,
+                            child: ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(Icons.flag_outlined),
+                              title: Text(strings.readingStatus),
+                            ),
                           ),
-                        ),
                         PopupMenuItem(
                           value: _LibraryCardAction.collection,
                           child: ListTile(
@@ -134,10 +136,10 @@ class _LibraryCard extends StatelessWidget {
                   ),
                   if (!writing) ...[
                     const SizedBox(height: 10),
-                    LinearProgressIndicator(value: readingProgress(project)),
+                    LinearProgressIndicator(value: progress),
                     const SizedBox(height: 4),
                     Text(
-                      '${(readingProgress(project) * 100).round()}%',
+                      '${(progress * 100).round()}%',
                       style: Theme.of(context).textTheme.labelSmall,
                     ),
                   ],
@@ -175,6 +177,7 @@ class _LibraryListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
+    final progress = writing ? 0.0 : readingProgress(project);
     return Card(
       key: ValueKey('literia-project-list-${project.id}'),
       clipBehavior: Clip.antiAlias,
@@ -205,8 +208,7 @@ class _LibraryListTile extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-            if (!writing)
-              LinearProgressIndicator(value: readingProgress(project)),
+            if (!writing) LinearProgressIndicator(value: progress),
           ],
         ),
         trailing: Row(
@@ -238,10 +240,11 @@ class _LibraryListTile extends StatelessWidget {
                   value: _LibraryCardAction.collection,
                   child: Text(strings.moveToCollection),
                 ),
-                PopupMenuItem(
-                  value: _LibraryCardAction.readingStatus,
-                  child: Text(strings.readingStatus),
-                ),
+                if (!writing)
+                  PopupMenuItem(
+                    value: _LibraryCardAction.readingStatus,
+                    child: Text(strings.readingStatus),
+                  ),
                 PopupMenuItem(
                   value: _LibraryCardAction.delete,
                   child: Text(strings.deleteBook),

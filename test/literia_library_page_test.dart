@@ -70,4 +70,39 @@ void main() {
     await tester.binding.setSurfaceSize(null);
     controller.dispose();
   });
+
+  testWidgets('manuscript menu does not expose reading-only status', (
+    tester,
+  ) async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(seedManuscript: false),
+    );
+    await controller.load(preferredLanguage: 'ru');
+    controller.addProject();
+
+    await tester.binding.setSurfaceSize(const Size(900, 800));
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('ru'),
+        supportedLocales: const [Locale('ru'), Locale('en')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        home: LiteriaLibraryPage(
+          mode: LiteriaLibraryMode.manuscripts,
+          controller: controller,
+          onPrimaryAction: () async {},
+          onOpen: (_) async {},
+          onDelete: (_) async {},
+          onAbout: (_) async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Ещё'));
+    await tester.pumpAndSettle();
+    expect(find.text('Статус чтения'), findsNothing);
+
+    await tester.binding.setSurfaceSize(null);
+    controller.dispose();
+  });
 }
