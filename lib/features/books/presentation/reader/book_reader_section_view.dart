@@ -13,6 +13,7 @@ import 'package:dnevnik/features/books/domain/rich_document.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_highlight_style.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_page_card.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_selection_resolver.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_text_selection.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_typography.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_image_embed_builder.dart';
@@ -692,35 +693,14 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
     required int globalStart,
     required int localLength,
   }) {
-    if (selection.isCollapsed) return;
-    final localStart = math
-        .min(selection.baseOffset, selection.extentOffset)
-        .clamp(0, localLength);
-    final localEnd = math
-        .max(selection.baseOffset, selection.extentOffset)
-        .clamp(0, localLength);
-    if (localEnd <= localStart) return;
     final plainText = richDocumentPlainText(widget.section.content);
-    final start = (globalStart + localStart).clamp(0, plainText.length);
-    final end = (globalStart + localEnd).clamp(0, plainText.length);
-    if (end <= start) return;
-    final rawText = plainText.substring(start, end);
-    final leadingWhitespace = rawText.length - rawText.trimLeft().length;
-    final trailingWhitespace = rawText.length - rawText.trimRight().length;
-    final adjustedStart = start + leadingWhitespace;
-    final adjustedEnd = end - trailingWhitespace;
-    final text = plainText.substring(adjustedStart, adjustedEnd);
-    if (text.isEmpty) return;
-    widget.onTextSelection(
-      BookReaderTextSelection(
-        startOffset: adjustedStart,
-        endOffset: adjustedEnd,
-        text: text,
-        sectionProgress: plainText.isEmpty
-            ? 0
-            : adjustedStart / plainText.length,
-      ),
+    final resolved = BookReaderSelectionResolver.resolve(
+      selection: selection,
+      globalStart: globalStart,
+      localLength: localLength,
+      plainText: plainText,
     );
+    if (resolved != null) widget.onTextSelection(resolved);
   }
 
   void _replaceVisiblePagesForHighlights() {
