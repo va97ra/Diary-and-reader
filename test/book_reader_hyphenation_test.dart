@@ -49,4 +49,26 @@ void main() {
       expect(displayed.displayToOriginal(offset), offset);
     }
   });
+
+  test('English hyphenation keeps an existing soft hyphen stable', () async {
+    const original = 'Extraordinary inter\u00adnational representation.\n';
+    final source = <Map<String, dynamic>>[
+      {'insert': original},
+    ];
+    final hyphenation = await BookReaderHyphenation.forLanguage('en');
+    final displayed = hyphenation.apply(source);
+    final displayedText = richDocumentPlainText(displayed.document);
+
+    expect(
+      displayedText.replaceAll('\u00ad', ''),
+      original.replaceAll('\u00ad', ''),
+    );
+    expect(displayedText, isNot(contains('\u00ad\u00ad')));
+    for (var offset = 0; offset <= original.length; offset++) {
+      expect(
+        displayed.displayToOriginal(displayed.originalToDisplay(offset)),
+        offset,
+      );
+    }
+  });
 }

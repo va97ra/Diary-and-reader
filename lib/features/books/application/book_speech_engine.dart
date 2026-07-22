@@ -232,12 +232,12 @@ class _BookTtsAudioHandler extends BaseAudioHandler {
     required AudioProcessingState state,
   }) {
     final controls = playing
-        ? const [MediaControl.pause, MediaControl.stop]
-        : const [MediaControl.play, MediaControl.stop];
+        ? const [MediaControl.pause]
+        : const [MediaControl.play];
     playbackState.add(
       PlaybackState(
         controls: controls,
-        androidCompactActionIndices: const [0, 1],
+        androidCompactActionIndices: const [0],
         processingState: state,
         playing: playing,
       ),

@@ -13,6 +13,7 @@ void main() {
       contentWidth: 840,
       horizontalPadding: 48,
       verticalPadding: 36,
+      hyphenateWords: true,
     );
 
     expect(BookReaderSettings.fromJson(settings.toJson()), settings);
