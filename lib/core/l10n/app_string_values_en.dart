@@ -247,6 +247,7 @@ const appStringValuesEn = <String, String>{
   'readerFontSize': 'Text size',
   'fontWeight': 'Font weight',
   'justifyText': 'Justify text',
+  'hyphenateWords': 'Automatic word hyphenation',
   'centerTapControls': 'Toggle controls by tapping the center',
   'swipeChapterNavigation': 'Swipe between chapters',
   'textToSpeech': 'Read aloud (TTS)',

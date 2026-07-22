@@ -246,6 +246,7 @@ const appStringValuesRu = <String, String>{
   'readerFontSize': 'Размер текста',
   'fontWeight': 'Толщина шрифта',
   'justifyText': 'Выравнивать текст по ширине',
+  'hyphenateWords': 'Автоматические переносы слов',
   'centerTapControls': 'Скрывать панели касанием по центру',
   'swipeChapterNavigation': 'Переходить между главами свайпом',
   'textToSpeech': 'Чтение вслух (TTS)',

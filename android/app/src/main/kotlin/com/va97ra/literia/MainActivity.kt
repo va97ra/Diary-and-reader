@@ -7,13 +7,13 @@ import android.net.Uri
 import android.os.StatFs
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
-import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import com.ryanheise.audioservice.AudioServiceActivity
 import java.io.File
 import java.util.UUID
 
-class MainActivity : FlutterActivity() {
+class MainActivity : AudioServiceActivity() {
     private var pendingFolderResult: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {

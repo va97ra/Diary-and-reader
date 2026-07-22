@@ -164,6 +164,13 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
+              title: Text(strings.hyphenateWords),
+              value: _settings.hyphenateWords,
+              onChanged: (value) =>
+                  _change(_settings.copyWith(hyphenateWords: value)),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
               title: Text(strings.centerTapControls),
               value: _settings.centerTapControls,
               onChanged: (value) =>

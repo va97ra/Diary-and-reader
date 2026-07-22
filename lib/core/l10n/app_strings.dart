@@ -254,6 +254,7 @@ class AppStrings {
   String get readerFontSize => _text('readerFontSize');
   String get fontWeight => _text('fontWeight');
   String get justifyText => _text('justifyText');
+  String get hyphenateWords => _text('hyphenateWords');
   String get centerTapControls => _text('centerTapControls');
   String get swipeChapterNavigation => _text('swipeChapterNavigation');
   String get textToSpeech => _text('textToSpeech');
