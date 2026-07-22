@@ -27,6 +27,7 @@ import 'package:dnevnik/features/books/presentation/widgets/book_focus_mode_bar.
 import 'package:dnevnik/features/books/presentation/widgets/book_formatting_toolbar.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_navigator.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_properties_panel.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_rename_title_dialog.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_section_editor.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_workspace_app_bar.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_writer_context_bar.dart';
@@ -203,7 +204,7 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
     final strings = AppStrings.of(context);
     final title = await showDialog<String>(
       context: context,
-      builder: (_) => _RenameTitleDialog(
+      builder: (_) => BookRenameTitleDialog(
         initialTitle: project.metadata.title,
         label: strings.bookTitle,
         fieldKey: const ValueKey('writer-book-title-field'),
@@ -231,7 +232,7 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
     final strings = AppStrings.of(context);
     final title = await showDialog<String>(
       context: context,
-      builder: (_) => _RenameTitleDialog(
+      builder: (_) => BookRenameTitleDialog(
         initialTitle: section.title,
         label: strings.chapterTitle,
         fieldKey: const ValueKey('writer-section-title-field'),
@@ -601,78 +602,5 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
       ),
     );
     await widget.controller.flush();
-  }
-}
-
-class _RenameTitleDialog extends StatefulWidget {
-  const _RenameTitleDialog({
-    required this.initialTitle,
-    required this.label,
-    required this.fieldKey,
-    required this.saveKey,
-    required this.strings,
-  });
-
-  final String initialTitle;
-  final String label;
-  final Key fieldKey;
-  final Key saveKey;
-  final AppStrings strings;
-
-  @override
-  State<_RenameTitleDialog> createState() => _RenameTitleDialogState();
-}
-
-class _RenameTitleDialogState extends State<_RenameTitleDialog> {
-  late final TextEditingController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.initialTitle)
-      ..selection = TextSelection(
-        baseOffset: 0,
-        extentOffset: widget.initialTitle.length,
-      );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: Text(widget.label),
-    content: TextField(
-      key: widget.fieldKey,
-      controller: _controller,
-      autofocus: true,
-      maxLength: 120,
-      textCapitalization: TextCapitalization.sentences,
-      textInputAction: TextInputAction.done,
-      decoration: InputDecoration(
-        labelText: widget.label,
-        border: const OutlineInputBorder(),
-      ),
-      onSubmitted: _submit,
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        child: Text(widget.strings.cancel),
-      ),
-      FilledButton(
-        key: widget.saveKey,
-        onPressed: () => _submit(_controller.text),
-        child: Text(widget.strings.save),
-      ),
-    ],
-  );
-
-  void _submit(String value) {
-    final title = value.trim();
-    if (title.isNotEmpty) Navigator.pop(context, title);
   }
 }
