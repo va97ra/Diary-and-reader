@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math' as math;
 
-import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/book_page_paginator.dart';
 import 'package:dnevnik/features/books/application/book_pagination_measurement.dart';
 import 'package:dnevnik/features/books/domain/book_asset.dart';
@@ -13,6 +11,7 @@ import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/manuscript_statistics.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_editor_metrics.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_editor_page_stage.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_formatting_toolbar.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_mobile_editor.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_page_canvas.dart';
@@ -583,148 +582,36 @@ class BookSectionEditorState extends State<BookSectionEditor> {
   }
 
   Widget _buildSinglePage(BoxConstraints constraints, {bool compact = false}) =>
-      _buildPageStage(
+      BookEditorPageStage(
         key: ValueKey(compact ? 'mobile-a4-page-preview' : 'single-page-view'),
         constraints: constraints,
+        pageFormat: widget.pageFormat,
         pageIndices: [_activePage],
         previousPage: _activePage > 0 ? _activePage - 1 : null,
         nextPage: _activePage < _controllers.length - 1
             ? _activePage + 1
             : null,
         compact: compact,
+        pageBuilder: _buildPage,
+        onSelectPage: _selectPage,
+        onExitCompactPreview: widget.onExitCompactPreview,
       );
 
   Widget _buildPageSpread(BoxConstraints constraints) {
     final firstPage = (_activePage ~/ 2) * 2;
-    return _buildPageStage(
+    return BookEditorPageStage(
       key: const ValueKey('two-page-spread-view'),
       constraints: constraints,
+      pageFormat: widget.pageFormat,
       pageIndices: [
         firstPage,
         if (firstPage + 1 < _controllers.length) firstPage + 1,
       ],
       previousPage: firstPage > 0 ? firstPage - 2 : null,
       nextPage: firstPage + 2 < _controllers.length ? firstPage + 2 : null,
-    );
-  }
-
-  Widget _buildPageStage({
-    required Key key,
-    required BoxConstraints constraints,
-    required List<int> pageIndices,
-    required int? previousPage,
-    required int? nextPage,
-    bool compact = false,
-  }) {
-    final horizontalPadding = compact ? 24.0 : 76.0;
-    final verticalPadding = compact ? 24.0 : 36.0;
-    final compactControlsHeight = compact ? 64.0 : 0.0;
-    const pageGap = 18.0;
-    final naturalWidth =
-        widget.pageFormat.width * pageIndices.length +
-        pageGap * (pageIndices.length - 1);
-    final widthScale =
-        (constraints.maxWidth - horizontalPadding) / naturalWidth;
-    final heightScale =
-        (constraints.maxHeight - verticalPadding - compactControlsHeight) /
-        widget.pageFormat.height;
-    final scale = math
-        .min(1, math.min(widthScale, heightScale))
-        .clamp(0.1, 1.0)
-        .toDouble();
-    final strings = AppStrings.of(context);
-
-    final pages = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (var index = 0; index < pageIndices.length; index++) ...[
-          if (index > 0) const SizedBox(width: pageGap),
-          IgnorePointer(
-            ignoring: compact,
-            child: _buildPage(pageIndices[index], scale),
-          ),
-        ],
-      ],
-    );
-
-    return Stack(
-      key: key,
-      children: [
-        if (compact)
-          Positioned.fill(
-            bottom: compactControlsHeight,
-            child: Center(child: pages),
-          )
-        else
-          Center(child: pages),
-        if (compact)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 8,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (previousPage != null)
-                  IconButton.filledTonal(
-                    key: const ValueKey('book-page-previous'),
-                    tooltip: strings.previousPage,
-                    visualDensity: VisualDensity.compact,
-                    onPressed: () => _selectPage(previousPage),
-                    icon: const Icon(Icons.chevron_left),
-                  ),
-                const SizedBox(width: 12),
-                FilledButton.tonalIcon(
-                  key: const ValueKey('mobile-a4-edit-button'),
-                  onPressed: widget.onExitCompactPreview,
-                  icon: const Icon(Icons.edit_outlined, size: 18),
-                  label: Text(strings.comfortableWriting),
-                ),
-                const SizedBox(width: 12),
-                if (nextPage != null)
-                  IconButton.filledTonal(
-                    key: const ValueKey('book-page-next'),
-                    tooltip: strings.nextPage,
-                    visualDensity: VisualDensity.compact,
-                    onPressed: () => _selectPage(nextPage),
-                    icon: const Icon(Icons.chevron_right),
-                  ),
-              ],
-            ),
-          )
-        else if (!compact) ...[
-          Positioned(
-            left: 12,
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: IconButton.filledTonal(
-                key: const ValueKey('book-page-previous'),
-                tooltip: strings.previousPage,
-                onPressed: previousPage == null
-                    ? null
-                    : () => _selectPage(previousPage),
-                icon: const Icon(Icons.chevron_left),
-              ),
-            ),
-          ),
-          Positioned(
-            right: 12,
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: IconButton.filledTonal(
-                key: const ValueKey('book-page-next'),
-                tooltip: strings.nextPage,
-                onPressed: nextPage == null
-                    ? null
-                    : () => _selectPage(nextPage),
-                icon: const Icon(Icons.chevron_right),
-              ),
-            ),
-          ),
-        ],
-      ],
+      pageBuilder: _buildPage,
+      onSelectPage: _selectPage,
+      onExitCompactPreview: widget.onExitCompactPreview,
     );
   }
 
