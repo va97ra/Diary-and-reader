@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
-import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/book_pagination_measurement.dart';
 import 'package:dnevnik/features/books/application/book_reader_text_anchor.dart';
 import 'package:dnevnik/features/books/domain/book_asset.dart';
@@ -12,6 +11,7 @@ import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_highlight_style.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_page_card.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_page_stage.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_selection_resolver.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_text_selection.dart';
@@ -276,7 +276,15 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
         children: [
           Positioned.fill(
             child: pagesMatchGeometry
-                ? _buildPageStage(context, geometry, mode)
+                ? BookReaderPageStage(
+                    activePage: _activePage,
+                    pageCount: _pageControllers.length,
+                    viewMode: mode,
+                    pageBuilder: (index) => _buildPage(index, geometry),
+                    onSelectPage: _selectPage,
+                    onPreviousSection: widget.onPreviousSectionRequested,
+                    onNextSection: widget.onNextSectionRequested,
+                  )
                 : const Center(
                     key: ValueKey('reader-page-loading'),
                     child: CircularProgressIndicator(),
@@ -316,70 +324,6 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
             ),
         ],
       ),
-    );
-  }
-
-  Widget _buildPageStage(
-    BuildContext context,
-    _ReaderPageGeometry geometry,
-    BookReaderViewMode mode,
-  ) {
-    final isSpread = mode == BookReaderViewMode.spread;
-    final firstPage = isSpread ? (_activePage ~/ 2) * 2 : _activePage;
-    final indices = [
-      firstPage,
-      if (isSpread && firstPage + 1 < _pageControllers.length) firstPage + 1,
-    ];
-    final previous = firstPage > 0 ? firstPage - (isSpread ? 2 : 1) : null;
-    final next = firstPage + (isSpread ? 2 : 1) < _pageControllers.length
-        ? firstPage + (isSpread ? 2 : 1)
-        : null;
-    final strings = AppStrings.of(context);
-
-    return Stack(
-      children: [
-        Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var index = 0; index < indices.length; index++) ...[
-                if (index > 0) const SizedBox(width: 16),
-                _buildPage(indices[index], geometry),
-              ],
-            ],
-          ),
-        ),
-        Positioned(
-          left: 6,
-          top: 0,
-          bottom: 0,
-          child: Center(
-            child: IconButton.filledTonal(
-              key: const ValueKey('reader-previous-page'),
-              tooltip: strings.previousReaderPage,
-              onPressed: previous == null
-                  ? widget.onPreviousSectionRequested
-                  : () => _selectPage(previous),
-              icon: const Icon(Icons.chevron_left),
-            ),
-          ),
-        ),
-        Positioned(
-          right: 6,
-          top: 0,
-          bottom: 0,
-          child: Center(
-            child: IconButton.filledTonal(
-              key: const ValueKey('reader-next-page'),
-              tooltip: strings.nextReaderPage,
-              onPressed: next == null
-                  ? widget.onNextSectionRequested
-                  : () => _selectPage(next),
-              icon: const Icon(Icons.chevron_right),
-            ),
-          ),
-        ),
-      ],
     );
   }
 
