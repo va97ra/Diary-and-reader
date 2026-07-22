@@ -33,6 +33,11 @@ class LiteriaLibraryPage extends StatefulWidget {
 
 class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
   int? _foundDeviceBooks;
+  bool _showGrid = true;
+  String _search = '';
+  BookLibraryFilter _filter = BookLibraryFilter.all;
+  BookLibrarySort _sort = BookLibrarySort.recentlyUpdated;
+  String? _collectionName;
 
   bool get _writing => widget.mode == LiteriaLibraryMode.manuscripts;
 
@@ -51,32 +56,90 @@ class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
     return ListenableBuilder(
       listenable: widget.controller,
       builder: (context, _) {
-        final projects =
-            widget.controller.projects
-                .where(
-                  (project) =>
-                      _writing ? !project.isReadOnly : project.isReadOnly,
-                )
+        final availableProjects = widget.controller.projects
+            .where(
+              (project) => _writing ? !project.isReadOnly : project.isReadOnly,
+            )
+            .toList();
+        final projects = BookLibraryQuery(
+          search: _search,
+          filter: _filter,
+          sort: _sort,
+          collectionName: _collectionName,
+        ).apply(availableProjects);
+        final collections =
+            availableProjects
+                .map((project) => project.collectionName.trim())
+                .where((name) => name.isNotEmpty)
+                .toSet()
                 .toList()
-              ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-        return _buildPage(context, projects);
+              ..sort();
+        return _buildPage(context, projects, collections);
       },
     );
   }
 
-  Widget _buildPage(BuildContext context, List<BookProject> projects) {
+  Widget _buildPage(
+    BuildContext context,
+    List<BookProject> projects,
+    List<String> collections,
+  ) {
     final strings = AppStrings.of(context);
     return Scaffold(
       appBar: AppBar(
         title: Text(
           _writing ? strings.manuscriptLibrary : strings.readingLibrary,
         ),
+        actions: [
+          IconButton(
+            key: const ValueKey('library-layout-toggle'),
+            tooltip: _showGrid ? 'Список' : 'Плитки',
+            onPressed: () => setState(() => _showGrid = !_showGrid),
+            icon: Icon(_showGrid ? Icons.view_list : Icons.grid_view),
+          ),
+          PopupMenuButton<BookLibrarySort>(
+            tooltip: strings.sortBy,
+            initialValue: _sort,
+            onSelected: (value) => setState(() => _sort = value),
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: BookLibrarySort.recentlyUpdated,
+                child: Text(strings.recentlyUpdated),
+              ),
+              PopupMenuItem(
+                value: BookLibrarySort.title,
+                child: Text(strings.byTitle),
+              ),
+              PopupMenuItem(
+                value: BookLibrarySort.author,
+                child: Text(strings.byAuthor),
+              ),
+              if (!_writing)
+                PopupMenuItem(
+                  value: BookLibrarySort.progress,
+                  child: Text(strings.byProgress),
+                ),
+            ],
+          ),
+        ],
       ),
       body: SafeArea(
         top: false,
         child: CustomScrollView(
           key: ValueKey(_writing ? 'manuscript-library' : 'reading-library'),
           slivers: [
+            SliverToBoxAdapter(
+              child: _LibraryControls(
+                writing: _writing,
+                filter: _filter,
+                collectionName: _collectionName,
+                collections: collections,
+                onSearchChanged: (value) => setState(() => _search = value),
+                onFilterChanged: (value) => setState(() => _filter = value),
+                onCollectionChanged: (value) =>
+                    setState(() => _collectionName = value),
+              ),
+            ),
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -137,9 +200,15 @@ class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
             if (projects.isEmpty)
               SliverFillRemaining(
                 hasScrollBody: false,
-                child: _EmptyLibrary(writing: _writing),
+                child: _EmptyLibrary(
+                  writing: _writing,
+                  filtered:
+                      _search.trim().isNotEmpty ||
+                      _filter != BookLibraryFilter.all ||
+                      _collectionName != null,
+                ),
               )
-            else
+            else if (_showGrid)
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
                 sliver: SliverGrid.builder(
@@ -157,6 +226,25 @@ class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
                       writing: _writing,
                       onOpen: () => widget.onOpen(project),
                       onDelete: () => widget.onDelete(project),
+                      onMoveToCollection: () => _showCollectionDialog(project),
+                    );
+                  },
+                ),
+              ),
+            if (projects.isNotEmpty && !_showGrid)
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 28),
+                sliver: SliverList.separated(
+                  itemCount: projects.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final project = projects[index];
+                    return _LibraryListTile(
+                      project: project,
+                      writing: _writing,
+                      onOpen: () => widget.onOpen(project),
+                      onDelete: () => widget.onDelete(project),
+                      onMoveToCollection: () => _showCollectionDialog(project),
                     );
                   },
                 ),
@@ -180,12 +268,153 @@ class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
       if (mounted) setState(() => _foundDeviceBooks = null);
     }
   }
+
+  Future<void> _showCollectionDialog(BookProject project) async {
+    final strings = AppStrings.of(context);
+    final controller = TextEditingController(text: project.collectionName);
+    final value = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(strings.moveToCollection),
+        content: TextField(
+          key: const ValueKey('library-collection-field'),
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(
+            labelText: strings.collectionName,
+            hintText: strings.collectionHint,
+          ),
+          onSubmitted: (text) => Navigator.pop(dialogContext, text),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(strings.cancel),
+          ),
+          if (project.collectionName.isNotEmpty)
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, ''),
+              child: Text(strings.removeFromCollection),
+            ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            child: Text(strings.save),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (value == null) return;
+    widget.controller.updateProjectCollection(project.id, value);
+    await widget.controller.flush();
+  }
+}
+
+class _LibraryControls extends StatelessWidget {
+  const _LibraryControls({
+    required this.writing,
+    required this.filter,
+    required this.collectionName,
+    required this.collections,
+    required this.onSearchChanged,
+    required this.onFilterChanged,
+    required this.onCollectionChanged,
+  });
+
+  final bool writing;
+  final BookLibraryFilter filter;
+  final String? collectionName;
+  final List<String> collections;
+  final ValueChanged<String> onSearchChanged;
+  final ValueChanged<BookLibraryFilter> onFilterChanged;
+  final ValueChanged<String?> onCollectionChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    final filters = writing
+        ? const [BookLibraryFilter.all]
+        : const [
+            BookLibraryFilter.all,
+            BookLibraryFilter.unread,
+            BookLibraryFilter.inProgress,
+            BookLibraryFilter.finished,
+          ];
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SearchBar(
+            key: const ValueKey('library-search'),
+            hintText: strings.librarySearchHint,
+            leading: const Icon(Icons.search),
+            onChanged: onSearchChanged,
+          ),
+          if (!writing) ...[
+            const SizedBox(height: 10),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final value in filters) ...[
+                    FilterChip(
+                      selected: filter == value,
+                      label: Text(_filterLabel(strings, value)),
+                      onSelected: (_) => onFilterChanged(value),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                ],
+              ),
+            ),
+          ],
+          if (collections.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String?>(
+              initialValue: collectionName,
+              decoration: InputDecoration(
+                labelText: strings.collectionName,
+                isDense: true,
+              ),
+              items: [
+                DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text(strings.allCollections),
+                ),
+                DropdownMenuItem<String?>(
+                  value: '',
+                  child: Text(strings.noCollection),
+                ),
+                ...collections.map(
+                  (name) =>
+                      DropdownMenuItem<String?>(value: name, child: Text(name)),
+                ),
+              ],
+              onChanged: onCollectionChanged,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _filterLabel(AppStrings strings, BookLibraryFilter filter) =>
+      switch (filter) {
+        BookLibraryFilter.all => strings.allBooks,
+        BookLibraryFilter.unread => strings.unreadBooks,
+        BookLibraryFilter.inProgress => strings.readingBooks,
+        BookLibraryFilter.finished => strings.finishedBooks,
+        BookLibraryFilter.manuscripts => strings.manuscripts,
+        BookLibraryFilter.imported => strings.importedBooks,
+      };
 }
 
 class _EmptyLibrary extends StatelessWidget {
-  const _EmptyLibrary({required this.writing});
+  const _EmptyLibrary({required this.writing, required this.filtered});
 
   final bool writing;
+  final bool filtered;
 
   @override
   Widget build(BuildContext context) {
@@ -203,7 +432,11 @@ class _EmptyLibrary extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              writing ? strings.emptyManuscripts : strings.emptyReadingLibrary,
+              filtered
+                  ? strings.noBooksFound
+                  : writing
+                  ? strings.emptyManuscripts
+                  : strings.emptyReadingLibrary,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleMedium,
             ),
@@ -220,12 +453,14 @@ class _LibraryCard extends StatelessWidget {
     required this.writing,
     required this.onOpen,
     required this.onDelete,
+    required this.onMoveToCollection,
   });
 
   final BookProject project;
   final bool writing;
   final VoidCallback onOpen;
   final VoidCallback onDelete;
+  final VoidCallback onMoveToCollection;
 
   @override
   Widget build(BuildContext context) {
@@ -255,9 +490,22 @@ class _LibraryCard extends StatelessWidget {
                     child: PopupMenuButton<_LibraryCardAction>(
                       tooltip: strings.more,
                       onSelected: (action) {
-                        if (action == _LibraryCardAction.delete) onDelete();
+                        switch (action) {
+                          case _LibraryCardAction.collection:
+                            onMoveToCollection();
+                          case _LibraryCardAction.delete:
+                            onDelete();
+                        }
                       },
                       itemBuilder: (_) => [
+                        PopupMenuItem(
+                          value: _LibraryCardAction.collection,
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.folder_outlined),
+                            title: Text(strings.moveToCollection),
+                          ),
+                        ),
                         PopupMenuItem(
                           value: _LibraryCardAction.delete,
                           child: ListTile(
@@ -311,4 +559,78 @@ class _LibraryCard extends StatelessWidget {
   }
 }
 
-enum _LibraryCardAction { delete }
+class _LibraryListTile extends StatelessWidget {
+  const _LibraryListTile({
+    required this.project,
+    required this.writing,
+    required this.onOpen,
+    required this.onDelete,
+    required this.onMoveToCollection,
+  });
+
+  final BookProject project;
+  final bool writing;
+  final VoidCallback onOpen;
+  final VoidCallback onDelete;
+  final VoidCallback onMoveToCollection;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    return Card(
+      key: ValueKey('literia-project-list-${project.id}'),
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        onTap: onOpen,
+        minTileHeight: 104,
+        leading: BookCoverView(
+          project: project,
+          width: 62,
+          height: 88,
+          borderRadius: 6,
+        ),
+        title: Text(project.metadata.title, maxLines: 2),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              project.metadata.author.isEmpty
+                  ? (writing ? strings.manuscript : strings.importedBook)
+                  : project.metadata.author,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (project.collectionName.isNotEmpty)
+              Text(
+                project.collectionName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            if (!writing)
+              LinearProgressIndicator(value: readingProgress(project)),
+          ],
+        ),
+        trailing: PopupMenuButton<_LibraryCardAction>(
+          tooltip: strings.more,
+          onSelected: (action) => switch (action) {
+            _LibraryCardAction.collection => onMoveToCollection(),
+            _LibraryCardAction.delete => onDelete(),
+          },
+          itemBuilder: (_) => [
+            PopupMenuItem(
+              value: _LibraryCardAction.collection,
+              child: Text(strings.moveToCollection),
+            ),
+            PopupMenuItem(
+              value: _LibraryCardAction.delete,
+              child: Text(strings.deleteBook),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+enum _LibraryCardAction { collection, delete }
