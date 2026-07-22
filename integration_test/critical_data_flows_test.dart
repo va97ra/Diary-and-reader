@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:convert';
 
 import 'package:dnevnik/app/author_studio_app.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
@@ -7,6 +7,7 @@ import 'package:dnevnik/features/books/application/book_import_parser.dart';
 import 'package:dnevnik/features/books/application/legacy_diary_migrator.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_repository.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_snapshot.dart';
+import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 import 'package:dnevnik/features/books/legacy/legacy_diary_snapshot.dart';
 import 'package:flutter/material.dart';
@@ -17,7 +18,18 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('autosave survives an app lifecycle restart', (tester) async {
-    final repository = _MemoryWorkspaceRepository();
+    final project = BookProject.create(
+      title: 'Новая книга',
+      chapterTitle: 'Глава 1',
+      languageCode: 'ru',
+    );
+    final repository = _MemoryWorkspaceRepository(
+      seed: AuthorWorkspaceSnapshot(
+        projects: [project],
+        activeProjectId: project.id,
+        languageCode: 'ru',
+      ),
+    );
     final firstController = AuthorWorkspaceController(
       repository,
       saveDebounce: const Duration(hours: 1),
@@ -29,8 +41,9 @@ void main() {
     ]);
     await tester.pumpWidget(AuthorStudioApp(controller: firstController));
 
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
-    await tester.pumpAndSettle();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pump(const Duration(milliseconds: 100));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pumpWidget(const SizedBox.shrink());
     firstController.dispose();
 
@@ -78,7 +91,7 @@ void main() {
   );
 
   test('FB2 import is persisted and remains readable', () async {
-    final bytes = await File('test/fixtures/import_sample.fb2').readAsBytes();
+    final bytes = utf8.encode(_fb2Fixture);
     final imported = BookImportParser.parse(
       BookImportFile(name: 'import_sample.fb2', bytes: bytes),
     );
@@ -103,6 +116,17 @@ void main() {
     restoredController.dispose();
   });
 }
+
+const _fb2Fixture = '''<?xml version="1.0" encoding="UTF-8"?>
+<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">
+  <description><title-info>
+    <author><first-name>Тестовый</first-name><last-name>Автор</last-name></author>
+    <book-title>Книга для интеграционного теста</book-title><lang>ru</lang>
+  </title-info></description>
+  <body><section><title><p>Глава первая</p></title>
+    <p>Текст должен сохраниться после перезапуска.</p>
+  </section></body>
+</FictionBook>''';
 
 class _MemoryWorkspaceRepository implements AuthorWorkspaceRepository {
   _MemoryWorkspaceRepository({AuthorWorkspaceSnapshot? seed}) : snapshot = seed;
