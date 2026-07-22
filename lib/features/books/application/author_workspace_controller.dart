@@ -3,6 +3,7 @@ import 'dart:collection';
 
 import 'package:dnevnik/features/books/application/book_manuscript_search.dart';
 import 'package:dnevnik/features/books/application/section_tree_editor.dart';
+import 'package:dnevnik/features/books/application/workspace_persistence_coordinator.dart';
 import 'package:dnevnik/features/books/application/workspace_save_state.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_repository.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_snapshot.dart';
@@ -24,34 +25,32 @@ import 'package:flutter/foundation.dart';
 
 class AuthorWorkspaceController extends ChangeNotifier {
   AuthorWorkspaceController(
-    this._repository, {
+    AuthorWorkspaceRepository repository, {
     BookVersionRepository? versionRepository,
-    this.saveDebounce = const Duration(milliseconds: 350),
-    this.maxSaveDelay = const Duration(seconds: 2),
+    Duration saveDebounce = const Duration(milliseconds: 350),
+    Duration maxSaveDelay = const Duration(seconds: 2),
   }) : _versionRepository =
-           versionRepository ?? _TransientBookVersionRepository(),
-       assert(!saveDebounce.isNegative),
-       assert(!maxSaveDelay.isNegative);
+           versionRepository ?? _TransientBookVersionRepository() {
+    _persistence = WorkspacePersistenceCoordinator(
+      repository,
+      () => _snapshot,
+      onStateChanged: notifyListeners,
+      saveDebounce: saveDebounce,
+      maxSaveDelay: maxSaveDelay,
+    );
+  }
 
-  final AuthorWorkspaceRepository _repository;
   final BookVersionRepository _versionRepository;
-  final Duration saveDebounce;
-  final Duration maxSaveDelay;
+  late final WorkspacePersistenceCoordinator _persistence;
   final List<BookProject> _projects = [];
-  Future<void> _saveQueue = Future.value();
-  Timer? _saveTimer;
-  Timer? _maxSaveTimer;
   String? _activeProjectId;
   String _languageCode = 'ru';
   LiteriaAppPreferences _appPreferences = const LiteriaAppPreferences();
-  WorkspaceSaveState _saveState = WorkspaceSaveState.saved;
-  int _changeRevision = 0;
-  bool _isDisposed = false;
 
   UnmodifiableListView<BookProject> get projects =>
       UnmodifiableListView(_projects);
   String get languageCode => _languageCode;
-  WorkspaceSaveState get saveState => _saveState;
+  WorkspaceSaveState get saveState => _persistence.saveState;
   LiteriaAppPreferences get appPreferences => _appPreferences;
   BookReaderSettings get readerSettings => _appPreferences.readerSettings;
   LiteriaThemePreference get themePreference => _appPreferences.theme;
@@ -77,7 +76,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
   BookSection? get activeSection => activeProject?.activeSection;
 
   Future<void> load({required String preferredLanguage}) async {
-    final snapshot = await _repository.load();
+    final snapshot = await _persistence.load();
     if (snapshot == null) {
       _languageCode = preferredLanguage == 'en' ? 'en' : 'ru';
       return;
@@ -317,7 +316,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
     );
     _markDirty();
     notifyListeners();
-    _scheduleSave();
+    _persistence.scheduleSave();
   }
 
   void addAsset(BookAsset asset) {
@@ -516,22 +515,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
     safetyLabel: safetyLabel,
   );
 
-  Future<void> flush() async {
-    _saveTimer?.cancel();
-    _saveTimer = null;
-    _maxSaveTimer?.cancel();
-    _maxSaveTimer = null;
-    final revision = _changeRevision;
-    final snapshot = _snapshot;
-    try {
-      await _enqueueSave(snapshot);
-      if (_isDisposed || revision != _changeRevision) return;
-      _setSaveState(WorkspaceSaveState.saved);
-    } catch (_) {
-      if (_isDisposed || revision != _changeRevision) return;
-      _setSaveState(WorkspaceSaveState.error);
-    }
-  }
+  Future<void> flush() => _persistence.flush();
 
   Future<void> _replaceActiveProjectFromExternalSource(
     BookProject source, {
@@ -638,31 +622,10 @@ class AuthorWorkspaceController extends ChangeNotifier {
   void _changed() {
     _markDirty();
     notifyListeners();
-    _scheduleSave();
+    _persistence.scheduleSave();
   }
 
-  void _markDirty() {
-    _changeRevision++;
-    _saveState = WorkspaceSaveState.saving;
-  }
-
-  void _setSaveState(WorkspaceSaveState state) {
-    if (_saveState == state) return;
-    _saveState = state;
-    notifyListeners();
-  }
-
-  void _scheduleSave() {
-    _saveTimer?.cancel();
-    _saveTimer = Timer(saveDebounce, () => unawaited(flush()));
-    _maxSaveTimer ??= Timer(maxSaveDelay, () => unawaited(flush()));
-  }
-
-  Future<void> _enqueueSave(AuthorWorkspaceSnapshot snapshot) {
-    final save = _saveQueue.then((_) => _repository.save(snapshot));
-    _saveQueue = save.catchError((_) {});
-    return save;
-  }
+  void _markDirty() => _persistence.markChanged();
 
   AuthorWorkspaceSnapshot get _snapshot => AuthorWorkspaceSnapshot(
     projects: List.unmodifiable(_projects),
@@ -673,10 +636,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
 
   @override
   void dispose() {
-    _isDisposed = true;
-    _saveTimer?.cancel();
-    _maxSaveTimer?.cancel();
-    unawaited(_enqueueSave(_snapshot).catchError((_) {}));
+    _persistence.dispose();
     super.dispose();
   }
 }
