@@ -7,6 +7,7 @@ import 'package:dnevnik/features/books/application/transient_book_version_reposi
 import 'package:dnevnik/features/books/application/workspace_library_editor.dart';
 import 'package:dnevnik/features/books/application/workspace_persistence_coordinator.dart';
 import 'package:dnevnik/features/books/application/workspace_save_state.dart';
+import 'package:dnevnik/features/books/application/workspace_version_coordinator.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_repository.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_snapshot.dart';
 import 'package:dnevnik/features/books/domain/book_asset.dart';
@@ -31,8 +32,9 @@ class AuthorWorkspaceController extends ChangeNotifier {
     BookVersionRepository? versionRepository,
     Duration saveDebounce = const Duration(milliseconds: 350),
     Duration maxSaveDelay = const Duration(seconds: 2),
-  }) : _versionRepository =
-           versionRepository ?? TransientBookVersionRepository() {
+  }) : _versions = WorkspaceVersionCoordinator(
+         versionRepository ?? TransientBookVersionRepository(),
+       ) {
     _persistence = WorkspacePersistenceCoordinator(
       repository,
       () => _snapshot,
@@ -42,7 +44,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
     );
   }
 
-  final BookVersionRepository _versionRepository;
+  final WorkspaceVersionCoordinator _versions;
   late final WorkspacePersistenceCoordinator _persistence;
   final List<BookProject> _projects = [];
   String? _activeProjectId;
@@ -390,23 +392,20 @@ class AuthorWorkspaceController extends ChangeNotifier {
   Future<List<BookProjectVersion>> listVersions() async {
     final project = activeProject;
     if (project == null || project.isReadOnly) return const [];
-    return _versionRepository.list(project.id);
+    return _versions.list(project);
   }
 
   Future<BookProjectVersion?> createVersion({String? label}) async {
     await flush();
     final project = activeProject;
     if (project == null || project.isReadOnly) return null;
-    return _versionRepository.create(project: project, label: label);
+    return _versions.create(project, label: label);
   }
 
   Future<void> deleteVersion(String versionId) async {
     final project = activeProject;
     if (project == null || project.isReadOnly) return;
-    await _versionRepository.delete(
-      projectId: project.id,
-      versionId: versionId,
-    );
+    await _versions.delete(project, versionId);
   }
 
   Future<void> restoreVersion(
@@ -444,32 +443,12 @@ class AuthorWorkspaceController extends ChangeNotifier {
     if (current == null || current.isReadOnly || source.sections.isEmpty) {
       return;
     }
-    await _versionRepository.create(project: current, label: safetyLabel);
     final index = _projects.indexWhere((project) => project.id == current.id);
     if (index < 0) return;
-    final copied = BookProject.fromJson(source.toJson());
-    _projects[index] = BookProject(
-      id: current.id,
-      metadata: copied.metadata,
-      sections: copied.sections,
-      activeSectionId: copied.activeSectionId,
-      createdAt: current.createdAt,
-      updatedAt: DateTime.now(),
-      layoutSettings: copied.layoutSettings,
-      paragraphSettings: copied.paragraphSettings,
-      readerSettings: copied.readerSettings,
-      readerProgress: copied.readerProgress,
-      readerAnnotations: copied.readerAnnotations,
-      kind: current.kind,
-      sourceFormat: current.sourceFormat,
-      sourceFileName: current.sourceFileName,
-      sourceStoredPath: current.sourceStoredPath,
-      sourceFingerprint: current.sourceFingerprint,
-      sourceExternalUri: current.sourceExternalUri,
-      sourceFileSize: current.sourceFileSize,
-      collectionName: current.collectionName,
-      assets: current.assets,
-      coverAssetId: current.coverAssetId,
+    _projects[index] = await _versions.replaceFromExternalSource(
+      current: current,
+      source: source,
+      safetyLabel: safetyLabel,
     );
     _activeProjectId = current.id;
     _markDirty();
