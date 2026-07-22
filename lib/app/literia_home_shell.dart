@@ -1,3 +1,4 @@
+import 'package:dnevnik/app/literia_book_details_page.dart';
 import 'package:dnevnik/app/literia_book_storage_page.dart';
 import 'package:dnevnik/app/literia_device_books_page.dart';
 import 'package:dnevnik/app/literia_home_page.dart';
@@ -76,6 +77,7 @@ class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
         onPrimaryAction: _createManuscript,
         onOpen: _openManuscript,
         onDelete: _deleteProject,
+        onAbout: _openBookDetails,
       ),
     ),
   );
@@ -94,6 +96,7 @@ class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
             : null,
         onOpen: _openReader,
         onDelete: _deleteProject,
+        onAbout: _openBookDetails,
       ),
     ),
   );
@@ -230,11 +233,24 @@ class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
           onSettingsChanged: widget.controller.updateReaderSettings,
           onProgressChanged: widget.controller.updateReaderProgress,
           onAnnotationsChanged: widget.controller.updateReaderAnnotations,
+          onReadingTimeChanged: (duration) =>
+              widget.controller.recordReadingTime(selected.id, duration),
         ),
       ),
     );
     await widget.controller.flush();
   }
+
+  Future<void> _openBookDetails(BookProject project) =>
+      Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => LiteriaBookDetailsPage(
+            projectId: project.id,
+            controller: widget.controller,
+            onRead: _openReader,
+          ),
+        ),
+      );
 
   Future<void> _deleteProject(BookProject project) async {
     final strings = AppStrings.of(context);

@@ -43,6 +43,7 @@ class WorkspaceVersionCoordinator {
       sourceExternalUri: current.sourceExternalUri,
       sourceFileSize: current.sourceFileSize,
       collectionName: current.collectionName,
+      libraryState: current.libraryState,
       assets: current.assets,
       coverAssetId: current.coverAssetId,
     );

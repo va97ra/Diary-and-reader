@@ -12,6 +12,7 @@ import 'package:dnevnik/features/books/domain/author_workspace_repository.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_snapshot.dart';
 import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
+import 'package:dnevnik/features/books/domain/book_library_state.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
@@ -195,6 +196,51 @@ class AuthorWorkspaceController extends ChangeNotifier {
     _projects[index] = WorkspaceLibraryEditor.updateCollection(
       _projects[index],
       normalized,
+    );
+    _changed();
+  }
+
+  void updateProjectMetadata(String id, BookMetadata metadata) {
+    final index = _projects.indexWhere((project) => project.id == id);
+    if (index < 0) return;
+    _projects[index] = WorkspaceLibraryEditor.updateMetadata(
+      _projects[index],
+      metadata,
+    );
+    _changed();
+  }
+
+  void updateProjectFavorite(String id, bool isFavorite) {
+    final index = _projects.indexWhere((project) => project.id == id);
+    if (index < 0 || _projects[index].libraryState.isFavorite == isFavorite) {
+      return;
+    }
+    _projects[index] = WorkspaceLibraryEditor.updateFavorite(
+      _projects[index],
+      isFavorite,
+    );
+    _changed();
+  }
+
+  void updateProjectReadingStatus(String id, BookReadingStatus status) {
+    final index = _projects.indexWhere((project) => project.id == id);
+    if (index < 0 || _projects[index].libraryState.readingStatus == status) {
+      return;
+    }
+    _projects[index] = WorkspaceLibraryEditor.updateReadingStatus(
+      _projects[index],
+      status,
+    );
+    _changed();
+  }
+
+  void recordReadingTime(String id, Duration duration) {
+    if (duration.inSeconds <= 0) return;
+    final index = _projects.indexWhere((project) => project.id == id);
+    if (index < 0) return;
+    _projects[index] = WorkspaceLibraryEditor.recordReading(
+      _projects[index],
+      duration,
     );
     _changed();
   }
