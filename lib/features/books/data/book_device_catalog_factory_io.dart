@@ -153,7 +153,13 @@ class IoBookDeviceCatalogGateway implements BookDeviceCatalogGateway {
     final lower = path.toLowerCase();
     return lower.endsWith('.epub') ||
         lower.endsWith('.fb2') ||
-        lower.endsWith('.zip');
+        lower.endsWith('.zip') ||
+        lower.endsWith('.txt') ||
+        lower.endsWith('.rtf') ||
+        lower.endsWith('.docx') ||
+        lower.endsWith('.mobi') ||
+        lower.endsWith('.doc') ||
+        lower.endsWith('.chm');
   }
 
   String _lastSegment(String path) => path

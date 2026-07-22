@@ -7,12 +7,16 @@ import 'package:dnevnik/features/books/application/book_import_file.dart';
 import 'package:dnevnik/features/books/application/book_import_parsing_support.dart';
 import 'package:dnevnik/features/books/application/epub_book_format_parser.dart';
 import 'package:dnevnik/features/books/application/fb2_book_format_parser.dart';
+import 'package:dnevnik/features/books/application/mobi_book_format_parser.dart';
+import 'package:dnevnik/features/books/application/text_document_book_format_parser.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 
 abstract final class BookImportParser {
   static const List<BookFormatParser> _parsers = [
     EpubBookFormatParser(),
     Fb2BookFormatParser(),
+    TextDocumentBookFormatParser(),
+    MobiBookFormatParser(),
   ];
 
   static BookProject parse(BookImportFile file, {DateTime? now}) {
@@ -44,6 +48,13 @@ abstract final class BookImportParser {
     if (name.endsWith('.epub')) return BookImportFormat.epub;
     if (name.endsWith('.fb2')) return BookImportFormat.fb2;
     if (name.endsWith('.fb2.zip')) return BookImportFormat.fb2Zip;
+    if (name.endsWith('.txt')) return BookImportFormat.txt;
+    if (name.endsWith('.rtf')) return BookImportFormat.rtf;
+    if (name.endsWith('.docx')) return BookImportFormat.docx;
+    if (name.endsWith('.mobi')) return BookImportFormat.mobi;
+    if (name.endsWith('.doc') || name.endsWith('.chm')) {
+      throw const BookImportException(BookImportFailure.conversionRequired);
+    }
     if (_isZip(file.bytes)) {
       final archive = ZipDecoder().decodeBytes(file.bytes);
       if (BookImportParsingSupport.archiveFile(

@@ -142,6 +142,12 @@ class FileBookSourceStorage implements BookSourceStorage {
     if (lower.endsWith('.fb2.zip')) return '.fb2.zip';
     if (lower.endsWith('.epub')) return '.epub';
     if (lower.endsWith('.fb2')) return '.fb2';
+    if (lower.endsWith('.txt')) return '.txt';
+    if (lower.endsWith('.rtf')) return '.rtf';
+    if (lower.endsWith('.docx')) return '.docx';
+    if (lower.endsWith('.mobi')) return '.mobi';
+    if (lower.endsWith('.doc')) return '.doc';
+    if (lower.endsWith('.chm')) return '.chm';
     if (lower.endsWith('.zip')) return '.zip';
     return '.book';
   }

@@ -8,6 +8,7 @@ import 'package:dnevnik/features/books/domain/book_project.dart';
 enum BookImportItemFailure {
   duplicate,
   unsupportedFormat,
+  conversionRequired,
   noReadableText,
   invalidFile,
   notEnoughSpace,
@@ -47,6 +48,10 @@ class BookImportBatchResult {
         (item) =>
             !item.succeeded && item.failure != BookImportItemFailure.duplicate,
       )
+      .length;
+
+  int get conversionRequiredCount => items
+      .where((item) => item.failure == BookImportItemFailure.conversionRequired)
       .length;
 }
 
@@ -100,6 +105,8 @@ class BookImportCoordinator {
             failure: switch (error.failure) {
               BookImportFailure.unsupportedFormat =>
                 BookImportItemFailure.unsupportedFormat,
+              BookImportFailure.conversionRequired =>
+                BookImportItemFailure.conversionRequired,
               BookImportFailure.noReadableText =>
                 BookImportItemFailure.noReadableText,
               BookImportFailure.invalidFile =>

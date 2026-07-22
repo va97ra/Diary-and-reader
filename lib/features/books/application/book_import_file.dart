@@ -12,7 +12,12 @@ class BookImportFile {
   final String sourceUri;
 }
 
-enum BookImportFailure { unsupportedFormat, invalidFile, noReadableText }
+enum BookImportFailure {
+  unsupportedFormat,
+  conversionRequired,
+  invalidFile,
+  noReadableText,
+}
 
 class BookImportException implements Exception {
   const BookImportException(this.failure, [this.details = '']);

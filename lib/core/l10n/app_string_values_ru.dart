@@ -47,7 +47,7 @@ const appStringValuesRu = <String, String>{
   'manuscriptLibrary': 'Мои рукописи',
   'readingLibrary': 'Мои книги',
   'createBook': 'Создать книгу',
-  'supportedBookFormats': 'EPUB, FB2 и FB2.ZIP без DRM',
+  'supportedBookFormats': 'EPUB, FB2, TXT, RTF, DOCX и MOBI без DRM',
   'emptyManuscripts': 'Здесь появятся книги, которые вы пишете',
   'emptyReadingLibrary': 'Здесь появятся загруженные книги',
   'appearance': 'Оформление приложения',
@@ -153,7 +153,9 @@ const appStringValuesRu = <String, String>{
   'imagesInBook': 'Изображений',
   'bookImported': 'Книга добавлена в библиотеку',
   'bookImportFailed': 'Не удалось прочитать книгу',
-  'unsupportedBookFormat': 'Поддерживаются EPUB, FB2 и FB2.ZIP',
+  'unsupportedBookFormat': 'Формат книги пока не поддерживается',
+  'conversionRequired':
+      'Старые DOC и CHM нужно сначала преобразовать в DOCX или EPUB',
   'noReadableBookText':
       'В книге не найдено доступное содержимое. Возможно, файл повреждён или защищён DRM.',
   'newPart': 'Новая часть',

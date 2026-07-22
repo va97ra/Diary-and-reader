@@ -164,6 +164,7 @@ class AppStrings {
   String get bookImported => _text('bookImported');
   String get bookImportFailed => _text('bookImportFailed');
   String get unsupportedBookFormat => _text('unsupportedBookFormat');
+  String get conversionRequired => _text('conversionRequired');
   String get noReadableBookText => _text('noReadableBookText');
   String sectionsInBook(int count) => '${_text('sectionsInBook')}: $count';
   String imagesInBook(int count) => '${_text('imagesInBook')}: $count';
