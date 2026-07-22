@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:dnevnik/features/books/application/legacy_diary_migrator.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_repository.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_snapshot.dart';
-import 'package:dnevnik/features/diary/domain/diary_snapshot.dart';
+import 'package:dnevnik/features/books/legacy/legacy_diary_snapshot.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PreferencesAuthorWorkspaceRepository
@@ -50,9 +50,9 @@ class PreferencesAuthorWorkspaceRepository
     return AuthorWorkspaceSnapshot.fromJson(json);
   }
 
-  DiarySnapshot? _decodeDiary(String? encoded) {
+  LegacyDiarySnapshot? _decodeDiary(String? encoded) {
     final json = _decodeMap(encoded);
-    return json == null ? null : DiarySnapshot.fromJson(json);
+    return json == null ? null : LegacyDiarySnapshot.fromJson(json);
   }
 
   Map<String, dynamic>? _decodeMap(String? encoded) {

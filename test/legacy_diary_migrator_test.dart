@@ -1,16 +1,14 @@
 import 'package:dnevnik/features/books/application/legacy_diary_migrator.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
-import 'package:dnevnik/features/diary/domain/diary_entry.dart';
-import 'package:dnevnik/features/diary/domain/diary_snapshot.dart';
-import 'package:dnevnik/features/diary/domain/page_margins.dart';
+import 'package:dnevnik/features/books/legacy/legacy_diary_snapshot.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('migrates diary entries and pages into semantic book chapters', () {
     final createdAt = DateTime.utc(2026, 7, 14);
-    final snapshot = DiarySnapshot(
+    final snapshot = LegacyDiarySnapshot(
       entries: [
-        DiaryEntry(
+        LegacyDiaryEntry(
           id: 'entry-1',
           title: 'Первая глава',
           createdAt: createdAt,
@@ -30,7 +28,6 @@ void main() {
       ],
       activeEntryId: 'entry-1',
       languageCode: 'ru',
-      margins: const PageMargins.normal(),
     );
 
     final workspace = LegacyDiaryMigrator.migrate(snapshot);

@@ -3,12 +3,12 @@ import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
-import 'package:dnevnik/features/diary/domain/diary_snapshot.dart';
+import 'package:dnevnik/features/books/legacy/legacy_diary_snapshot.dart';
 
 class LegacyDiaryMigrator {
   const LegacyDiaryMigrator._();
 
-  static AuthorWorkspaceSnapshot migrate(DiarySnapshot snapshot) {
+  static AuthorWorkspaceSnapshot migrate(LegacyDiarySnapshot snapshot) {
     final now = DateTime.now();
     final sections = snapshot.entries
         .map(

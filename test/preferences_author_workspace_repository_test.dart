@@ -3,20 +3,26 @@ import 'dart:convert';
 import 'package:dnevnik/features/books/data/preferences_author_workspace_repository.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_snapshot.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
-import 'package:dnevnik/features/diary/domain/diary_entry.dart';
-import 'package:dnevnik/features/diary/domain/diary_snapshot.dart';
-import 'package:dnevnik/features/diary/domain/page_margins.dart';
+import 'package:dnevnik/features/books/legacy/legacy_diary_snapshot.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   test('migrates legacy diary storage once and persists version 2', () async {
-    final entry = DiaryEntry.create(title: 'Пролог');
-    final legacy = DiarySnapshot(
+    final entry = LegacyDiaryEntry(
+      id: 'legacy-entry',
+      title: 'Пролог',
+      createdAt: DateTime.utc(2026),
+      pages: const [
+        [
+          {'insert': '\n'},
+        ],
+      ],
+    );
+    final legacy = LegacyDiarySnapshot(
       entries: [entry],
       activeEntryId: entry.id,
       languageCode: 'ru',
-      margins: const PageMargins.normal(),
     );
     SharedPreferences.setMockInitialValues({
       PreferencesAuthorWorkspaceRepository.legacyStorageKey: jsonEncode(
