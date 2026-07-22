@@ -490,8 +490,6 @@ class BookSectionEditorState extends State<BookSectionEditor> {
                   controller: controller,
                   focusNode: _focusNodes[_activePage],
                   scrollController: _scrollControllers[_activePage],
-                  titleController: _titleController,
-                  onTitleChanged: widget.onTitleChanged,
                   pageNumber: _activePage + 1,
                   pageCount: _controllers.length,
                   pageFormat: widget.pageFormat,

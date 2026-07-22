@@ -26,14 +26,21 @@ class AuthorWorkspaceController extends ChangeNotifier {
   AuthorWorkspaceController(
     this._repository, {
     BookVersionRepository? versionRepository,
+    this.saveDebounce = const Duration(milliseconds: 350),
+    this.maxSaveDelay = const Duration(seconds: 2),
   }) : _versionRepository =
-           versionRepository ?? _TransientBookVersionRepository();
+           versionRepository ?? _TransientBookVersionRepository(),
+       assert(!saveDebounce.isNegative),
+       assert(!maxSaveDelay.isNegative);
 
   final AuthorWorkspaceRepository _repository;
   final BookVersionRepository _versionRepository;
+  final Duration saveDebounce;
+  final Duration maxSaveDelay;
   final List<BookProject> _projects = [];
   Future<void> _saveQueue = Future.value();
   Timer? _saveTimer;
+  Timer? _maxSaveTimer;
   String? _activeProjectId;
   String _languageCode = 'ru';
   LiteriaAppPreferences _appPreferences = const LiteriaAppPreferences();
@@ -194,6 +201,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
 
   void selectProject(String id) {
     if (_activeProjectId == id) return;
+    unawaited(flush());
     _activeProjectId = id;
     final selected = _projects.where((project) => project.id == id).firstOrNull;
     if (selected?.isReadOnly == true) {
@@ -217,6 +225,8 @@ class AuthorWorkspaceController extends ChangeNotifier {
   }
 
   void selectSection(String id) {
+    if (activeProject?.activeSectionId == id) return;
+    unawaited(flush());
     _replaceActiveProject((project) => project.copyWith(activeSectionId: id));
     _changed();
   }
@@ -508,6 +518,9 @@ class AuthorWorkspaceController extends ChangeNotifier {
 
   Future<void> flush() async {
     _saveTimer?.cancel();
+    _saveTimer = null;
+    _maxSaveTimer?.cancel();
+    _maxSaveTimer = null;
     final revision = _changeRevision;
     final snapshot = _snapshot;
     try {
@@ -641,10 +654,8 @@ class AuthorWorkspaceController extends ChangeNotifier {
 
   void _scheduleSave() {
     _saveTimer?.cancel();
-    _saveTimer = Timer(
-      const Duration(milliseconds: 350),
-      () => unawaited(flush()),
-    );
+    _saveTimer = Timer(saveDebounce, () => unawaited(flush()));
+    _maxSaveTimer ??= Timer(maxSaveDelay, () => unawaited(flush()));
   }
 
   Future<void> _enqueueSave(AuthorWorkspaceSnapshot snapshot) {
@@ -664,6 +675,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
   void dispose() {
     _isDisposed = true;
     _saveTimer?.cancel();
+    _maxSaveTimer?.cancel();
     unawaited(_enqueueSave(_snapshot).catchError((_) {}));
     super.dispose();
   }

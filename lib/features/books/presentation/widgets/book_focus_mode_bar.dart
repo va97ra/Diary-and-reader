@@ -1,9 +1,18 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
+import 'package:dnevnik/features/books/application/workspace_save_state.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_save_status.dart';
 import 'package:flutter/material.dart';
 
 class BookFocusModeBar extends StatelessWidget {
-  const BookFocusModeBar({required this.onExit, super.key});
+  const BookFocusModeBar({
+    required this.saveState,
+    required this.onRetrySave,
+    required this.onExit,
+    super.key,
+  });
 
+  final WorkspaceSaveState saveState;
+  final VoidCallback onRetrySave;
   final VoidCallback onExit;
 
   @override
@@ -13,17 +22,20 @@ class BookFocusModeBar extends StatelessWidget {
       bottom: false,
       child: SizedBox(
         height: 44,
-        child: Align(
-          alignment: Alignment.centerRight,
-          child: Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: IconButton(
-              key: const ValueKey('editor-exit-focus-mode'),
-              tooltip: AppStrings.of(context).exitFocusWriting,
-              visualDensity: VisualDensity.compact,
-              onPressed: onExit,
-              icon: const Icon(Icons.fullscreen_exit),
-            ),
+        child: Padding(
+          padding: const EdgeInsets.only(left: 12, right: 8),
+          child: Row(
+            children: [
+              BookSaveStatus(state: saveState, onRetry: onRetrySave),
+              const Spacer(),
+              IconButton(
+                key: const ValueKey('editor-exit-focus-mode'),
+                tooltip: AppStrings.of(context).exitFocusWriting,
+                visualDensity: VisualDensity.compact,
+                onPressed: onExit,
+                icon: const Icon(Icons.fullscreen_exit),
+              ),
+            ],
           ),
         ),
       ),

@@ -73,7 +73,10 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
   int _paginationRequest = 0;
   int _measurementRetries = 0;
   bool _isPaginating = false;
-  bool _continuousDragActive = false;
+  int? _continuousPointer;
+  double? _continuousPointerStartY;
+  bool _continuousPointerStartedAtStart = false;
+  bool _continuousPointerStartedAtEnd = false;
   _ReaderPageGeometry? _geometry;
   _ReaderPageGeometry? _completedGeometry;
   BookReaderViewMode _effectiveMode = BookReaderViewMode.continuous;
@@ -224,8 +227,10 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
             widget.settings.horizontalPadding,
             8,
           ),
-          child: NotificationListener<ScrollNotification>(
-            onNotification: _handleContinuousScrollNotification,
+          child: Listener(
+            onPointerDown: _handleContinuousPointerDown,
+            onPointerUp: _handleContinuousPointerUp,
+            onPointerCancel: (_) => _resetContinuousPointer(),
             child: QuillEditor(
               key: ValueKey('reader-document-${widget.section.id}'),
               controller: _continuousController,
@@ -413,22 +418,40 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
     );
   }
 
-  bool _handleContinuousScrollNotification(ScrollNotification notification) {
-    if (notification is ScrollStartNotification &&
-        notification.dragDetails != null) {
-      _continuousDragActive = true;
+  void _handleContinuousPointerDown(PointerDownEvent event) {
+    if (_continuousPointer != null ||
+        !_continuousScrollController.hasClients ||
+        _effectiveMode != BookReaderViewMode.continuous) {
+      return;
     }
-    if (notification is! ScrollEndNotification) return false;
+    final position = _continuousScrollController.position;
+    _continuousPointer = event.pointer;
+    _continuousPointerStartY = event.position.dy;
+    _continuousPointerStartedAtStart = position.extentBefore <= 1;
+    _continuousPointerStartedAtEnd = position.extentAfter <= 1;
+  }
 
-    final wasUserScroll = _continuousDragActive;
-    _continuousDragActive = false;
-    final reachedEnd =
-        notification.metrics.maxScrollExtent > 0 &&
-        notification.metrics.extentAfter <= 1;
-    if (wasUserScroll && reachedEnd) {
-      widget.onNextSectionRequested?.call();
+  void _handleContinuousPointerUp(PointerUpEvent event) {
+    if (_continuousPointer != event.pointer ||
+        _continuousPointerStartY == null) {
+      return;
     }
-    return false;
+    final delta = event.position.dy - _continuousPointerStartY!;
+    final startedAtStart = _continuousPointerStartedAtStart;
+    final startedAtEnd = _continuousPointerStartedAtEnd;
+    _resetContinuousPointer();
+    if (startedAtEnd && delta <= -48) {
+      widget.onNextSectionRequested?.call();
+    } else if (startedAtStart && delta >= 48) {
+      widget.onPreviousSectionRequested?.call();
+    }
+  }
+
+  void _resetContinuousPointer() {
+    _continuousPointer = null;
+    _continuousPointerStartY = null;
+    _continuousPointerStartedAtStart = false;
+    _continuousPointerStartedAtEnd = false;
   }
 
   void _selectPage(int page) {

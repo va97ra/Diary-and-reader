@@ -90,12 +90,21 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
                     bookTitle: project.metadata.title,
                     sectionTitle: section.title,
                     metrics: metrics,
+                    saveState: widget.controller.saveState,
+                    onRenameBook: _renameBook,
+                    onRenameSection: _renameSection,
+                    onRetrySave: widget.controller.flush,
                     onFocusMode: _toggleFocusMode,
                     onAction: _handleWorkspaceAction,
                   ),
             body: Column(
               children: [
-                if (_isFocusMode) BookFocusModeBar(onExit: _toggleFocusMode),
+                if (_isFocusMode)
+                  BookFocusModeBar(
+                    saveState: widget.controller.saveState,
+                    onRetrySave: widget.controller.flush,
+                    onExit: _toggleFocusMode,
+                  ),
                 Expanded(
                   child: Row(
                     children: [
@@ -186,6 +195,57 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
           duration: const Duration(seconds: 3),
         ),
       );
+  }
+
+  Future<void> _renameBook() async {
+    final project = widget.controller.activeProject;
+    if (project == null || project.isReadOnly) return;
+    final strings = AppStrings.of(context);
+    final title = await showDialog<String>(
+      context: context,
+      builder: (_) => _RenameTitleDialog(
+        initialTitle: project.metadata.title,
+        label: strings.bookTitle,
+        fieldKey: const ValueKey('writer-book-title-field'),
+        saveKey: const ValueKey('writer-book-title-save'),
+        strings: strings,
+      ),
+    );
+    if (title == null || !mounted) return;
+    final current = widget.controller.activeProject;
+    if (current == null || current.isReadOnly) return;
+    widget.controller.updateMetadata(current.metadata.copyWith(title: title));
+    await widget.controller.flush();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(strings.saved)));
+  }
+
+  Future<void> _renameSection() async {
+    final section = widget.controller.activeSection;
+    if (section == null ||
+        (widget.controller.activeProject?.isReadOnly ?? true)) {
+      return;
+    }
+    final strings = AppStrings.of(context);
+    final title = await showDialog<String>(
+      context: context,
+      builder: (_) => _RenameTitleDialog(
+        initialTitle: section.title,
+        label: strings.chapterTitle,
+        fieldKey: const ValueKey('writer-section-title-field'),
+        saveKey: const ValueKey('writer-section-title-save'),
+        strings: strings,
+      ),
+    );
+    if (title == null || !mounted) return;
+    widget.controller.updateSectionTitle(title);
+    await widget.controller.flush();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(strings.saved)));
   }
 
   Future<void> _showManuscriptSearch() async {
@@ -541,5 +601,78 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
       ),
     );
     await widget.controller.flush();
+  }
+}
+
+class _RenameTitleDialog extends StatefulWidget {
+  const _RenameTitleDialog({
+    required this.initialTitle,
+    required this.label,
+    required this.fieldKey,
+    required this.saveKey,
+    required this.strings,
+  });
+
+  final String initialTitle;
+  final String label;
+  final Key fieldKey;
+  final Key saveKey;
+  final AppStrings strings;
+
+  @override
+  State<_RenameTitleDialog> createState() => _RenameTitleDialogState();
+}
+
+class _RenameTitleDialogState extends State<_RenameTitleDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialTitle)
+      ..selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: widget.initialTitle.length,
+      );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(widget.label),
+    content: TextField(
+      key: widget.fieldKey,
+      controller: _controller,
+      autofocus: true,
+      maxLength: 120,
+      textCapitalization: TextCapitalization.sentences,
+      textInputAction: TextInputAction.done,
+      decoration: InputDecoration(
+        labelText: widget.label,
+        border: const OutlineInputBorder(),
+      ),
+      onSubmitted: _submit,
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: Text(widget.strings.cancel),
+      ),
+      FilledButton(
+        key: widget.saveKey,
+        onPressed: () => _submit(_controller.text),
+        child: Text(widget.strings.save),
+      ),
+    ],
+  );
+
+  void _submit(String value) {
+    final title = value.trim();
+    if (title.isNotEmpty) Navigator.pop(context, title);
   }
 }

@@ -18,12 +18,14 @@ class MemoryAuthorWorkspaceRepository implements AuthorWorkspaceRepository {
   }
 
   AuthorWorkspaceSnapshot? snapshot;
+  int saveCount = 0;
 
   @override
   Future<AuthorWorkspaceSnapshot?> load() async => snapshot;
 
   @override
   Future<void> save(AuthorWorkspaceSnapshot snapshot) async {
+    saveCount++;
     this.snapshot = AuthorWorkspaceSnapshot.fromJson(snapshot.toJson());
   }
 }
