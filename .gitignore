@@ -34,6 +34,7 @@ dist/
 /RuStore Release/
 /.omo/
 /.playwright-mcp/
+/.codex-artifacts/
 /tmp/
 /dnevnik-desktop-home.png
 .DS_Store
