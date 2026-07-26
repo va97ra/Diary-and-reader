@@ -57,6 +57,13 @@ void registerAdaptiveWorkflowScenarios() {
     await tester.tap(find.byKey(const ValueKey('writer-structure-action')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('navigator-new-chapter')), findsOneWidget);
+    expect(find.byKey(const ValueKey('navigator-close')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('navigator-close')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('navigator-new-chapter')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('writer-structure-action')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('navigator-new-chapter')));
     await tester.pumpAndSettle();
 
@@ -224,7 +231,7 @@ void registerAdaptiveWorkflowScenarios() {
     await tester.tap(find.byKey(const ValueKey('home-read-tile')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('import-book-button')));
-    await tester.pumpAndSettle();
+    await pumpUntilFound(tester, find.byType(BookReaderPage));
 
     expect(gateway.openCount, 1);
     expect(find.byType(BookReaderPage), findsOneWidget);

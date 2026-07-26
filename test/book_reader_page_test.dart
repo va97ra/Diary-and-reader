@@ -2,9 +2,12 @@ import 'package:dnevnik/app/author_studio_app.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_contents.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_progress_rail.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -12,6 +15,41 @@ import 'support/literia_test_navigation.dart';
 import 'support/memory_author_workspace_repository.dart';
 
 void main() {
+  testWidgets('contents distinguishes repeated legacy chapter titles', (
+    tester,
+  ) async {
+    final sections = [
+      BookSection.create(
+        id: 'one',
+        title: 'Одинаковое название книги',
+        type: BookSectionType.chapter,
+      ),
+      BookSection.create(
+        id: 'two',
+        title: 'Одинаковое название книги',
+        type: BookSectionType.chapter,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('ru'),
+        supportedLocales: const [Locale('ru'), Locale('en')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        home: Scaffold(
+          body: BookReaderContents(
+            sections: sections,
+            activeSectionId: 'one',
+            onSelected: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Раздел 1'), findsOneWidget);
+    expect(find.text('Раздел 2'), findsOneWidget);
+  });
+
   testWidgets('reader opens with contents and keeps independent settings', (
     tester,
   ) async {
@@ -251,6 +289,52 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('reader-contents-action')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('reader-contents')), findsOneWidget);
+    final contentsTabs = find.byType(TabBar);
+    expect(
+      find.descendant(of: contentsTabs, matching: find.text('Главы')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: contentsTabs, matching: find.text('Закладки')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: contentsTabs, matching: find.text('Выделения')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: contentsTabs, matching: find.text('Заметки')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('reader-navigation-close')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey('reader-navigation-close')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('reader-contents')), findsNothing);
+
+    await tester.tapAt(
+      tester.getCenter(find.byKey(const ValueKey('reader-surface'))),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('reader-exit-focus-mode')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey('reader-exit-focus-mode')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('reader-settings-action')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('reader-settings-close')), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('reader-settings-close')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('reader-settings-action')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('reader-settings-close')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('reader-settings-close')), findsNothing);
 
     await tester.binding.setSurfaceSize(null);
   });

@@ -85,6 +85,78 @@ class SectionTreeEditor {
     ];
   }
 
+  static bool canMoveToTarget(
+    List<BookSection> sections,
+    String sectionId,
+    String targetId,
+  ) {
+    if (sectionId == targetId) return false;
+    final section = sections.where((item) => item.id == sectionId).firstOrNull;
+    final target = sections.where((item) => item.id == targetId).firstOrNull;
+    if (section == null || target == null) return false;
+    if (subtreeIds(sections, sectionId).contains(targetId)) return false;
+    return switch (section.type) {
+      BookSectionType.part => target.type == BookSectionType.part,
+      BookSectionType.chapter =>
+        target.type == BookSectionType.part ||
+            target.type == BookSectionType.chapter,
+      BookSectionType.scene =>
+        target.type == BookSectionType.chapter ||
+            target.type == BookSectionType.scene,
+    };
+  }
+
+  /// Moves a complete subtree onto another visible tree item.
+  ///
+  /// Dropping a chapter on a part or a scene on a chapter appends it to that
+  /// parent. Dropping on an item of the same type places it before that item
+  /// and adopts its parent, which also supports moving between parts.
+  static List<BookSection> moveToTarget(
+    List<BookSection> sections,
+    String sectionId,
+    String targetId,
+  ) {
+    if (!canMoveToTarget(sections, sectionId, targetId)) return [...sections];
+    final section = sections.firstWhere((item) => item.id == sectionId);
+    final target = sections.firstWhere((item) => item.id == targetId);
+    final movingIds = subtreeIds(sections, sectionId);
+    final movingBlock = sections
+        .where((item) => movingIds.contains(item.id))
+        .toList();
+    final remaining = sections
+        .where((item) => !movingIds.contains(item.id))
+        .toList();
+
+    final droppedInside =
+        (section.type == BookSectionType.chapter &&
+            target.type == BookSectionType.part) ||
+        (section.type == BookSectionType.scene &&
+            target.type == BookSectionType.chapter);
+    final newParentId = droppedInside ? target.id : target.parentId;
+    movingBlock[0] = movingBlock.first.copyWith(
+      parentId: newParentId,
+      clearParent: newParentId == null,
+      updatedAt: DateTime.now(),
+    );
+
+    final targetIndex = remaining.indexWhere((item) => item.id == target.id);
+    if (targetIndex < 0) return [...sections];
+    var insertionIndex = targetIndex;
+    if (droppedInside) {
+      final targetIds = subtreeIds(remaining, target.id);
+      insertionIndex = targetIndex + 1;
+      for (var index = targetIndex + 1; index < remaining.length; index += 1) {
+        if (!targetIds.contains(remaining[index].id)) break;
+        insertionIndex = index + 1;
+      }
+    }
+    return [
+      ...remaining.take(insertionIndex),
+      ...movingBlock,
+      ...remaining.skip(insertionIndex),
+    ];
+  }
+
   static Set<String> subtreeIds(List<BookSection> sections, String sectionId) {
     final result = <String>{sectionId};
     var changed = true;

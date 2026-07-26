@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dnevnik/app/literia_book_details_page.dart';
 import 'package:dnevnik/app/literia_book_storage_page.dart';
 import 'package:dnevnik/app/literia_device_books_page.dart';
@@ -50,6 +52,9 @@ class LiteriaHomeShell extends StatefulWidget {
 }
 
 class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
+  bool _isImporting = false;
+  bool _isImportProgressVisible = false;
+
   @override
   Widget build(BuildContext context) => LiteriaHomePage(
     lastManuscript: widget.controller.lastManuscript,
@@ -123,6 +128,8 @@ class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
   }
 
   Future<void> _importBook() async {
+    if (_isImporting) return;
+    _isImporting = true;
     try {
       final List<BookImportFile> files;
       if (widget.importFileGateway
@@ -133,11 +140,53 @@ class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
         files = file == null ? const [] : [file];
       }
       if (files.isEmpty || !mounted) return;
+      _showImportProgress();
       final result = await _importFiles(files);
-      if (mounted) await _finishImport(result);
+      if (!mounted) return;
+      _hideImportProgress();
+      await _finishImport(result);
     } on Exception {
-      if (mounted) _showMessage(AppStrings.of(context).bookImportFailed);
+      if (mounted) {
+        _hideImportProgress();
+        _showMessage(AppStrings.of(context).bookImportFailed);
+      }
+    } finally {
+      _isImporting = false;
+      if (mounted) _hideImportProgress();
     }
+  }
+
+  void _showImportProgress() {
+    _isImportProgressVisible = true;
+    final strings = AppStrings.of(context);
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => PopScope(
+          canPop: false,
+          child: AlertDialog(
+            content: Row(
+              children: [
+                const SizedBox.square(
+                  dimension: 28,
+                  child: CircularProgressIndicator(strokeWidth: 3),
+                ),
+                const SizedBox(width: 20),
+                Expanded(child: Text(strings.importingBooks)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _hideImportProgress() {
+    if (!_isImportProgressVisible) return;
+    _isImportProgressVisible = false;
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) navigator.pop();
   }
 
   Future<BookImportBatchResult> _importFiles(List<BookImportFile> files) async {
@@ -226,7 +275,6 @@ class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
 
   Future<void> _openReader(BookProject project) async {
     widget.controller.selectProject(project.id);
-    await widget.controller.flush();
     if (!mounted) return;
     final selected = widget.controller.activeProject;
     if (selected == null || selected.sections.isEmpty) return;

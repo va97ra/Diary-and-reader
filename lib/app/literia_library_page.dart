@@ -3,6 +3,8 @@ import 'package:dnevnik/features/books/application/author_workspace_controller.d
 import 'package:dnevnik/features/books/application/book_library_query.dart';
 import 'package:dnevnik/features/books/domain/book_library_state.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
+import 'package:dnevnik/features/books/domain/book_section.dart';
+import 'package:dnevnik/features/books/domain/manuscript_statistics.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_cover_view.dart';
 import 'package:flutter/material.dart';
 
@@ -96,43 +98,6 @@ class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
         title: Text(
           _writing ? strings.manuscriptLibrary : strings.readingLibrary,
         ),
-        actions: [
-          IconButton(
-            key: const ValueKey('library-layout-toggle'),
-            tooltip: _showGrid ? strings.listView : strings.gridView,
-            onPressed: () => setState(() => _showGrid = !_showGrid),
-            icon: Icon(_showGrid ? Icons.view_list : Icons.grid_view),
-          ),
-          PopupMenuButton<BookLibrarySort>(
-            tooltip: strings.sortBy,
-            initialValue: _sort,
-            onSelected: (value) => setState(() => _sort = value),
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                value: BookLibrarySort.recentlyUpdated,
-                child: Text(strings.recentlyUpdated),
-              ),
-              if (!_writing)
-                PopupMenuItem(
-                  value: BookLibrarySort.lastRead,
-                  child: Text(strings.byLastRead),
-                ),
-              PopupMenuItem(
-                value: BookLibrarySort.title,
-                child: Text(strings.byTitle),
-              ),
-              PopupMenuItem(
-                value: BookLibrarySort.author,
-                child: Text(strings.byAuthor),
-              ),
-              if (!_writing)
-                PopupMenuItem(
-                  value: BookLibrarySort.progress,
-                  child: Text(strings.byProgress),
-                ),
-            ],
-          ),
-        ],
       ),
       body: SafeArea(
         top: false,
@@ -145,7 +110,11 @@ class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
                 filter: _filter,
                 collectionName: _collectionName,
                 collections: collections,
+                showGrid: _showGrid,
+                sort: _sort,
                 onSearchChanged: (value) => setState(() => _search = value),
+                onLayoutChanged: () => setState(() => _showGrid = !_showGrid),
+                onSortChanged: (value) => setState(() => _sort = value),
                 onFilterChanged: (value) => setState(() => _filter = value),
                 onCollectionChanged: (value) =>
                     setState(() => _collectionName = value),
@@ -223,9 +192,9 @@ class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
                 sliver: SliverGrid.builder(
-                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
                     maxCrossAxisExtent: 230,
-                    mainAxisExtent: 320,
+                    mainAxisExtent: _writing ? 196 : 320,
                     crossAxisSpacing: 14,
                     mainAxisSpacing: 14,
                   ),

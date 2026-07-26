@@ -15,7 +15,13 @@ abstract interface class BookSpeechEngine {
 
   void setCompletionHandler(void Function() handler);
 
+  void setErrorHandler(void Function(String message) handler);
+
   Future<void> speak(String text);
+
+  Future<void> pause();
+
+  Future<void> resume();
 
   Future<void> stop();
 }
@@ -53,7 +59,17 @@ class FlutterBookSpeechEngine implements BookSpeechEngine {
       _delegate.setCompletionHandler(handler);
 
   @override
+  void setErrorHandler(void Function(String message) handler) =>
+      _delegate.setErrorHandler(handler);
+
+  @override
   Future<void> speak(String text) => _delegate.speak(text);
+
+  @override
+  Future<void> pause() => _delegate.pause();
+
+  @override
+  Future<void> resume() => _delegate.resume();
 
   @override
   Future<void> stop() => _delegate.stop();
@@ -63,6 +79,7 @@ class _DirectBookSpeechEngine implements BookSpeechEngine {
   _DirectBookSpeechEngine({FlutterTts? tts}) : _tts = tts ?? FlutterTts();
 
   final FlutterTts _tts;
+  String _currentText = '';
 
   @override
   Future<void> configure({
@@ -89,12 +106,29 @@ class _DirectBookSpeechEngine implements BookSpeechEngine {
   }
 
   @override
+  void setErrorHandler(void Function(String message) handler) {
+    _tts.setErrorHandler((message) => handler(message.toString()));
+  }
+
+  @override
   Future<void> speak(String text) async {
+    _currentText = text;
     await _tts.speak(text);
   }
 
   @override
+  Future<void> pause() async {
+    await _tts.pause();
+  }
+
+  @override
+  Future<void> resume() async {
+    if (_currentText.isNotEmpty) await _tts.speak(_currentText);
+  }
+
+  @override
   Future<void> stop() async {
+    _currentText = '';
     await _tts.stop();
   }
 }
@@ -102,10 +136,12 @@ class _DirectBookSpeechEngine implements BookSpeechEngine {
 class _AudioServiceBookSpeechEngine implements BookSpeechEngine {
   static Future<_BookTtsAudioHandler>? _handlerFuture;
   void Function()? _completionHandler;
+  void Function(String message)? _errorHandler;
 
   Future<_BookTtsAudioHandler> get _handler async {
     final handler = await (_handlerFuture ??= _createHandler());
     handler.completionHandler = _completionHandler;
+    handler.errorHandler = _errorHandler;
     return handler;
   }
 
@@ -149,7 +185,22 @@ class _AudioServiceBookSpeechEngine implements BookSpeechEngine {
   }
 
   @override
+  void setErrorHandler(void Function(String message) handler) {
+    _errorHandler = handler;
+    final future = _handlerFuture;
+    if (future != null) {
+      unawaited(future.then((value) => value.errorHandler = handler));
+    }
+  }
+
+  @override
   Future<void> speak(String text) async => (await _handler).speakText(text);
+
+  @override
+  Future<void> pause() async => (await _handler).pause();
+
+  @override
+  Future<void> resume() async => (await _handler).play();
 
   @override
   Future<void> stop() async => (await _handler).stop();
@@ -164,13 +215,15 @@ class _BookTtsAudioHandler extends BaseAudioHandler {
     _tts.setCancelHandler(
       () => _broadcast(playing: false, state: AudioProcessingState.ready),
     );
-    _tts.setErrorHandler(
-      (_) => _broadcast(playing: false, state: AudioProcessingState.error),
-    );
+    _tts.setErrorHandler((message) {
+      _broadcast(playing: false, state: AudioProcessingState.error);
+      errorHandler?.call(message);
+    });
   }
 
   final FlutterTts _tts;
   void Function()? completionHandler;
+  void Function(String message)? errorHandler;
   String _currentText = '';
 
   Future<void> configure({

@@ -48,15 +48,6 @@ class EpubBookFormatParser implements BookFormatParser {
       for (final item in BookImportParsingSupport.elements(package, 'item'))
         ?item.getAttribute('id'): item,
     };
-    final media = _readMedia(archive, rootPath, package, manifest);
-    final sections = _readSections(
-      archive,
-      rootPath,
-      package,
-      manifest,
-      media,
-      timestamp,
-    );
     final metadataElement = BookImportParsingSupport.elements(
       package,
       'metadata',
@@ -65,6 +56,23 @@ class EpubBookFormatParser implements BookFormatParser {
       metadataElement,
       'title',
     ).ifEmpty(BookImportParsingSupport.baseName(file.name));
+    final media = _readMedia(archive, rootPath, package, manifest);
+    final navigationTitles = _readNavigationTitles(
+      archive,
+      rootPath,
+      package,
+      manifest,
+    );
+    final sections = _readSections(
+      archive,
+      rootPath,
+      package,
+      manifest,
+      media,
+      timestamp,
+      bookTitle: title,
+      navigationTitles: navigationTitles,
+    );
     return BookImportParsingSupport.project(
       file: file,
       timestamp: timestamp,
@@ -104,8 +112,10 @@ class EpubBookFormatParser implements BookFormatParser {
     XmlDocument package,
     Map<String, XmlElement> manifest,
     ImportedBookMedia media,
-    DateTime timestamp,
-  ) {
+    DateTime timestamp, {
+    required String bookTitle,
+    required Map<String, String> navigationTitles,
+  }) {
     final itemRefs = BookImportParsingSupport.elements(
       package,
       'itemref',
@@ -169,10 +179,21 @@ class EpubBookFormatParser implements BookFormatParser {
         content.rootElement,
         'title',
       );
+      final navigationTitle = navigationTitles[contentPath.toLowerCase()];
+      final fallbackTitle = 'Раздел $sectionNumber';
+      final title = [navigationTitle, heading, pageTitle]
+          .whereType<String>()
+          .map((value) => value.trim())
+          .firstWhere(
+            (value) =>
+                value.isNotEmpty &&
+                value.toLowerCase() != bookTitle.trim().toLowerCase(),
+            orElse: () => fallbackTitle,
+          );
       sections.add(
         BookSection(
           id: 'import-${timestamp.microsecondsSinceEpoch}-section-$sectionNumber',
-          title: heading ?? pageTitle.ifEmpty('Раздел $sectionNumber'),
+          title: title,
           type: BookSectionType.chapter,
           status: DraftStatus.complete,
           content: richContent,
@@ -181,7 +202,110 @@ class EpubBookFormatParser implements BookFormatParser {
         ),
       );
     }
-    return sections;
+    final titleCounts = <String, int>{};
+    for (final section in sections) {
+      final key = section.title.trim().toLowerCase();
+      titleCounts[key] = (titleCounts[key] ?? 0) + 1;
+    }
+    return [
+      for (var index = 0; index < sections.length; index++)
+        titleCounts[sections[index].title.trim().toLowerCase()]! > 1
+            ? sections[index].copyWith(
+                title: '${sections[index].title} · ${index + 1}',
+              )
+            : sections[index],
+    ];
+  }
+
+  Map<String, String> _readNavigationTitles(
+    Archive archive,
+    String packagePath,
+    XmlDocument package,
+    Map<String, XmlElement> manifest,
+  ) {
+    final result = <String, String>{};
+    final navItem = manifest.values.where((item) {
+      final properties = item.getAttribute('properties') ?? '';
+      return properties.toLowerCase().split(RegExp(r'\s+')).contains('nav');
+    }).firstOrNull;
+    final navHref = navItem?.getAttribute('href');
+    if (navHref != null && navHref.isNotEmpty) {
+      final navPath = BookImportParsingSupport.resolveArchivePath(
+        packagePath,
+        navHref,
+      );
+      final navFile = BookImportParsingSupport.archiveFile(archive, navPath);
+      if (navFile != null) {
+        try {
+          final document = _parseXml(navFile);
+          final navigation = BookImportParsingSupport.elements(document, 'nav')
+              .where((element) {
+                return element.attributes.any((attribute) {
+                  final value = attribute.value.toLowerCase();
+                  return (attribute.name.local == 'type' &&
+                          value.split(RegExp(r'\s+')).contains('toc')) ||
+                      (attribute.name.local == 'role' && value == 'doc-toc');
+                });
+              })
+              .firstOrNull;
+          final root = navigation ?? document.rootElement;
+          for (final anchor in BookImportParsingSupport.elements(root, 'a')) {
+            final href = anchor.getAttribute('href');
+            final label = anchor.innerText.trim();
+            if (href == null || href.isEmpty || label.isEmpty) continue;
+            final path = BookImportParsingSupport.resolveArchivePath(
+              navPath,
+              href,
+            ).toLowerCase();
+            result.putIfAbsent(path, () => label);
+          }
+        } on XmlParserException {
+          // A broken navigation document must not make readable book pages fail.
+        }
+      }
+    }
+
+    final ncxItem = manifest.values.where((item) {
+      final mediaType = item.getAttribute('media-type')?.toLowerCase();
+      return mediaType == 'application/x-dtbncx+xml';
+    }).firstOrNull;
+    final ncxHref = ncxItem?.getAttribute('href');
+    if (ncxHref != null && ncxHref.isNotEmpty) {
+      final ncxPath = BookImportParsingSupport.resolveArchivePath(
+        packagePath,
+        ncxHref,
+      );
+      final ncxFile = BookImportParsingSupport.archiveFile(archive, ncxPath);
+      if (ncxFile != null) {
+        try {
+          final document = _parseXml(ncxFile);
+          for (final point in BookImportParsingSupport.elements(
+            document,
+            'navPoint',
+          )) {
+            final content = BookImportParsingSupport.elements(
+              point,
+              'content',
+            ).firstOrNull;
+            final source = content?.getAttribute('src');
+            final labelElement = BookImportParsingSupport.elements(
+              point,
+              'navLabel',
+            ).firstOrNull;
+            final label = labelElement?.innerText.trim() ?? '';
+            if (source == null || source.isEmpty || label.isEmpty) continue;
+            final path = BookImportParsingSupport.resolveArchivePath(
+              ncxPath,
+              source,
+            ).toLowerCase();
+            result.putIfAbsent(path, () => label);
+          }
+        } on XmlParserException {
+          // The XHTML heading and file title remain safe fallbacks.
+        }
+      }
+    }
+    return result;
   }
 
   ImportedBookMedia _readMedia(

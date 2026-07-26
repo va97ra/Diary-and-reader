@@ -273,6 +273,21 @@ class AuthorWorkspaceController extends ChangeNotifier {
     _changed();
   }
 
+  void moveSectionToTarget(String id, String targetId) {
+    if (activeProject?.isReadOnly ?? true) return;
+    _replaceActiveProject(
+      (project) => project.copyWith(
+        sections: SectionTreeEditor.moveToTarget(
+          project.sections,
+          id,
+          targetId,
+        ),
+        updatedAt: DateTime.now(),
+      ),
+    );
+    _changed();
+  }
+
   void deleteSection(String id) {
     final project = activeProject;
     if (project == null || project.isReadOnly) return;
@@ -283,6 +298,41 @@ class AuthorWorkspaceController extends ChangeNotifier {
         languageCode: _languageCode,
       ),
     );
+    _changed();
+  }
+
+  Future<void> deleteSectionSafely(
+    String id, {
+    required String safetyLabel,
+  }) async {
+    final project = activeProject;
+    if (project == null || project.isReadOnly) return;
+    await flush();
+    await _versions.create(project, label: safetyLabel);
+    deleteSection(id);
+    await flush();
+  }
+
+  void restoreDeletedSection(String trashId) {
+    if (activeProject?.isReadOnly ?? true) return;
+    _replaceActiveProject(
+      (project) =>
+          ManuscriptProjectEditor.restoreDeletedSection(project, trashId),
+    );
+    _changed();
+  }
+
+  void permanentlyDeleteSection(String trashId) {
+    if (activeProject?.isReadOnly ?? true) return;
+    _replaceActiveProject(
+      (project) => ManuscriptProjectEditor.deleteTrashEntry(project, trashId),
+    );
+    _changed();
+  }
+
+  void emptySectionTrash() {
+    if (activeProject?.isReadOnly ?? true) return;
+    _replaceActiveProject(ManuscriptProjectEditor.emptySectionTrash);
     _changed();
   }
 
@@ -335,6 +385,29 @@ class AuthorWorkspaceController extends ChangeNotifier {
     return result.count;
   }
 
+  Future<int> replaceAllInManuscriptSafely(
+    String query,
+    String replacement, {
+    bool caseSensitive = false,
+    required String safetyLabel,
+  }) async {
+    final project = activeProject;
+    if (project == null || project.isReadOnly || query.isEmpty) return 0;
+    final result = ManuscriptProjectEditor.replaceAll(
+      project,
+      query,
+      replacement,
+      caseSensitive: caseSensitive,
+    );
+    if (result.count == 0) return 0;
+    await flush();
+    await _versions.create(project, label: safetyLabel);
+    _replaceActiveProject((_) => result.project);
+    _changed();
+    await flush();
+    return result.count;
+  }
+
   void updateSectionStatus(DraftStatus status) {
     if (activeProject?.isReadOnly ?? true) return;
     _replaceActiveProject(
@@ -350,6 +423,45 @@ class AuthorWorkspaceController extends ChangeNotifier {
         project,
         targetWords,
       ),
+    );
+    _changed();
+  }
+
+  void updateWritingGoals({
+    required int dailyTargetWords,
+    required int projectTargetWords,
+  }) {
+    if (activeProject?.isReadOnly ?? true) return;
+    _replaceActiveProject(
+      (project) => project.copyWith(
+        writingState: project.writingState.copyWith(
+          dailyTargetWords: dailyTargetWords,
+          projectTargetWords: projectTargetWords,
+        ),
+        updatedAt: DateTime.now(),
+      ),
+    );
+    _changed();
+  }
+
+  void recordWritingSession(
+    String projectId, {
+    required DateTime startedAt,
+    required Duration duration,
+    required int wordsAdded,
+  }) {
+    final index = _projects.indexWhere((project) => project.id == projectId);
+    if (index < 0 || _projects[index].isReadOnly) return;
+    final project = _projects[index];
+    final next = project.writingState.record(
+      startedAt: startedAt,
+      duration: duration,
+      wordsAdded: wordsAdded,
+    );
+    if (identical(next, project.writingState)) return;
+    _projects[index] = project.copyWith(
+      writingState: next,
+      updatedAt: DateTime.now(),
     );
     _changed();
   }

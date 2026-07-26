@@ -98,6 +98,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('Название рукописи или главы'), findsOneWidget);
+    expect(find.textContaining('Глав: 1'), findsOneWidget);
+    expect(find.textContaining('Слов: 0'), findsOneWidget);
+    expect(find.textContaining('Изменено:'), findsOneWidget);
+    expect(find.textContaining('Режим просмотра:'), findsOneWidget);
+    expect(find.textContaining('Сортировка:'), findsOneWidget);
     await tester.tap(find.byTooltip('Ещё'));
     await tester.pumpAndSettle();
     expect(find.text('Статус чтения'), findsNothing);

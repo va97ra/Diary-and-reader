@@ -245,6 +245,22 @@ void main() {
     );
   });
 
+  test('creates an automatic checkpoint before deleting a section', () async {
+    final repository = MemoryAuthorWorkspaceRepository();
+    final controller = AuthorWorkspaceController(repository);
+    await controller.load(preferredLanguage: 'ru');
+    controller.addSection(BookSectionType.chapter);
+    final deletedId = controller.activeSection!.id;
+
+    await controller.deleteSectionSafely(
+      deletedId,
+      safetyLabel: 'Перед удалением',
+    );
+
+    expect(controller.activeProject!.sectionTrash, hasLength(1));
+    expect((await controller.listVersions()).single.label, 'Перед удалением');
+  });
+
   test('imports a backup under the current project identity', () async {
     final controller = AuthorWorkspaceController(
       MemoryAuthorWorkspaceRepository(),

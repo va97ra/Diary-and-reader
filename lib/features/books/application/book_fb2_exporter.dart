@@ -39,10 +39,16 @@ abstract final class BookFb2Exporter {
   static String _document(BookProject project) {
     final metadata = project.metadata;
     final date = _date(project.updatedAt);
-    final body = _sections(project.sections);
+    final body = _sections(
+      project.sections,
+      showTitles: project.layoutSettings.showChapterTitlesInBody,
+    );
+    final hiddenTitleStyle = project.layoutSettings.showChapterTitlesInBody
+        ? ''
+        : '  <stylesheet type="text/css">.literia-hidden-title { display: none; }</stylesheet>\n';
     return '''<?xml version="1.0" encoding="UTF-8"?>
 <FictionBook xmlns="$namespace" xmlns:l="$linkNamespace">
-  <description>
+$hiddenTitleStyle  <description>
     <title-info>
       <genre>${_genre(metadata.genre)}</genre>
       ${_author(metadata.author, fallback: 'Неизвестный автор')}
@@ -72,7 +78,10 @@ ${_binaries(project)}
 ''';
   }
 
-  static String _sections(List<BookSection> sections) {
+  static String _sections(
+    List<BookSection> sections, {
+    required bool showTitles,
+  }) {
     if (sections.isEmpty) return '    <section><p/></section>\n';
     final ids = sections.map((section) => section.id).toSet();
     final byParent = <String?, List<int>>{};
@@ -92,7 +101,9 @@ ${_binaries(project)}
       final indent = '    ${List.filled(depth, '  ').join()}';
       final output = StringBuffer()
         ..writeln('$indent<section id="section-${index + 1}">')
-        ..writeln('$indent  <title><p>${escapeXml(section.title)}</p></title>');
+        ..writeln(
+          '$indent  <title><p${showTitles ? '' : ' style="literia-hidden-title"'}>${escapeXml(section.title)}</p></title>',
+        );
       final hasText = richDocumentHasContent(section.content);
       if (children.isNotEmpty && hasText) {
         output.writeln('$indent  <section id="section-${index + 1}-text">');

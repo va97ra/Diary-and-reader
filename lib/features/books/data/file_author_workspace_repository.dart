@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:dnevnik/features/books/domain/author_workspace_repository.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_snapshot.dart';
@@ -84,16 +85,9 @@ class FileAuthorWorkspaceRepository implements AuthorWorkspaceRepository {
 
   Future<void> _writePending(AuthorWorkspaceSnapshot snapshot) async {
     await _deleteIfExists(_pending);
-    final envelope = <String, dynamic>{
-      'storageFormatVersion': storageFormatVersion,
-      'savedAt': DateTime.now().toUtc().toIso8601String(),
-      'workspace': snapshot.toJson(),
-    };
-    await _pending.writeAsString(
-      jsonEncode(envelope),
-      encoding: utf8,
-      flush: true,
-    );
+    final savedAt = DateTime.now().toUtc().toIso8601String();
+    final encoded = await Isolate.run(() => _encodeSnapshot(snapshot, savedAt));
+    await _pending.writeAsString(encoded, encoding: utf8, flush: true);
   }
 
   Future<void> _archiveRollback() async {
@@ -124,19 +118,8 @@ class FileAuthorWorkspaceRepository implements AuthorWorkspaceRepository {
   Future<AuthorWorkspaceSnapshot?> _readSnapshot(File file) async {
     if (!await file.exists()) return null;
     try {
-      final decoded = jsonDecode(await file.readAsString(encoding: utf8));
-      if (decoded is! Map) return null;
-      final envelope = Map<String, dynamic>.from(decoded);
-      if (envelope['storageFormatVersion'] != storageFormatVersion) {
-        return null;
-      }
-      final workspace = envelope['workspace'];
-      if (workspace is! Map) return null;
-      final json = Map<String, dynamic>.from(workspace);
-      if (json['formatVersion'] != AuthorWorkspaceSnapshot.formatVersion) {
-        return null;
-      }
-      return AuthorWorkspaceSnapshot.fromJson(json);
+      final encoded = await file.readAsString(encoding: utf8);
+      return await Isolate.run(() => _decodeSnapshot(encoded));
     } on FileSystemException {
       rethrow;
     } on Object {
@@ -150,4 +133,29 @@ class FileAuthorWorkspaceRepository implements AuthorWorkspaceRepository {
   Future<void> _deleteIfExists(File file) async {
     if (await file.exists()) await file.delete();
   }
+}
+
+String _encodeSnapshot(AuthorWorkspaceSnapshot snapshot, String savedAt) =>
+    jsonEncode({
+      'storageFormatVersion':
+          FileAuthorWorkspaceRepository.storageFormatVersion,
+      'savedAt': savedAt,
+      'workspace': snapshot.toJson(),
+    });
+
+AuthorWorkspaceSnapshot? _decodeSnapshot(String encoded) {
+  final decoded = jsonDecode(encoded);
+  if (decoded is! Map) return null;
+  final envelope = Map<String, dynamic>.from(decoded);
+  if (envelope['storageFormatVersion'] !=
+      FileAuthorWorkspaceRepository.storageFormatVersion) {
+    return null;
+  }
+  final workspace = envelope['workspace'];
+  if (workspace is! Map) return null;
+  final json = Map<String, dynamic>.from(workspace);
+  if (json['formatVersion'] != AuthorWorkspaceSnapshot.formatVersion) {
+    return null;
+  }
+  return AuthorWorkspaceSnapshot.fromJson(json);
 }

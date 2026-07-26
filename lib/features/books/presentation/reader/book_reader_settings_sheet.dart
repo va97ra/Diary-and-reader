@@ -41,11 +41,24 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              strings.readingSettings,
-              style: Theme.of(context).textTheme.titleLarge,
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    strings.readingSettings,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                IconButton(
+                  key: const ValueKey('reader-settings-close'),
+                  tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                  onPressed: () => Navigator.maybePop(context),
+                  color: Theme.of(context).textTheme.titleLarge?.color,
+                  icon: const Icon(Icons.close),
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
             Text(strings.readerViewMode),
             const SizedBox(height: 8),
             _ReaderChoiceWrap<BookReaderViewMode>(

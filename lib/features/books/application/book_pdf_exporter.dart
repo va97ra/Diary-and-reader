@@ -42,17 +42,21 @@ abstract final class BookPdfExporter {
               name: 'section-${index + 1}',
               title: section.title,
               level: _depth(project.sections, section),
-              child: pw.Text(
-                section.title,
-                style: pw.TextStyle(
-                  fontSize: _sectionTitleSize(section.type),
-                  fontWeight: pw.FontWeight.bold,
-                ),
-              ),
+              child: project.layoutSettings.showChapterTitlesInBody
+                  ? pw.Text(
+                      section.title,
+                      style: pw.TextStyle(
+                        fontSize: _sectionTitleSize(section.type),
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    )
+                  : pw.SizedBox(),
             ),
-            pw.SizedBox(height: 8),
-            pw.Divider(color: PdfColors.grey400, thickness: 0.5),
-            pw.SizedBox(height: 12),
+            if (project.layoutSettings.showChapterTitlesInBody) ...[
+              pw.SizedBox(height: 8),
+              pw.Divider(color: PdfColors.grey400, thickness: 0.5),
+              pw.SizedBox(height: 12),
+            ],
             ...BookPdfContentRenderer.build(
               blocks: BookExportContentParser.parse(section.content),
               settings: project.paragraphSettings,

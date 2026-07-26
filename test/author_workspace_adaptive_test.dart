@@ -39,18 +39,6 @@ Future<void> _openExportSheet(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _pumpUntil(
-  WidgetTester tester,
-  Finder finder, {
-  int attempts = 80,
-}) async {
-  for (var attempt = 0; attempt < attempts; attempt++) {
-    await tester.pump(const Duration(milliseconds: 50));
-    if (finder.evaluate().isNotEmpty) return;
-  }
-  expect(finder, findsWidgets);
-}
-
 class _MemoryBookExportSaver implements BookExportFileSaver {
   BookExportArtifact? artifact;
   String? bookTitle;

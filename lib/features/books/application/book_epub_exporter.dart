@@ -192,7 +192,7 @@ ${items.join('\n')}
     body:
         '''
   <section id="section-${index + 1}" epub:type="${_epubType(section.type)}">
-    <h1>${escapeXml(section.title)}</h1>
+    ${project.layoutSettings.showChapterTitlesInBody ? '<h1>${escapeXml(section.title)}</h1>' : ''}
 ${EpubRichTextRenderer.render(section.content, imageSource: (assetId) {
           final file = _imageFileName(project, assetId);
           return file.isEmpty ? null : '../images/$file';

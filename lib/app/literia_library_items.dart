@@ -25,6 +25,14 @@ class _LibraryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
     final progress = writing ? 0.0 : readingProgress(project);
+    final chapterCount = project.sections
+        .where((section) => section.type == BookSectionType.chapter)
+        .length;
+    final wordCount = project.sections.fold(
+      0,
+      (total, section) =>
+          total + ManuscriptStatistics.fromDocument(section.content).words,
+    );
     return Card(
       key: ValueKey('literia-project-${project.id}'),
       clipBehavior: Clip.antiAlias,
@@ -38,12 +46,24 @@ class _LibraryCard extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  BookCoverView(
-                    project: project,
-                    width: double.infinity,
-                    height: double.infinity,
-                    borderRadius: 0,
-                  ),
+                  if (writing)
+                    ColoredBox(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
+                      child: Icon(
+                        Icons.edit_note_outlined,
+                        size: 52,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    )
+                  else
+                    BookCoverView(
+                      project: project,
+                      width: double.infinity,
+                      height: double.infinity,
+                      borderRadius: 0,
+                    ),
                   Positioned(
                     top: 8,
                     left: 8,
@@ -127,13 +147,25 @@ class _LibraryCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    project.metadata.author.trim().isEmpty
-                        ? (writing ? strings.manuscript : strings.importedBook)
+                    writing
+                        ? '${strings.chapters}: $chapterCount · '
+                              '${strings.words}: $wordCount'
+                        : project.metadata.author.trim().isEmpty
+                        ? strings.importedBook
                         : project.metadata.author,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
+                  if (writing) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      '${strings.updated}: ${_shortDate(project.updatedAt)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                  ],
                   if (!writing) ...[
                     const SizedBox(height: 10),
                     LinearProgressIndicator(value: progress),
@@ -178,6 +210,14 @@ class _LibraryListTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
     final progress = writing ? 0.0 : readingProgress(project);
+    final chapterCount = project.sections
+        .where((section) => section.type == BookSectionType.chapter)
+        .length;
+    final wordCount = project.sections.fold(
+      0,
+      (total, section) =>
+          total + ManuscriptStatistics.fromDocument(section.content).words,
+    );
     return Card(
       key: ValueKey('literia-project-list-${project.id}'),
       clipBehavior: Clip.antiAlias,
@@ -196,12 +236,21 @@ class _LibraryListTile extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              project.metadata.author.isEmpty
-                  ? (writing ? strings.manuscript : strings.importedBook)
+              writing
+                  ? '${strings.chapters}: $chapterCount · '
+                        '${strings.words}: $wordCount'
+                  : project.metadata.author.isEmpty
+                  ? strings.importedBook
                   : project.metadata.author,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
+            if (writing)
+              Text(
+                '${strings.updated}: ${_shortDate(project.updatedAt)}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             if (project.collectionName.isNotEmpty)
               Text(
                 project.collectionName,
@@ -259,3 +308,9 @@ class _LibraryListTile extends StatelessWidget {
 }
 
 enum _LibraryCardAction { about, collection, readingStatus, delete }
+
+String _shortDate(DateTime value) {
+  final day = value.day.toString().padLeft(2, '0');
+  final month = value.month.toString().padLeft(2, '0');
+  return '$day.$month.${value.year}';
+}

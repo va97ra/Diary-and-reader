@@ -130,7 +130,7 @@ class LiteriaSettingsPage extends StatelessWidget {
           _SettingsCard(
             title: strings.about,
             icon: Icons.info_outline,
-            child: const Text('Литерия 1.0.1'),
+            child: const Text('Литерия 1.0.2'),
           ),
         ],
       ),

@@ -4,7 +4,9 @@ import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/book_reader_annotation_exporter.dart';
 import 'package:dnevnik/features/books/application/book_reader_external_lookup.dart';
 import 'package:dnevnik/features/books/application/book_reader_search.dart';
+import 'package:dnevnik/features/books/application/book_reader_text_anchor.dart';
 import 'package:dnevnik/features/books/application/book_speech_engine.dart';
+import 'package:dnevnik/features/books/application/book_speech_segmenter.dart';
 import 'package:dnevnik/features/books/data/book_reader_annotation_file_service.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
@@ -23,7 +25,9 @@ import 'package:dnevnik/features/books/presentation/reader/book_reader_search_sh
 import 'package:dnevnik/features/books/presentation/reader/book_reader_section_view.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_selection_bar.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_settings_sheet.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_speech_controls.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_text_selection.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_sheet_keyboard_dismiss.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -57,6 +61,8 @@ class BookReaderPage extends StatefulWidget {
 
 class _BookReaderPageState extends State<BookReaderPage> {
   final Stopwatch _readingStopwatch = Stopwatch();
+  final BookReaderSectionController _sectionNavigationController =
+      BookReaderSectionController();
   late final BookSpeechEngine _speechEngine;
   late BookReaderSettings _settings;
   late BookReaderAnnotations _annotations;
@@ -66,8 +72,14 @@ class _BookReaderPageState extends State<BookReaderPage> {
   int _clearSelectionVersion = 0;
   bool _isFocusMode = false;
   bool _isSpeaking = false;
-  List<String> _speechChunks = const [];
-  int _speechChunkIndex = 0;
+  bool _isSpeechPaused = false;
+  bool _isChoosingSpeechStart = false;
+  List<BookSpeechSegment> _speechSegments = const [];
+  int _speechSegmentIndex = 0;
+  BookSpeechSegment? _activeSpeechSegment;
+  int? _surfaceTapPointer;
+  Offset? _surfaceTapStart;
+  bool _surfaceTapMoved = false;
 
   List<BookSection> get _sections => widget.project.sections;
   BookSection get _section => _sections[_activeIndex];
@@ -80,6 +92,7 @@ class _BookReaderPageState extends State<BookReaderPage> {
     _speechEngine.setCompletionHandler(
       () => unawaited(_handleSpeechCompleted()),
     );
+    _speechEngine.setErrorHandler(_handleSpeechError);
     _readingStopwatch.start();
     _annotations = widget.project.readerAnnotations;
     final savedId = widget.project.readerProgress.sectionId;
@@ -98,7 +111,14 @@ class _BookReaderPageState extends State<BookReaderPage> {
     super.dispose();
   }
 
-  void _goToLocation(String sectionId, double sectionProgress) {
+  void _goToLocation(
+    String sectionId,
+    double sectionProgress, {
+    bool fromSpeech = false,
+  }) {
+    if (!fromSpeech && (_isSpeaking || _isChoosingSpeechStart)) {
+      unawaited(_stopSpeech());
+    }
     _clearTextSelection();
     final index = _sections.indexWhere((section) => section.id == sectionId);
     if (index < 0) return;
@@ -114,6 +134,7 @@ class _BookReaderPageState extends State<BookReaderPage> {
       _sectionProgress = normalizedProgress;
     });
     _saveProgress();
+    if (!fromSpeech) _showChapterTransition();
   }
 
   void _saveProgress() => widget.onProgressChanged(
@@ -149,61 +170,126 @@ class _BookReaderPageState extends State<BookReaderPage> {
         builder: (context) => LayoutBuilder(
           builder: (context, _) {
             return PopScope(
-              canPop: !_isFocusMode,
+              canPop: !_isFocusMode && !_isChoosingSpeechStart,
               onPopInvokedWithResult: (didPop, _) {
                 _saveProgress();
-                if (!didPop && _isFocusMode) {
+                if (!didPop && _isChoosingSpeechStart) {
+                  _cancelSpeechTargetSelection();
+                } else if (!didPop && _isFocusMode) {
                   setState(() => _isFocusMode = false);
                 }
               },
-              child: Scaffold(
-                appBar: _isFocusMode ? null : _buildAppBar(context),
-                body: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: _buildReadingSurface(context, palette),
-                    ),
-                    Positioned(
-                      left: 0,
-                      top: 0,
-                      bottom: 0,
-                      child: BookReaderProgressRail(
-                        value: _overallProgress,
-                        trackColor: palette.mutedInk.withValues(alpha: 0.22),
-                        progressColor: Theme.of(context).colorScheme.primary,
-                        semanticLabel: AppStrings.of(context).readingProgress,
-                      ),
-                    ),
-                    if (_isFocusMode)
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: SafeArea(
-                          child: Material(
-                            color: palette.surface.withValues(alpha: 0.84),
-                            elevation: 2,
-                            shape: const CircleBorder(),
-                            child: IconButton(
-                              key: const ValueKey('reader-exit-focus-mode'),
-                              tooltip: AppStrings.of(context).exitFocusReading,
-                              visualDensity: VisualDensity.compact,
-                              onPressed: _toggleFocusMode,
-                              icon: const Icon(Icons.fullscreen_exit),
+              child: CallbackShortcuts(
+                bindings: {
+                  const SingleActivator(LogicalKeyboardKey.arrowRight):
+                      _moveReaderForward,
+                  const SingleActivator(LogicalKeyboardKey.arrowDown):
+                      _moveReaderForward,
+                  const SingleActivator(LogicalKeyboardKey.pageDown):
+                      _moveReaderForward,
+                  const SingleActivator(LogicalKeyboardKey.space):
+                      _moveReaderForward,
+                  const SingleActivator(LogicalKeyboardKey.arrowLeft):
+                      _moveReaderBackward,
+                  const SingleActivator(LogicalKeyboardKey.arrowUp):
+                      _moveReaderBackward,
+                  const SingleActivator(LogicalKeyboardKey.pageUp):
+                      _moveReaderBackward,
+                  const SingleActivator(LogicalKeyboardKey.space, shift: true):
+                      _moveReaderBackward,
+                  const SingleActivator(LogicalKeyboardKey.escape):
+                      _handleReaderEscape,
+                },
+                child: Focus(
+                  autofocus: true,
+                  child: Scaffold(
+                    appBar: _isFocusMode ? null : _buildAppBar(context),
+                    body: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: _buildReadingSurface(context, palette),
+                        ),
+                        Positioned(
+                          left: 0,
+                          top: 0,
+                          bottom: 0,
+                          child: BookReaderProgressRail(
+                            value: _overallProgress,
+                            trackColor: palette.mutedInk.withValues(
+                              alpha: 0.22,
                             ),
+                            progressColor: Theme.of(
+                              context,
+                            ).colorScheme.primary,
+                            semanticLabel: AppStrings.of(
+                              context,
+                            ).readingProgress,
                           ),
                         ),
-                      ),
-                  ],
+                        if (_isFocusMode)
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: SafeArea(
+                              child: Material(
+                                color: palette.surface.withValues(alpha: 0.84),
+                                elevation: 2,
+                                shape: const CircleBorder(),
+                                child: IconButton(
+                                  key: const ValueKey('reader-exit-focus-mode'),
+                                  tooltip: AppStrings.of(
+                                    context,
+                                  ).exitFocusReading,
+                                  visualDensity: VisualDensity.compact,
+                                  onPressed: _toggleFocusMode,
+                                  icon: const Icon(Icons.fullscreen_exit),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    bottomNavigationBar: _isFocusMode
+                        ? null
+                        : _buildNavigationBar(context, palette),
+                  ),
                 ),
-                bottomNavigationBar: _isFocusMode
-                    ? null
-                    : _buildNavigationBar(context, palette),
               ),
             );
           },
         ),
       ),
     );
+  }
+
+  void _moveReaderForward() =>
+      unawaited(_sectionNavigationController.moveForward());
+
+  void _moveReaderBackward() =>
+      unawaited(_sectionNavigationController.moveBackward());
+
+  void _handleReaderEscape() {
+    if (_isChoosingSpeechStart) {
+      _cancelSpeechTargetSelection();
+    } else if (_isFocusMode) {
+      _toggleFocusMode();
+    }
+  }
+
+  void _showChapterTransition() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(_section.title),
+            duration: const Duration(milliseconds: 850),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+    });
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
@@ -229,11 +315,23 @@ class _BookReaderPageState extends State<BookReaderPage> {
       actions: [
         IconButton(
           key: const ValueKey('reader-tts-action'),
-          tooltip: _isSpeaking
-              ? strings.stopReadingAloud
+          tooltip: _isChoosingSpeechStart
+              ? strings.cancelSpeechStart
+              : _isSpeaking
+              ? _isSpeechPaused
+                    ? strings.resumeReadingAloud
+                    : strings.pauseReadingAloud
               : strings.startReadingAloud,
           onPressed: _toggleSpeech,
-          icon: Icon(_isSpeaking ? Icons.stop_circle : Icons.volume_up),
+          icon: Icon(
+            _isChoosingSpeechStart
+                ? Icons.close
+                : _isSpeaking
+                ? _isSpeechPaused
+                      ? Icons.play_arrow
+                      : Icons.pause
+                : Icons.volume_up,
+          ),
         ),
         IconButton(
           key: const ValueKey('reader-hide-panels-button'),
@@ -273,18 +371,16 @@ class _BookReaderPageState extends State<BookReaderPage> {
   }
 
   Future<void> _toggleSpeech() async {
-    if (_isSpeaking) {
-      setState(() => _isSpeaking = false);
-      _speechChunks = const [];
-      _speechChunkIndex = 0;
-      await _speechEngine.stop();
+    if (_isChoosingSpeechStart) {
+      _cancelSpeechTargetSelection();
       return;
     }
-    await _configureSpeechForSection();
-    _prepareSpeechChunks(useCurrentProgress: true);
-    if (_speechChunks.isEmpty) return;
-    setState(() => _isSpeaking = true);
-    await _speakNextChunk();
+    if (_isSpeaking) {
+      await _pauseOrResumeSpeech();
+      return;
+    }
+    _clearTextSelection();
+    setState(() => _isChoosingSpeechStart = true);
   }
 
   Future<void> _configureSpeechForSection() => _speechEngine.configure(
@@ -295,64 +391,192 @@ class _BookReaderPageState extends State<BookReaderPage> {
     chapterTitle: _section.title,
   );
 
-  void _prepareSpeechChunks({required bool useCurrentProgress}) {
-    final text = richDocumentPlainText(_section.content).trim();
-    final offset = useCurrentProgress
-        ? (text.length * _sectionProgress).round().clamp(0, text.length)
-        : 0;
-    _speechChunks = _splitSpeech(text.substring(offset));
-    _speechChunkIndex = 0;
+  void _prepareSpeechSegments({required int startOffset}) {
+    final text = richDocumentPlainText(_section.content);
+    _speechSegments = BookSpeechSegmenter.split(text, startOffset: startOffset);
+    _speechSegmentIndex = 0;
   }
 
-  List<String> _splitSpeech(String text) {
-    const limit = 3500;
-    final chunks = <String>[];
-    var remaining = text.trim();
-    while (remaining.isNotEmpty) {
-      if (remaining.length <= limit) {
-        chunks.add(remaining);
-        break;
-      }
-      var split = remaining.lastIndexOf(RegExp(r'[.!?\n ]'), limit);
-      if (split < limit ~/ 2) split = limit;
-      chunks.add(remaining.substring(0, split).trim());
-      remaining = remaining.substring(split).trimLeft();
+  Future<void> _handleSpeechTargetSelected(int requestedOffset) async {
+    if (!_isChoosingSpeechStart) return;
+    final text = richDocumentPlainText(_section.content);
+    final offset = BookSpeechSegmenter.wordStart(text, requestedOffset);
+    setState(() => _isChoosingSpeechStart = false);
+    await _startSpeechAt(offset);
+  }
+
+  Future<void> _startSpeechAt(int offset) async {
+    try {
+      await _configureSpeechForSection();
+    } catch (error) {
+      _handleSpeechError(error.toString());
+      return;
     }
-    return chunks.where((chunk) => chunk.isNotEmpty).toList();
+    _prepareSpeechSegments(startOffset: offset);
+    if (_speechSegments.isEmpty) {
+      await _continueSpeechInNextReadableSection();
+      return;
+    }
+    setState(() {
+      _isSpeaking = true;
+      _isSpeechPaused = false;
+    });
+    await _speakNextSegment();
   }
 
-  Future<void> _speakNextChunk() async {
-    if (!_isSpeaking || _speechChunkIndex >= _speechChunks.length) return;
-    await _speechEngine.speak(_speechChunks[_speechChunkIndex++]);
+  Future<void> _speakNextSegment() async {
+    if (!_isSpeaking || _speechSegmentIndex >= _speechSegments.length) return;
+    final segment = _speechSegments[_speechSegmentIndex++];
+    final textLength = richDocumentPlainText(_section.content).length;
+    setState(() {
+      _activeSpeechSegment = segment;
+      _sectionProgress = textLength <= 0
+          ? 0
+          : (segment.startOffset / textLength).clamp(0, 1);
+    });
+    _saveProgress();
+    try {
+      await _speechEngine.speak(segment.text);
+    } catch (error) {
+      _handleSpeechError(error.toString());
+    }
   }
 
   Future<void> _handleSpeechCompleted() async {
     if (!_isSpeaking || !mounted) return;
-    if (_speechChunkIndex < _speechChunks.length) {
-      await _speakNextChunk();
+    if (_isSpeechPaused) return;
+    if (_speechSegmentIndex < _speechSegments.length) {
+      await _speakNextSegment();
       return;
     }
-    if (_activeIndex < _sections.length - 1) {
-      _goToNextSection();
-      await _configureSpeechForSection();
-      _prepareSpeechChunks(useCurrentProgress: false);
-      await _speakNextChunk();
+    await _continueSpeechInNextReadableSection();
+  }
+
+  Future<void> _continueSpeechInNextReadableSection() async {
+    _sectionProgress = 1;
+    _saveProgress();
+    for (var index = _activeIndex + 1; index < _sections.length; index++) {
+      final text = richDocumentPlainText(_sections[index].content).trim();
+      if (text.isEmpty) continue;
+      _goToLocation(_sections[index].id, 0, fromSpeech: true);
+      try {
+        await _configureSpeechForSection();
+      } catch (error) {
+        _handleSpeechError(error.toString());
+        return;
+      }
+      _prepareSpeechSegments(startOffset: 0);
+      await _speakNextSegment();
       return;
     }
-    setState(() => _isSpeaking = false);
+    if (!mounted) return;
+    setState(() {
+      _isSpeaking = false;
+      _isSpeechPaused = false;
+      _activeSpeechSegment = null;
+      _speechSegments = const [];
+      _speechSegmentIndex = 0;
+    });
+  }
+
+  Future<void> _pauseOrResumeSpeech() async {
+    if (!_isSpeaking) return;
+    if (_isSpeechPaused) {
+      await _speechEngine.resume();
+      if (mounted) setState(() => _isSpeechPaused = false);
+    } else {
+      await _speechEngine.pause();
+      if (mounted) setState(() => _isSpeechPaused = true);
+    }
+  }
+
+  Future<void> _stopSpeech() async {
+    if (mounted) {
+      setState(() {
+        _isSpeaking = false;
+        _isSpeechPaused = false;
+        _isChoosingSpeechStart = false;
+        _activeSpeechSegment = null;
+        _speechSegments = const [];
+        _speechSegmentIndex = 0;
+      });
+    }
+    await _speechEngine.stop();
+  }
+
+  void _cancelSpeechTargetSelection() {
+    _clearTextSelection();
+    setState(() => _isChoosingSpeechStart = false);
+  }
+
+  void _handleSpeechError(String _) {
+    if (!mounted) return;
+    setState(() {
+      _isSpeaking = false;
+      _isSpeechPaused = false;
+      _isChoosingSpeechStart = false;
+      _activeSpeechSegment = null;
+    });
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(AppStrings.of(context).speechError)));
+  }
+
+  void _changeSpeechRate(double delta) {
+    final rate = (_settings.speechRate + delta).clamp(0.25, 0.75);
+    if ((rate - _settings.speechRate).abs() < 0.001) return;
+    final settings = _settings.copyWith(speechRate: rate);
+    setState(() => _settings = settings);
+    widget.onSettingsChanged(settings);
+    if (_isSpeaking) unawaited(_configureSpeechForSection());
   }
 
   Widget _buildReadingSurface(
     BuildContext context,
     BookReaderPalette palette,
-  ) => GestureDetector(
-    behavior: HitTestBehavior.translucent,
-    onTapUp: _settings.centerTapControls
-        ? (details) => _handleReadingSurfaceTap(context, details)
-        : null,
-    child: Stack(
-      children: [
-        Positioned.fill(
+  ) => Stack(
+    children: [
+      Positioned.fill(
+        child: Listener(
+          key: const ValueKey('reader-reading-surface-listener'),
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: _settings.centerTapControls
+              ? (event) {
+                  _surfaceTapPointer = event.pointer;
+                  _surfaceTapStart = event.localPosition;
+                  _surfaceTapMoved = false;
+                }
+              : null,
+          onPointerMove: _settings.centerTapControls
+              ? (event) {
+                  if (event.pointer != _surfaceTapPointer ||
+                      _surfaceTapStart == null) {
+                    return;
+                  }
+                  if ((event.localPosition - _surfaceTapStart!).distance > 12) {
+                    _surfaceTapMoved = true;
+                  }
+                }
+              : null,
+          onPointerCancel: _settings.centerTapControls
+              ? (_) => _resetSurfaceTap()
+              : null,
+          onPointerUp: _settings.centerTapControls
+              ? (event) {
+                  final isTap =
+                      event.pointer == _surfaceTapPointer &&
+                      !_surfaceTapMoved &&
+                      _surfaceTapStart != null;
+                  final position = event.localPosition;
+                  _resetSurfaceTap();
+                  if (!isTap) return;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      _handleReadingSurfaceTap(context, position);
+                    }
+                  });
+                }
+              : null,
           child: BookReaderSectionView(
             section: _section,
             languageCode: widget.project.metadata.languageCode,
@@ -366,6 +590,16 @@ class _BookReaderPageState extends State<BookReaderPage> {
                 .toList(),
             onTextSelection: _handleTextSelection,
             clearSelectionVersion: _clearSelectionVersion,
+            navigationController: _sectionNavigationController,
+            speechTargetMode: _isChoosingSpeechStart,
+            onSpeechTargetSelected: (offset) =>
+                unawaited(_handleSpeechTargetSelected(offset)),
+            speechRange: _activeSpeechSegment == null
+                ? null
+                : BookReaderTextRange(
+                    _activeSpeechSegment!.startOffset,
+                    _activeSpeechSegment!.endOffset,
+                  ),
             onNextSectionRequested: _activeIndex < _sections.length - 1
                 ? _goToNextSection
                 : null,
@@ -374,36 +608,70 @@ class _BookReaderPageState extends State<BookReaderPage> {
                 : null,
           ),
         ),
-        if (_textSelection case final selection?)
-          Positioned(
-            left: 12,
-            right: 12,
-            bottom: 12,
-            child: Center(
-              child: BookReaderSelectionBar(
-                selection: selection,
-                onHighlight: _saveHighlight,
-                onSaveQuote: _saveQuote,
-                onAddNote: () => _addNoteForSelection(context),
-                onCopy: _copySelection,
-                onDictionary: () =>
-                    _openSelectionLookup(BookReaderLookupAction.dictionary),
-                onTranslate: () =>
-                    _openSelectionLookup(BookReaderLookupAction.translate),
-                onWebSearch: () =>
-                    _openSelectionLookup(BookReaderLookupAction.webSearch),
-                onClose: _clearTextSelection,
+      ),
+      if (_textSelection case final selection?)
+        Positioned(
+          left: 12,
+          right: 12,
+          bottom: 12,
+          child: Center(
+            child: BookReaderSelectionBar(
+              selection: selection,
+              onHighlight: _saveHighlight,
+              onSaveQuote: _saveQuote,
+              onAddNote: () => _addNoteForSelection(context),
+              onCopy: _copySelection,
+              onDictionary: () =>
+                  _openSelectionLookup(BookReaderLookupAction.dictionary),
+              onTranslate: () =>
+                  _openSelectionLookup(BookReaderLookupAction.translate),
+              onWebSearch: () =>
+                  _openSelectionLookup(BookReaderLookupAction.webSearch),
+              onClose: _clearTextSelection,
+            ),
+          ),
+        ),
+      if (_isChoosingSpeechStart || _isSpeaking)
+        Positioned(
+          left: 12,
+          right: 12,
+          top: 12,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: BookReaderSpeechControls(
+                isChoosingStart: _isChoosingSpeechStart,
+                isPaused: _isSpeechPaused,
+                rate: _settings.speechRate,
+                onCancelChoosing: _cancelSpeechTargetSelection,
+                onPauseOrResume: () => unawaited(_pauseOrResumeSpeech()),
+                onStop: () => unawaited(_stopSpeech()),
+                onSlower: _settings.speechRate > 0.25
+                    ? () => _changeSpeechRate(-0.05)
+                    : null,
+                onFaster: _settings.speechRate < 0.75
+                    ? () => _changeSpeechRate(0.05)
+                    : null,
+                onSettings: () => _showSettings(context),
+                backgroundColor: palette.surface,
+                foregroundColor: palette.ink,
               ),
             ),
           ),
-      ],
-    ),
+        ),
+    ],
   );
 
-  void _handleReadingSurfaceTap(BuildContext context, TapUpDetails details) {
-    if (_textSelection != null) return;
+  void _resetSurfaceTap() {
+    _surfaceTapPointer = null;
+    _surfaceTapStart = null;
+    _surfaceTapMoved = false;
+  }
+
+  void _handleReadingSurfaceTap(BuildContext context, Offset localPosition) {
+    if (_textSelection != null || _isChoosingSpeechStart) return;
     final width = context.size?.width ?? MediaQuery.sizeOf(context).width;
-    final position = details.localPosition.dx / width;
+    final position = localPosition.dx / width;
     if (position >= 0.32 && position <= 0.68) _toggleFocusMode();
   }
 
@@ -474,9 +742,11 @@ class _BookReaderPageState extends State<BookReaderPage> {
       showModalBottomSheet<void>(
         context: themedContext,
         isScrollControlled: true,
-        builder: (sheetContext) => FractionallySizedBox(
-          heightFactor: 0.82,
-          child: _navigationPanel(sheetContext, closeAfterSelection: true),
+        builder: (sheetContext) => BookSheetKeyboardDismiss(
+          child: FractionallySizedBox(
+            heightFactor: 0.82,
+            child: _navigationPanel(sheetContext, closeAfterSelection: true),
+          ),
         ),
       );
 
@@ -485,14 +755,16 @@ class _BookReaderPageState extends State<BookReaderPage> {
         context: themedContext,
         isScrollControlled: true,
         showDragHandle: true,
-        builder: (sheetContext) => FractionallySizedBox(
-          heightFactor: 0.88,
-          child: BookReaderSearchSheet(
-            sections: _sections,
-            onSelected: (result) {
-              Navigator.of(sheetContext).pop();
-              _goToSearchResult(result);
-            },
+        builder: (sheetContext) => BookSheetKeyboardDismiss(
+          child: FractionallySizedBox(
+            heightFactor: 0.88,
+            child: BookReaderSearchSheet(
+              sections: _sections,
+              onSelected: (result) {
+                Navigator.of(sheetContext).pop();
+                _goToSearchResult(result);
+              },
+            ),
           ),
         ),
       );
@@ -502,12 +774,15 @@ class _BookReaderPageState extends State<BookReaderPage> {
         context: themedContext,
         isScrollControlled: true,
         showDragHandle: true,
-        builder: (_) => BookReaderSettingsSheet(
-          settings: _settings,
-          onChanged: (settings) {
-            setState(() => _settings = settings);
-            widget.onSettingsChanged(settings);
-          },
+        builder: (_) => BookSheetKeyboardDismiss(
+          child: BookReaderSettingsSheet(
+            settings: _settings,
+            onChanged: (settings) {
+              setState(() => _settings = settings);
+              widget.onSettingsChanged(settings);
+              if (_isSpeaking) unawaited(_configureSpeechForSection());
+            },
+          ),
         ),
       );
 
@@ -635,11 +910,13 @@ class _BookReaderPageState extends State<BookReaderPage> {
       showModalBottomSheet<void>(
         context: themedContext,
         showDragHandle: true,
-        builder: (sheetContext) => BookReaderAnnotationExportSheet(
-          onSelected: (format) {
-            Navigator.of(sheetContext).pop();
-            _exportAnnotations(themedContext, format);
-          },
+        builder: (sheetContext) => BookSheetKeyboardDismiss(
+          child: BookReaderAnnotationExportSheet(
+            onSelected: (format) {
+              Navigator.of(sheetContext).pop();
+              _exportAnnotations(themedContext, format);
+            },
+          ),
         ),
       );
 

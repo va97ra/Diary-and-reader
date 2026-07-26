@@ -28,8 +28,11 @@ abstract final class BookHtmlExporter {
     final sections = outline
         .map((entry) {
           final level = (entry.depth + 2).clamp(2, 6);
+          final heading = project.layoutSettings.showChapterTitlesInBody
+              ? '<h$level>${escapeXml(entry.section.title)}</h$level>'
+              : '';
           return '''<section id="section-${entry.index + 1}" data-type="${entry.section.type.name}">
-  <h$level>${escapeXml(entry.section.title)}</h$level>
+  $heading
 ${EpubRichTextRenderer.render(entry.section.content, imageSource: (assetId) {
             final asset = project.assetById(assetId);
             return asset == null ? null : 'data:${asset.mediaType};base64,${base64Encode(asset.bytes)}';

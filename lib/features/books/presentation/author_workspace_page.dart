@@ -17,10 +17,13 @@ import 'package:dnevnik/features/books/data/book_pdf_asset_font_loader.dart';
 import 'package:dnevnik/features/books/data/book_project_backup_file_service.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/manuscript_statistics.dart';
+import 'package:dnevnik/features/books/domain/rich_document.dart';
 import 'package:dnevnik/features/books/presentation/book_export_sheet.dart';
 import 'package:dnevnik/features/books/presentation/book_manuscript_search_sheet.dart';
 import 'package:dnevnik/features/books/presentation/book_pdf_preview_page.dart';
+import 'package:dnevnik/features/books/presentation/book_section_trash_sheet.dart';
 import 'package:dnevnik/features/books/presentation/book_version_history_sheet.dart';
+import 'package:dnevnik/features/books/presentation/book_writing_statistics_sheet.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_page.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_editor_metrics.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_focus_mode_bar.dart';
@@ -29,6 +32,7 @@ import 'package:dnevnik/features/books/presentation/widgets/book_navigator.dart'
 import 'package:dnevnik/features/books/presentation/widgets/book_properties_panel.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_rename_title_dialog.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_section_editor.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_sheet_keyboard_dismiss.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_workspace_app_bar.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_writer_context_bar.dart';
 import 'package:flutter/material.dart';
@@ -54,13 +58,41 @@ class AuthorWorkspacePage extends StatefulWidget {
   State<AuthorWorkspacePage> createState() => _AuthorWorkspacePageState();
 }
 
-class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
+class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
+    with WidgetsBindingObserver {
   QuillController? _editorController;
   final _sectionEditorKeys = <String, GlobalKey<BookSectionEditorState>>{};
   BookManuscriptMatch? _pendingSearchMatch;
   bool _isFocusMode = false;
   bool _isA4Preview = false;
   final _editorMetrics = <String, BookEditorMetrics>{};
+  DateTime _writingSessionStartedAt = DateTime.now();
+  DateTime? _lastWritingActivity;
+  Duration _activeWritingDuration = Duration.zero;
+  late int _writingSessionStartWords;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _writingSessionStartWords = _projectWordCount();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached ||
+        state == AppLifecycleState.hidden) {
+      _commitWritingSession();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _commitWritingSession();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -129,9 +161,11 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
                           viewMode: project.layoutSettings.viewMode,
                           onMetricsChanged: (metrics) =>
                               _handleEditorMetrics(section.id, metrics),
+                          showChapterTitleOnPage:
+                              _isA4Preview &&
+                              project.layoutSettings.showChapterTitlesInBody,
                           onTitleChanged: widget.controller.updateSectionTitle,
-                          onContentChanged:
-                              widget.controller.updateSectionContent,
+                          onContentChanged: _handleContentChanged,
                           onControllerReady: _handleEditorControllerReady,
                         ),
                       ),
@@ -165,17 +199,80 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
     switch (action) {
       case BookWorkspaceAction.search:
         return _showManuscriptSearch();
+      case BookWorkspaceAction.statistics:
+        return _showWritingStatistics();
       case BookWorkspaceAction.export:
         return _showExportSheet();
       case BookWorkspaceAction.preview:
         return _openReader();
       case BookWorkspaceAction.history:
         return _showVersionHistory();
+      case BookWorkspaceAction.trash:
+        return _showSectionTrash();
       case BookWorkspaceAction.backup:
         return _backupProject();
       case BookWorkspaceAction.restore:
         return _restoreProjectBackup();
     }
+  }
+
+  void _handleContentChanged(RichDocument content) {
+    final now = DateTime.now();
+    final previous = _lastWritingActivity;
+    if (previous == null) {
+      _activeWritingDuration += const Duration(seconds: 1);
+    } else {
+      final gap = now.difference(previous);
+      if (!gap.isNegative && gap <= const Duration(minutes: 2)) {
+        _activeWritingDuration += gap;
+      }
+    }
+    _lastWritingActivity = now;
+    widget.controller.updateSectionContent(content);
+  }
+
+  int _projectWordCount() {
+    final project = widget.controller.activeProject;
+    if (project == null) return 0;
+    return project.sections.fold(
+      0,
+      (total, section) =>
+          total + ManuscriptStatistics.fromDocument(section.content).words,
+    );
+  }
+
+  void _commitWritingSession() {
+    final project = widget.controller.activeProject;
+    if (project != null && !project.isReadOnly) {
+      widget.controller.recordWritingSession(
+        project.id,
+        startedAt: _writingSessionStartedAt,
+        duration: _activeWritingDuration,
+        wordsAdded: (_projectWordCount() - _writingSessionStartWords).clamp(
+          0,
+          10000000,
+        ),
+      );
+    }
+    _writingSessionStartedAt = DateTime.now();
+    _writingSessionStartWords = _projectWordCount();
+    _lastWritingActivity = null;
+    _activeWritingDuration = Duration.zero;
+  }
+
+  Future<void> _showWritingStatistics() async {
+    _commitWritingSession();
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => BookSheetKeyboardDismiss(
+        child: FractionallySizedBox(
+          heightFactor: 0.9,
+          child: BookWritingStatisticsSheet(controller: widget.controller),
+        ),
+      ),
+    );
   }
 
   void _toggleFocusMode() => setState(() {
@@ -256,25 +353,30 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (sheetContext) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
-        ),
-        child: BookManuscriptSearchSheet(
-          project: project,
-          onOpenMatch: _openSearchMatch,
+      builder: (sheetContext) => BookSheetKeyboardDismiss(
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
+          ),
+          child: BookManuscriptSearchSheet(
+            project: project,
+            onOpenMatch: _openSearchMatch,
+          ),
         ),
       ),
     );
     if (!mounted || request == null) return;
-    final count = widget.controller.replaceAllInManuscript(
+    final strings = AppStrings.of(context);
+    final count = await widget.controller.replaceAllInManuscriptSafely(
       request.query,
       request.replacement,
       caseSensitive: request.caseSensitive,
+      safetyLabel: strings.automaticBeforeReplace,
     );
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(AppStrings.of(context).replacementsMade(count))),
-    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(strings.replacementsMade(count))));
   }
 
   void _openSearchMatch(BookManuscriptMatch match) {
@@ -305,11 +407,13 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
   Future<void> _showManuscript() => showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    builder: (_) => FractionallySizedBox(
-      heightFactor: 0.82,
-      child: BookNavigator(
-        controller: widget.controller,
-        closeAfterSelection: true,
+    builder: (_) => BookSheetKeyboardDismiss(
+      child: FractionallySizedBox(
+        heightFactor: 0.82,
+        child: BookNavigator(
+          controller: widget.controller,
+          closeAfterSelection: true,
+        ),
       ),
     ),
   );
@@ -318,52 +422,56 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (sheetContext) => FractionallySizedBox(
-      heightFactor: 0.9,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    AppStrings.of(context).writerSettings,
-                    style: Theme.of(context).textTheme.titleLarge,
+    builder: (sheetContext) => BookSheetKeyboardDismiss(
+      child: FractionallySizedBox(
+        heightFactor: 0.9,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      AppStrings.of(context).writerSettings,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
                   ),
-                ),
-                IconButton(
-                  tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-                  onPressed: () => Navigator.pop(sheetContext),
-                  icon: const Icon(Icons.close),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: FilledButton.tonalIcon(
-              key: const ValueKey('writer-a4-preview-action'),
-              onPressed: () {
-                Navigator.pop(sheetContext);
-                _toggleA4Preview();
-              },
-              icon: Icon(
-                _isA4Preview
-                    ? Icons.edit_note_outlined
-                    : Icons.description_outlined,
-              ),
-              label: Text(
-                _isA4Preview
-                    ? AppStrings.of(context).comfortableWriting
-                    : AppStrings.of(context).a4Preview,
+                  IconButton(
+                    tooltip: MaterialLocalizations.of(
+                      context,
+                    ).closeButtonTooltip,
+                    onPressed: () => Navigator.pop(sheetContext),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Expanded(child: BookPropertiesPanel(controller: widget.controller)),
-        ],
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: FilledButton.tonalIcon(
+                key: const ValueKey('writer-a4-preview-action'),
+                onPressed: () {
+                  Navigator.pop(sheetContext);
+                  _toggleA4Preview();
+                },
+                icon: Icon(
+                  _isA4Preview
+                      ? Icons.edit_note_outlined
+                      : Icons.description_outlined,
+                ),
+                label: Text(
+                  _isA4Preview
+                      ? AppStrings.of(context).comfortableWriting
+                      : AppStrings.of(context).a4Preview,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Expanded(child: BookPropertiesPanel(controller: widget.controller)),
+          ],
+        ),
       ),
     ),
   );
@@ -375,20 +483,23 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (sheetContext) => FractionallySizedBox(
-        heightFactor: 0.9,
-        child: BookFormattingSheet(
-          workspaceController: widget.controller,
-          controller: controller,
-          paragraphSettings: widget.controller.activeProject!.paragraphSettings,
-          onInsertImage: () {
-            Navigator.pop(sheetContext);
-            _insertImage();
-          },
-          onInsertPageBreak: () {
-            Navigator.pop(sheetContext);
-            _insertPageBreak();
-          },
+      builder: (sheetContext) => BookSheetKeyboardDismiss(
+        child: FractionallySizedBox(
+          heightFactor: 0.9,
+          child: BookFormattingSheet(
+            workspaceController: widget.controller,
+            controller: controller,
+            paragraphSettings:
+                widget.controller.activeProject!.paragraphSettings,
+            onInsertImage: () {
+              Navigator.pop(sheetContext);
+              _insertImage();
+            },
+            onInsertPageBreak: () {
+              Navigator.pop(sheetContext);
+              _insertPageBreak();
+            },
+          ),
         ),
       ),
     );
@@ -448,28 +559,30 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
       showDragHandle: true,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (sheetContext) => BookExportSheet(
-        onSelected: (format) {
-          Navigator.of(sheetContext).pop();
-          switch (format) {
-            case BookExportFormat.epub:
-              _exportArtifact(BookEpubExporter.create);
-            case BookExportFormat.fb2:
-              _exportArtifact(BookFb2Exporter.create);
-            case BookExportFormat.fb2Zip:
-              _exportArtifact(BookFb2Exporter.createZip);
-            case BookExportFormat.pdf:
-              _openPdfPreview();
-            case BookExportFormat.docx:
-              _exportArtifact(BookDocxExporter.create);
-            case BookExportFormat.html:
-              _exportArtifact(BookHtmlExporter.create);
-            case BookExportFormat.markdown:
-              _exportArtifact(BookMarkdownExporter.create);
-            case BookExportFormat.txt:
-              _exportArtifact(BookTxtExporter.create);
-          }
-        },
+      builder: (sheetContext) => BookSheetKeyboardDismiss(
+        child: BookExportSheet(
+          onSelected: (format) {
+            Navigator.of(sheetContext).pop();
+            switch (format) {
+              case BookExportFormat.epub:
+                _exportArtifact(BookEpubExporter.create);
+              case BookExportFormat.fb2:
+                _exportArtifact(BookFb2Exporter.create);
+              case BookExportFormat.fb2Zip:
+                _exportArtifact(BookFb2Exporter.createZip);
+              case BookExportFormat.pdf:
+                _openPdfPreview();
+              case BookExportFormat.docx:
+                _exportArtifact(BookDocxExporter.create);
+              case BookExportFormat.html:
+                _exportArtifact(BookHtmlExporter.create);
+              case BookExportFormat.markdown:
+                _exportArtifact(BookMarkdownExporter.create);
+              case BookExportFormat.txt:
+                _exportArtifact(BookTxtExporter.create);
+            }
+          },
+        ),
       ),
     );
   }
@@ -478,9 +591,23 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage> {
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (context) => FractionallySizedBox(
-      heightFactor: 0.84,
-      child: BookVersionHistorySheet(controller: widget.controller),
+    builder: (context) => BookSheetKeyboardDismiss(
+      child: FractionallySizedBox(
+        heightFactor: 0.84,
+        child: BookVersionHistorySheet(controller: widget.controller),
+      ),
+    ),
+  );
+
+  Future<void> _showSectionTrash() => showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    builder: (_) => BookSheetKeyboardDismiss(
+      child: FractionallySizedBox(
+        heightFactor: 0.82,
+        child: BookSectionTrashSheet(controller: widget.controller),
+      ),
     ),
   );
 

@@ -17,12 +17,27 @@ import 'package:dnevnik/features/books/presentation/reader/book_reader_page_stag
 import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_selection_resolver.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_text_selection.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
 part 'book_reader_section_continuous.dart';
 part 'book_reader_section_document.dart';
 part 'book_reader_section_pagination.dart';
+
+class BookReaderSectionController {
+  _BookReaderSectionViewState? _state;
+
+  Future<void> moveForward() async => _state?._moveByNavigation(1);
+
+  Future<void> moveBackward() async => _state?._moveByNavigation(-1);
+
+  void _attach(_BookReaderSectionViewState state) => _state = state;
+
+  void _detach(_BookReaderSectionViewState state) {
+    if (identical(_state, state)) _state = null;
+  }
+}
 
 class BookReaderSectionView extends StatefulWidget {
   const BookReaderSectionView({
@@ -36,6 +51,10 @@ class BookReaderSectionView extends StatefulWidget {
     required this.highlights,
     required this.onTextSelection,
     required this.clearSelectionVersion,
+    required this.speechTargetMode,
+    required this.onSpeechTargetSelected,
+    required this.navigationController,
+    this.speechRange,
     this.onNextSectionRequested,
     this.onPreviousSectionRequested,
     super.key,
@@ -51,6 +70,10 @@ class BookReaderSectionView extends StatefulWidget {
   final List<BookReaderHighlight> highlights;
   final ValueChanged<BookReaderTextSelection?> onTextSelection;
   final int clearSelectionVersion;
+  final bool speechTargetMode;
+  final ValueChanged<int> onSpeechTargetSelected;
+  final BookReaderSectionController navigationController;
+  final BookReaderTextRange? speechRange;
   final VoidCallback? onNextSectionRequested;
   final VoidCallback? onPreviousSectionRequested;
 
@@ -82,10 +105,13 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
   int _paginationRequest = 0;
   final _paginationMeasurement = BookPaginationMeasurement(maxRetries: 8);
   bool _isPaginating = false;
+  bool _navigationLocked = false;
   int? _continuousPointer;
   double? _continuousPointerStartY;
   bool _continuousPointerStartedAtStart = false;
   bool _continuousPointerStartedAtEnd = false;
+  bool _continuousForwardInput = false;
+  bool _continuousBackwardInput = false;
   _ReaderPageGeometry? _geometry;
   _ReaderPageGeometry? _completedGeometry;
   BookReaderViewMode _effectiveMode = BookReaderViewMode.continuous;
@@ -102,6 +128,7 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
     super.initState();
     _progress = widget.initialProgress.clamp(0, 1).toDouble();
     _pendingProgress = _progress;
+    widget.navigationController._attach(this);
     _displayDocument = BookReaderHyphenation.identity(widget.section.content);
     _createContinuousResources();
     _scheduleHyphenation();
@@ -128,6 +155,14 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
         oldWidget.section.id != widget.section.id ||
         jsonEncode(oldWidget.section.content) !=
             jsonEncode(widget.section.content);
+    if (!identical(
+      oldWidget.navigationController,
+      widget.navigationController,
+    )) {
+      oldWidget.navigationController._detach(this);
+      widget.navigationController._attach(this);
+    }
+    if (sectionChanged) _navigationLocked = false;
     final highlightsChanged =
         jsonEncode(
           oldWidget.highlights.map((item) => item.toJson()).toList(),
@@ -143,6 +178,8 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
       _clearVisiblePages();
       _invalidatePagination();
     } else if (highlightsChanged ||
+        oldWidget.speechRange?.start != widget.speechRange?.start ||
+        oldWidget.speechRange?.end != widget.speechRange?.end ||
         oldWidget.settings.theme != widget.settings.theme) {
       _replaceContinuousResources();
       _replaceVisiblePagesForHighlights();
@@ -152,6 +189,11 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
 
     if (oldWidget.clearSelectionVersion != widget.clearSelectionVersion) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _clearSelection());
+    }
+
+    if (oldWidget.speechTargetMode != widget.speechTargetMode) {
+      _replaceContinuousResources();
+      _replaceVisiblePagesForHighlights();
     }
 
     if ((widget.initialProgress - _progress).abs() > 0.004 || sectionChanged) {
@@ -252,12 +294,62 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
     }
   }
 
+  Future<void> _moveByNavigation(int direction) async {
+    if (_navigationLocked || direction == 0) return;
+    if (_effectiveMode == BookReaderViewMode.continuous) {
+      if (!_continuousScrollController.hasClients) return;
+      final position = _continuousScrollController.position;
+      final atBoundary = direction > 0
+          ? position.extentAfter <= 1
+          : position.extentBefore <= 1;
+      if (atBoundary || position.maxScrollExtent <= 0) {
+        _requestSectionNavigation(direction);
+        return;
+      }
+      _navigationLocked = true;
+      final target = (position.pixels + direction * position.viewportDimension)
+          .clamp(position.minScrollExtent, position.maxScrollExtent)
+          .toDouble();
+      await _continuousScrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+      );
+      _navigationLocked = false;
+      if (!mounted || !_continuousScrollController.hasClients) return;
+      final updated = _continuousScrollController.position;
+      final reachedBoundary = direction > 0
+          ? updated.extentAfter <= 1
+          : updated.extentBefore <= 1;
+      if (reachedBoundary) _requestSectionNavigation(direction);
+      return;
+    }
+    final step = _effectiveMode == BookReaderViewMode.spread ? 2 : 1;
+    final target = _activePage + direction * step;
+    if (target >= 0 && target < _pageControllers.length) {
+      _selectPage(target);
+      return;
+    }
+    _requestSectionNavigation(direction);
+  }
+
+  void _requestSectionNavigation(int direction) {
+    if (_navigationLocked) return;
+    final callback = direction > 0
+        ? widget.onNextSectionRequested
+        : widget.onPreviousSectionRequested;
+    if (callback == null) return;
+    _navigationLocked = true;
+    callback();
+  }
+
   @override
   void dispose() {
     _progressTimer?.cancel();
     _paginationTimer?.cancel();
     _paginationRequest++;
     _hyphenationRequest++;
+    widget.navigationController._detach(this);
     _continuousController.dispose();
     _continuousFocusNode.dispose();
     _continuousScrollController.dispose();

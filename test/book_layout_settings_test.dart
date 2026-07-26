@@ -9,6 +9,7 @@ void main() {
     expect(settings.paperSize, BookPaperSize.a4);
     expect(settings.orientation, BookPageOrientation.portrait);
     expect(settings.viewMode, BookPageViewMode.continuous);
+    expect(settings.showChapterTitlesInBody, isTrue);
     expect(settings.pageFormat.widthMm, 210);
     expect(settings.pageFormat.heightMm, 297);
   });
@@ -18,6 +19,7 @@ void main() {
       orientation: BookPageOrientation.landscape,
       marginLeftMm: 25,
       viewMode: BookPageViewMode.spread,
+      showChapterTitlesInBody: false,
     );
 
     final restored = BookLayoutSettings.fromJson(source.toJson());
@@ -25,6 +27,7 @@ void main() {
     expect(restored.orientation, BookPageOrientation.landscape);
     expect(restored.marginLeftMm, 25);
     expect(restored.viewMode, BookPageViewMode.spread);
+    expect(restored.showChapterTitlesInBody, isFalse);
     expect(restored.pageFormat.widthMm, 297);
   });
 

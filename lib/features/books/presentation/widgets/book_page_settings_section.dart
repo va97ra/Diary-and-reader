@@ -24,6 +24,16 @@ class BookPageSettingsSection extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text('${strings.paperFormat}: A4'),
+        const SizedBox(height: 8),
+        SwitchListTile(
+          key: ValueKey('${project.id}-show-chapter-titles'),
+          contentPadding: EdgeInsets.zero,
+          title: Text(strings.showChapterTitlesInBody),
+          subtitle: Text(strings.showChapterTitlesInBodyHint),
+          value: settings.showChapterTitlesInBody,
+          onChanged: (value) =>
+              _update(settings.copyWith(showChapterTitlesInBody: value)),
+        ),
         const SizedBox(height: 14),
         BookPageViewModeSelector(
           value: settings.viewMode,
