@@ -63,6 +63,7 @@ class BookReaderContinuousView extends StatelessWidget {
         child: Container(
           key: const ValueKey('reader-surface'),
           width: double.infinity,
+          height: double.infinity,
           color: palette.surface,
           child: Listener(
             onPointerDown: onPointerDown,

@@ -302,10 +302,13 @@ void main() {
     await openReaderPreview(tester, controller);
     await tester.pumpAndSettle();
 
-    await tester.drag(
-      find.byKey(ValueKey('reader-document-$firstChapterId')),
-      const Offset(0, -240),
+    final continuousView = find.byKey(const ValueKey('reader-continuous-view'));
+    final viewBounds = tester.getRect(continuousView);
+    final forwardGesture = await tester.startGesture(
+      Offset(viewBounds.center.dx, viewBounds.bottom - 24),
     );
+    await forwardGesture.moveBy(const Offset(0, -240));
+    await forwardGesture.up();
     await tester.pumpAndSettle();
     expect(controller.activeProject!.readerProgress.sectionId, secondChapterId);
 

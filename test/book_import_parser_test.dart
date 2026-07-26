@@ -3,10 +3,12 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
+import 'package:dnevnik/features/books/application/book_docx_exporter.dart';
 import 'package:dnevnik/features/books/application/book_epub_exporter.dart';
 import 'package:dnevnik/features/books/application/book_fb2_exporter.dart';
 import 'package:dnevnik/features/books/application/book_import_file.dart';
 import 'package:dnevnik/features/books/application/book_import_parser.dart';
+import 'package:dnevnik/features/books/application/book_txt_exporter.dart';
 import 'package:dnevnik/features/books/application/xml_book_content_converter.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
@@ -173,6 +175,34 @@ void main() {
             .join(),
         contains('Жирный текст'),
       );
+    });
+
+    test('reopens every readable format exported by Literia', () {
+      final project = _sourceProject();
+      final artifacts = [
+        BookEpubExporter.create(project),
+        BookFb2Exporter.create(project),
+        BookFb2Exporter.createZip(project),
+        BookDocxExporter.create(project),
+        BookTxtExporter.create(project),
+      ];
+
+      for (final artifact in artifacts) {
+        final reopened = BookImportParser.parse(
+          BookImportFile(
+            name: 'round-trip.${artifact.extension}',
+            bytes: artifact.bytes,
+          ),
+          now: _importTime,
+        );
+        expect(
+          reopened.sections
+              .map((section) => richDocumentPlainText(section.content))
+              .join(),
+          contains('Жирный текст'),
+          reason: artifact.extension,
+        );
+      }
     });
 
     test('uses EPUB navigation labels when page titles are repeated', () {

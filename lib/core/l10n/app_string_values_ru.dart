@@ -406,7 +406,8 @@ const appStringValuesRu = <String, String>{
   'deleteQuote': 'Удалить цитату',
   'exportAnnotations': 'Экспорт аннотаций',
   'exportMarkdown': 'Markdown (.md)',
-  'exportMarkdownHint': 'Удобно читать и открывать в текстовых редакторах',
+  'exportMarkdownHint':
+      'Для текстовых редакторов; обратно в Литерию не импортируется',
   'exportJson': 'JSON (.json)',
   'exportJsonHint': 'Структурированная резервная копия для переноса данных',
   'annotationsExported': 'Аннотации сохранены',
@@ -417,24 +418,20 @@ const appStringValuesRu = <String, String>{
   'exportBook': 'Экспорт книги',
   'exportEpub': 'EPUB 3.3 (.epub)',
   'exportEpubHint':
-      'Адаптивная электронная книга с оглавлением и оформлением текста',
+      'Электронная книга с оглавлением; можно снова загрузить в Литерию',
   'exportFb2': 'FictionBook (.fb2)',
   'exportFb2Hint':
-      'Формат для популярных читалок с главами и оформлением текста',
+      'Книга с главами и оформлением; можно снова загрузить в Литерию',
   'exportFb2Zip': 'FictionBook в архиве (.fb2.zip)',
-  'exportFb2ZipHint':
-      'Компактный FB2 для библиотек и устройств с поддержкой архивов',
+  'exportFb2ZipHint': 'Компактный FB2; можно снова загрузить в Литерию',
   'exportPdf': 'Печатный PDF (.pdf)',
-  'exportPdfHint':
-      'Фиксированные страницы A4 с полями, оглавлением и нумерацией',
+  'exportPdfHint': 'Для печати на A4; обратно в Литерию не импортируется',
   'exportDocx': 'Документ Word (.docx)',
-  'exportDocxHint':
-      'Редактируемая рукопись со стилями, оглавлением и разметкой A4',
+  'exportDocxHint': 'Редактируемая рукопись; можно снова загрузить в Литерию',
   'exportHtml': 'Веб-страница (.html)',
-  'exportHtmlHint':
-      'Автономная адаптивная страница с оглавлением и оформлением',
+  'exportHtmlHint': 'Для браузера; обратно в Литерию не импортируется',
   'exportTxt': 'Обычный текст (.txt)',
-  'exportTxtHint': 'Максимально совместимый текст без оформления',
+  'exportTxtHint': 'Текст без оформления; можно снова загрузить в Литерию',
   'readerExportFormats': 'Для электронных читалок',
   'printExportFormats': 'Для печати и редактирования',
   'textExportFormats': 'Открытые текстовые форматы',
