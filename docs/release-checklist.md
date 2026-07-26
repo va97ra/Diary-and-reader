@@ -30,7 +30,9 @@
 
 ## Windows
 
-1. Создать release ZIP:
+1. Создать release ZIP. Если `nuget.exe`, необходимый `flutter_tts`, отсутствует
+   в `PATH`, скрипт загрузит подписанный Microsoft CLI в игнорируемый каталог
+   `build/tools`:
 
        .\tool\package_windows_release.ps1 -Flutter C:\Users\va97r\.flutter-sdk\flutter\bin\flutter.bat -Version 1.0.0
 
