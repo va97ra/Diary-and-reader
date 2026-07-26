@@ -106,6 +106,54 @@ void main() {
       );
     });
 
+    test('splits a flat FB2 by visible chapter-heading paragraphs', () {
+      const xml = '''<?xml version="1.0" encoding="UTF-8"?>
+<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">
+  <description>
+    <title-info>
+      <book-title>Плоская книга</book-title>
+      <lang>ru</lang>
+    </title-info>
+  </description>
+  <body>
+    <section>
+      <p>Глава 1</p>
+      <p>Текст первой главы.</p>
+      <p>Глава 2.</p>
+      <p>Текст второй главы.</p>
+      <p>Эпилог</p>
+      <p>Финальный текст.</p>
+    </section>
+  </body>
+</FictionBook>''';
+
+      final imported = BookImportParser.parse(
+        BookImportFile(
+          name: 'flat.fb2',
+          bytes: Uint8List.fromList(utf8.encode(xml)),
+        ),
+        now: _importTime,
+      );
+
+      expect(imported.sections.map((section) => section.title), [
+        'Глава 1',
+        'Глава 2.',
+        'Эпилог',
+      ]);
+      expect(
+        richDocumentPlainText(imported.sections[0].content),
+        contains('Текст первой главы.'),
+      );
+      expect(
+        richDocumentPlainText(imported.sections[1].content),
+        isNot(contains('Текст первой главы.')),
+      );
+      expect(
+        richDocumentPlainText(imported.sections[2].content),
+        contains('Финальный текст.'),
+      );
+    });
+
     test('imports EPUB metadata and spine content in reading order', () {
       final exported = BookEpubExporter.create(_sourceProject());
 

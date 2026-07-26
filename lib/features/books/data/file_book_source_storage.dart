@@ -6,6 +6,8 @@ import 'package:dnevnik/features/books/application/book_import_file.dart';
 import 'package:dnevnik/features/books/application/book_source_storage.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 
+const _processedCacheVersion = 2;
+
 class FileBookSourceStorage
     implements BookSourceStorage, BookReadingCacheStorage {
   FileBookSourceStorage({required this.supportDirectory});
@@ -97,10 +99,12 @@ class FileBookSourceStorage
     if (!await cache.exists()) return null;
     try {
       final encoded = await cache.readAsString(encoding: utf8);
+      final originalAvailable = await hasOriginal(project);
       return Isolate.run(
         () => _decodeProcessed(
           encoded,
           expectedFingerprint: project.sourceFingerprint,
+          allowLegacy: !originalAvailable,
         ),
       );
     } on Object {
@@ -120,7 +124,7 @@ class FileBookSourceStorage
     await _deleteFileIfExists(pending);
     final encoded = await Isolate.run(
       () => jsonEncode({
-        'cacheVersion': 1,
+        'cacheVersion': _processedCacheVersion,
         'sourceFingerprint': project.sourceFingerprint,
         'project': processed.toJson(),
       }),
@@ -230,11 +234,16 @@ class FileBookSourceStorage
 BookProject? _decodeProcessed(
   String encoded, {
   required String expectedFingerprint,
+  required bool allowLegacy,
 }) {
   final decoded = jsonDecode(encoded);
   if (decoded is! Map) return null;
   final envelope = Map<String, dynamic>.from(decoded);
-  if (envelope['cacheVersion'] != 1 ||
+  final cacheVersion = envelope['cacheVersion'];
+  final supportedVersion =
+      cacheVersion == _processedCacheVersion ||
+      (allowLegacy && cacheVersion == 1);
+  if (!supportedVersion ||
       envelope['sourceFingerprint']?.toString() != expectedFingerprint ||
       envelope['project'] is! Map) {
     return null;
