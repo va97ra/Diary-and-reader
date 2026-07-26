@@ -416,7 +416,7 @@ void registerAdaptiveWorkflowScenarios() {
     await tester.binding.setSurfaceSize(null);
   });
 
-  testWidgets('imports an FB2 into the library and opens it in the reader', (
+  testWidgets('imports an FB2 as a catalog card and opens it on demand', (
     tester,
   ) async {
     final repository = MemoryAuthorWorkspaceRepository();
@@ -438,27 +438,40 @@ void registerAdaptiveWorkflowScenarios() {
     await tester.tap(find.byKey(const ValueKey('home-read-tile')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('import-book-button')));
-    await pumpUntilFound(tester, find.byType(BookReaderPage));
+    await pumpUntilCondition(tester, () => controller.projects.length == 2);
 
     expect(gateway.openCount, 1);
-    expect(find.byType(BookReaderPage), findsOneWidget);
-    expect(find.byKey(const ValueKey('book-image-asset-1')), findsOneWidget);
+    expect(find.byType(BookReaderPage), findsNothing);
     expect(controller.projects, hasLength(2));
     expect(controller.activeProject!.kind, BookProjectKind.importedBook);
     final importedProjectId = controller.activeProject!.id;
+    expect(controller.activeProject!.isCatalogOnly, isTrue);
     expect(
       repository.snapshot!.activeProject!.sourceFileName,
       'other-book.fb2',
     );
 
+    expect(find.byKey(const ValueKey('reading-library')), findsOneWidget);
+    final importedCard = find.byKey(
+      ValueKey('literia-project-$importedProjectId'),
+    );
+    final importedCover = find.byWidgetPredicate((widget) {
+      final key = widget.key;
+      return key is ValueKey<String> &&
+          key.value.startsWith('book-cover-$importedProjectId-');
+    });
+    expect(importedCard, findsOneWidget);
+    expect(importedCover, findsWidgets);
+    await tester.tap(importedCard);
+    await pumpUntilFound(tester, find.byType(BookReaderPage));
+
+    expect(find.byType(BookReaderPage), findsOneWidget);
+    expect(find.byKey(const ValueKey('book-image-asset-1')), findsOneWidget);
     Navigator.of(tester.element(find.byType(BookReaderPage))).pop();
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('reading-library')), findsOneWidget);
-    expect(
-      find.byKey(ValueKey('literia-project-$importedProjectId')),
-      findsOneWidget,
-    );
-    expect(find.byKey(const ValueKey('book-cover-image')), findsWidgets);
+    expect(importedCard, findsOneWidget);
+    expect(importedCover, findsWidgets);
     expect(find.byType(QuillEditor), findsNothing);
     await tester.binding.setSurfaceSize(null);
   });
