@@ -1,11 +1,21 @@
 param(
     [string]$Flutter = "flutter",
-    [string]$Version = "1.0.0",
+    [string]$Version,
     [string]$NuGetUrl = "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe"
 )
 
 $ErrorActionPreference = "Stop"
 $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$pubspecPath = Join-Path $projectRoot "pubspec.yaml"
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    $versionMatch = Select-String -LiteralPath $pubspecPath `
+        -Pattern '^\s*version:\s*([0-9]+\.[0-9]+\.[0-9]+)(?:\+\S+)?\s*$' |
+        Select-Object -First 1
+    if (-not $versionMatch) {
+        throw "Could not read the application version from pubspec.yaml."
+    }
+    $Version = $versionMatch.Matches[0].Groups[1].Value
+}
 $buildToolsDirectory = Join-Path $projectRoot "build\tools"
 $releaseDirectory = Join-Path $projectRoot "build\windows\x64\runner\Release"
 $distributionDirectory = Join-Path $projectRoot "dist"
