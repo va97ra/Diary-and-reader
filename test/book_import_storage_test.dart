@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/application/book_import_coordinator.dart';
 import 'package:dnevnik/features/books/application/book_import_file.dart';
+import 'package:dnevnik/features/books/application/book_import_parser.dart';
 import 'package:dnevnik/features/books/application/book_reading_session_loader.dart';
 import 'package:dnevnik/features/books/data/file_book_source_storage.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_repository.dart';
@@ -91,6 +93,45 @@ void main() {
     expect(overview.processedBytes, greaterThan(0));
     expect(await storage.loadProcessed(retained), isNotNull);
   });
+
+  test(
+    'refreshes an old processed cache while the original is available',
+    () async {
+      final controller = AuthorWorkspaceController(
+        MemoryAuthorWorkspaceRepository(seedManuscript: false),
+      );
+      await controller.load(preferredLanguage: 'ru');
+      final storage = FileBookSourceStorage(supportDirectory: directory);
+      final file = BookImportFile(
+        name: 'sample.fb2',
+        bytes: await File('test/fixtures/import_sample.fb2').readAsBytes(),
+      );
+      final result = await BookImportCoordinator(
+        controller: controller,
+        sourceStorage: storage,
+      ).import([file]);
+      final project = result.imported.single;
+      final processed = BookImportParser.parse(file);
+      final cache = File(
+        '${directory.path}${Platform.pathSeparator}library'
+        '${Platform.pathSeparator}${project.id}'
+        '${Platform.pathSeparator}processed-v1.json',
+      );
+      await cache.writeAsString(
+        jsonEncode({
+          'cacheVersion': 1,
+          'sourceFingerprint': project.sourceFingerprint,
+          'project': processed.toJson(),
+        }),
+      );
+
+      expect(await storage.loadProcessed(project), isNull);
+
+      await storage.deleteOriginal(project);
+      final legacyFallback = await storage.loadProcessed(project);
+      expect(legacyFallback?.sections, isNotEmpty);
+    },
+  );
 
   test('rolls back the import when the workspace cannot be saved', () async {
     final controller = AuthorWorkspaceController(_FailingSaveRepository());

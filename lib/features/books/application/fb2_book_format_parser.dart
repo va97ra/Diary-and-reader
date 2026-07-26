@@ -17,6 +17,15 @@ import 'package:xml/xml.dart';
 class Fb2BookFormatParser implements BookFormatParser {
   const Fb2BookFormatParser();
 
+  static final RegExp _flatChapterHeading = RegExp(
+    r'^(?:(?:глава|часть|книга|том|chapter|part|book|volume)\s+'
+    r'(?:\d+|[ivxlcdm]+|[a-zа-яё-]+)(?:\s*[.:—–-]\s*.{0,72})?|'
+    r'(?:пролог|эпилог|предисловие|послесловие|prologue|epilogue)'
+    r'(?:\s*[:—–-]\s*.{1,80})?)$',
+    caseSensitive: false,
+    unicode: true,
+  );
+
   @override
   Set<BookImportFormat> get formats => const {
     BookImportFormat.fb2,
@@ -182,6 +191,19 @@ class Fb2BookFormatParser implements BookFormatParser {
     DateTime timestamp,
     String bookTitle,
   ) {
+    final directSections = body.childElements
+        .where((element) => element.name.local == 'section')
+        .toList(growable: false);
+    if (directSections.length == 1) {
+      final flattened = _readFlattenedChapterSections(
+        directSections.single,
+        media,
+        timestamp,
+        bookTitle,
+      );
+      if (flattened.length > 1) return flattened;
+    }
+
     final sections = <BookSection>[];
     var sequence = 0;
 
@@ -229,9 +251,7 @@ class Fb2BookFormatParser implements BookFormatParser {
       }
     }
 
-    for (final section in body.childElements.where(
-      (element) => element.name.local == 'section',
-    )) {
+    for (final section in directSections) {
       addSection(section, null, 0);
     }
     if (sections.isEmpty) {
@@ -256,6 +276,80 @@ class Fb2BookFormatParser implements BookFormatParser {
       }
     }
     return sections;
+  }
+
+  List<BookSection> _readFlattenedChapterSections(
+    XmlElement section,
+    ImportedBookMedia media,
+    DateTime timestamp,
+    String bookTitle,
+  ) {
+    final nodes = section.children.toList(growable: false);
+    final headings = <({int index, String title})>[];
+    for (var index = 0; index < nodes.length; index++) {
+      final title = _flatHeadingTitle(nodes[index]);
+      if (title != null) headings.add((index: index, title: title));
+    }
+    if (headings.length < 2) return const [];
+
+    final sections = <BookSection>[];
+
+    void addSection(String title, Iterable<XmlNode> contentNodes) {
+      final content = XmlBookContentConverter.convert(
+        contentNodes,
+        imageResolver: media.resolve,
+      );
+      if (!richDocumentHasContent(content)) return;
+      final sequence = sections.length + 1;
+      sections.add(
+        BookSection(
+          id: 'import-${timestamp.microsecondsSinceEpoch}-section-$sequence',
+          title: title,
+          type: BookSectionType.chapter,
+          status: DraftStatus.complete,
+          content: content,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        ),
+      );
+    }
+
+    final leadingNodes = nodes.take(headings.first.index);
+    final leadingContent = XmlBookContentConverter.convert(
+      leadingNodes,
+      imageResolver: media.resolve,
+    );
+    if (richDocumentHasContent(leadingContent)) {
+      final titleElement = BookImportParsingSupport.directElement(
+        section,
+        'title',
+      );
+      final title =
+          titleElement?.innerText.trim().ifEmpty(bookTitle) ?? bookTitle;
+      addSection(title, leadingNodes);
+    }
+    for (var index = 0; index < headings.length; index++) {
+      final heading = headings[index];
+      final end = index + 1 < headings.length
+          ? headings[index + 1].index
+          : nodes.length;
+      addSection(heading.title, nodes.sublist(heading.index, end));
+    }
+    return sections;
+  }
+
+  String? _flatHeadingTitle(XmlNode node) {
+    if (node is! XmlElement ||
+        !const {'p', 'subtitle'}.contains(node.name.local.toLowerCase())) {
+      return null;
+    }
+    final title = node.innerText.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (title.isEmpty ||
+        title.length > 96 ||
+        !_flatChapterHeading.hasMatch(title)) {
+      return null;
+    }
+    return title;
   }
 
   ImportedBookMedia _readMedia(XmlDocument document, XmlElement? titleInfo) {
