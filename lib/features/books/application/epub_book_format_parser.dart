@@ -5,6 +5,7 @@ import 'package:dnevnik/features/books/application/book_import_parsing_support.d
 import 'package:dnevnik/features/books/application/xml_book_content_converter.dart';
 import 'package:dnevnik/features/books/application/xml_text_decoder.dart';
 import 'package:dnevnik/features/books/domain/book_asset.dart';
+import 'package:dnevnik/features/books/domain/book_chapter_heading.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
@@ -251,17 +252,24 @@ class EpubBookFormatParser implements BookFormatParser {
                 value.toLowerCase() != bookTitle.trim().toLowerCase(),
             orElse: () => fallbackTitle,
           );
-      sections.add(
-        BookSection(
-          id: 'import-${timestamp.microsecondsSinceEpoch}-section-$sectionNumber',
-          title: title,
-          type: BookSectionType.chapter,
-          status: DraftStatus.complete,
-          content: richContent,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        ),
-      );
+      final chapterParts = _splitFlatChapterContent(richContent);
+      for (var partIndex = 0; partIndex < chapterParts.length; partIndex++) {
+        final part = chapterParts[partIndex];
+        final nextSectionNumber = sections.length + 1;
+        sections.add(
+          BookSection(
+            id:
+                'import-${timestamp.microsecondsSinceEpoch}'
+                '-section-$nextSectionNumber',
+            title: part.title ?? (partIndex == 0 ? title : fallbackTitle),
+            type: BookSectionType.chapter,
+            status: DraftStatus.complete,
+            content: part.content,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          ),
+        );
+      }
     }
     final titleCounts = <String, int>{};
     for (final section in sections) {
@@ -276,6 +284,58 @@ class EpubBookFormatParser implements BookFormatParser {
               )
             : sections[index],
     ];
+  }
+
+  List<({String? title, RichDocument content})> _splitFlatChapterContent(
+    RichDocument content,
+  ) {
+    final headings = <({int operationIndex, String title})>[];
+    var paragraphStart = 0;
+    var paragraphText = '';
+    for (var index = 0; index < content.length; index++) {
+      final operation = content[index];
+      final insert = operation['insert'];
+      if (insert is! String) continue;
+      if (insert == '\n') {
+        final attributes = operation['attributes'];
+        final isHeading =
+            attributes is Map &&
+            attributes['header'] is num &&
+            BookChapterHeading.isRecognized(paragraphText);
+        if (isHeading) {
+          headings.add((
+            operationIndex: paragraphStart,
+            title: paragraphText.trim(),
+          ));
+        }
+        paragraphStart = index + 1;
+        paragraphText = '';
+        continue;
+      }
+      paragraphText += insert.replaceAll('\n', ' ');
+      if (insert.contains('\n')) {
+        paragraphStart = index + 1;
+        paragraphText = '';
+      }
+    }
+    if (headings.length < 2) return [(title: null, content: content)];
+
+    final parts = <({String? title, RichDocument content})>[];
+    final prefix = content.sublist(0, headings.first.operationIndex);
+    if (richDocumentHasContent(prefix)) {
+      parts.add((title: null, content: prefix));
+    }
+    for (var index = 0; index < headings.length; index++) {
+      final start = headings[index].operationIndex;
+      final end = index + 1 < headings.length
+          ? headings[index + 1].operationIndex
+          : content.length;
+      final chapter = content.sublist(start, end);
+      if (richDocumentHasContent(chapter)) {
+        parts.add((title: headings[index].title, content: chapter));
+      }
+    }
+    return parts;
   }
 
   Map<String, String> _readNavigationTitles(

@@ -8,6 +8,7 @@ import 'package:dnevnik/features/books/application/book_import_parsing_support.d
 import 'package:dnevnik/features/books/application/xml_book_content_converter.dart';
 import 'package:dnevnik/features/books/application/xml_text_decoder.dart';
 import 'package:dnevnik/features/books/domain/book_asset.dart';
+import 'package:dnevnik/features/books/domain/book_chapter_heading.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
@@ -16,15 +17,6 @@ import 'package:xml/xml.dart';
 
 class Fb2BookFormatParser implements BookFormatParser {
   const Fb2BookFormatParser();
-
-  static final RegExp _flatChapterHeading = RegExp(
-    r'^(?:(?:глава|часть|книга|том|chapter|part|book|volume)\s+'
-    r'(?:\d+|[ivxlcdm]+|[a-zа-яё-]+)(?:\s*[.:—–-]\s*.{0,72})?|'
-    r'(?:пролог|эпилог|предисловие|послесловие|prologue|epilogue)'
-    r'(?:\s*[:—–-]\s*.{1,80})?)$',
-    caseSensitive: false,
-    unicode: true,
-  );
 
   @override
   Set<BookImportFormat> get formats => const {
@@ -346,7 +338,7 @@ class Fb2BookFormatParser implements BookFormatParser {
     final title = node.innerText.replaceAll(RegExp(r'\s+'), ' ').trim();
     if (title.isEmpty ||
         title.length > 96 ||
-        !_flatChapterHeading.hasMatch(title)) {
+        !BookChapterHeading.isRecognized(title)) {
       return null;
     }
     return title;

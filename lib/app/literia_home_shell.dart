@@ -324,13 +324,6 @@ class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
       final hadAccess = await scanner.hasDownloadsAccess();
       if (!hadAccess && !await _ensureDownloadsAccess(scanner)) return null;
       if (!mounted) return null;
-      if (!hadAccess) {
-        final additionalFolder = await widget.deviceCatalog.chooseFolder();
-        if (additionalFolder != null && mounted) {
-          widget.controller.addBookScanFolder(additionalFolder);
-          await widget.controller.flush();
-        }
-      }
       downloads = await scanner.scanDownloads();
     } else if (widget.controller.appPreferences.bookScanFolders.isEmpty) {
       final folder = await widget.deviceCatalog.chooseFolder();
