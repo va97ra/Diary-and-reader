@@ -406,7 +406,8 @@ const appStringValuesEn = <String, String>{
   'deleteQuote': 'Delete quote',
   'exportAnnotations': 'Export annotations',
   'exportMarkdown': 'Markdown (.md)',
-  'exportMarkdownHint': 'Easy to read and open in text editors',
+  'exportMarkdownHint':
+      'For text editors; cannot be imported back into Literia',
   'exportJson': 'JSON (.json)',
   'exportJsonHint': 'Structured backup for transferring data',
   'annotationsExported': 'Annotations saved',
@@ -417,22 +418,20 @@ const appStringValuesEn = <String, String>{
   'exportBook': 'Export book',
   'exportEpub': 'EPUB 3.3 (.epub)',
   'exportEpubHint':
-      'Reflowable ebook with a table of contents and rich text styling',
+      'Reflowable ebook with contents; can be imported back into Literia',
   'exportFb2': 'FictionBook (.fb2)',
-  'exportFb2Hint': 'Reader-friendly book with chapters and rich text styling',
+  'exportFb2Hint':
+      'Reader-friendly book with chapters; can be imported back into Literia',
   'exportFb2Zip': 'Archived FictionBook (.fb2.zip)',
-  'exportFb2ZipHint':
-      'Compact FB2 for libraries and devices that support archives',
+  'exportFb2ZipHint': 'Compact FB2; can be imported back into Literia',
   'exportPdf': 'Print PDF (.pdf)',
-  'exportPdfHint': 'Fixed A4 pages with margins, contents, and page numbering',
+  'exportPdfHint': 'For A4 printing; cannot be imported back into Literia',
   'exportDocx': 'Word document (.docx)',
-  'exportDocxHint':
-      'Editable manuscript with styles, contents, and A4 page layout',
+  'exportDocxHint': 'Editable manuscript; can be imported back into Literia',
   'exportHtml': 'Web page (.html)',
-  'exportHtmlHint':
-      'Standalone responsive page with contents and rich text styling',
+  'exportHtmlHint': 'For web browsers; cannot be imported back into Literia',
   'exportTxt': 'Plain text (.txt)',
-  'exportTxtHint': 'Maximum compatibility without text styling',
+  'exportTxtHint': 'Unformatted text; can be imported back into Literia',
   'readerExportFormats': 'For ebook readers',
   'printExportFormats': 'For print and editing',
   'textExportFormats': 'Open text formats',
