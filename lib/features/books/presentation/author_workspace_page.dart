@@ -498,53 +498,55 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
     };
   }
 
-  Future<void> _showWorkspaceTools() => showBookLeatherBottomSheet<void>(
-    context: context,
-    builder: (sheetContext) => ConstrainedBox(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.78,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          BookLeatherModalHeader(
-            title: AppStrings.of(context).moreActions,
-            onClose: () => Navigator.of(sheetContext).pop(),
-          ),
-          Flexible(
-            child: GridView.count(
-              shrinkWrap: true,
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
-              crossAxisCount: 2,
-              childAspectRatio: 1.75,
-              mainAxisSpacing: bookModalGrid,
-              crossAxisSpacing: bookModalGrid,
-              children: [
-                for (final action in BookWorkspaceAction.values)
-                  Builder(
-                    builder: (_) {
-                      final (icon, label) = _workspaceActionPresentation(
-                        action,
-                      );
-                      return BookPanelAction(
-                        key: ValueKey('writer-panel-${action.name}'),
-                        icon: Icon(icon),
-                        label: label,
-                        onPressed: () {
-                          Navigator.of(sheetContext).pop();
-                          _handleWorkspaceAction(action);
-                        },
-                      );
-                    },
-                  ),
-              ],
+  Future<void> _showWorkspaceTools() async {
+    final action = await showBookLeatherBottomSheet<BookWorkspaceAction>(
+      context: context,
+      builder: (sheetContext) => ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.78,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            BookLeatherModalHeader(
+              title: AppStrings.of(context).moreActions,
+              onClose: () => Navigator.of(sheetContext).pop(),
             ),
-          ),
-        ],
+            Flexible(
+              child: GridView.count(
+                shrinkWrap: true,
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
+                crossAxisCount: 2,
+                childAspectRatio: 1.75,
+                mainAxisSpacing: bookModalGrid,
+                crossAxisSpacing: bookModalGrid,
+                children: [
+                  for (final action in BookWorkspaceAction.values)
+                    Builder(
+                      builder: (_) {
+                        final (icon, label) = _workspaceActionPresentation(
+                          action,
+                        );
+                        return BookPanelAction(
+                          key: ValueKey('writer-panel-${action.name}'),
+                          icon: Icon(icon),
+                          label: label,
+                          onPressed: () =>
+                              Navigator.of(sheetContext).pop(action),
+                        );
+                      },
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+    if (action == null || !mounted) return;
+    await _handleWorkspaceAction(action);
+  }
 
   void _handleEditorMetrics(String sectionId, BookEditorMetrics metrics) {
     if (_editorMetrics[sectionId] == metrics) return;
@@ -1139,36 +1141,35 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
   Future<void> _showExportSheet() async {
     await widget.controller.flush();
     if (!mounted) return;
-    await showBookLeatherBottomSheet<void>(
+    final format = await showBookLeatherBottomSheet<BookExportFormat>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (sheetContext) => BookSheetKeyboardDismiss(
         child: BookExportSheet(
-          onSelected: (format) {
-            Navigator.of(sheetContext).pop();
-            switch (format) {
-              case BookExportFormat.epub:
-                _exportArtifact(BookEpubExporter.create);
-              case BookExportFormat.fb2:
-                _exportArtifact(BookFb2Exporter.create);
-              case BookExportFormat.fb2Zip:
-                _exportArtifact(BookFb2Exporter.createZip);
-              case BookExportFormat.pdf:
-                _openPdfPreview();
-              case BookExportFormat.docx:
-                _exportArtifact(BookDocxExporter.create);
-              case BookExportFormat.html:
-                _exportArtifact(BookHtmlExporter.create);
-              case BookExportFormat.markdown:
-                _exportArtifact(BookMarkdownExporter.create);
-              case BookExportFormat.txt:
-                _exportArtifact(BookTxtExporter.create);
-            }
-          },
+          onSelected: (format) => Navigator.of(sheetContext).pop(format),
         ),
       ),
     );
+    if (format == null || !mounted) return;
+    switch (format) {
+      case BookExportFormat.epub:
+        await _exportArtifact(BookEpubExporter.create);
+      case BookExportFormat.fb2:
+        await _exportArtifact(BookFb2Exporter.create);
+      case BookExportFormat.fb2Zip:
+        await _exportArtifact(BookFb2Exporter.createZip);
+      case BookExportFormat.pdf:
+        await _openPdfPreview();
+      case BookExportFormat.docx:
+        await _exportArtifact(BookDocxExporter.create);
+      case BookExportFormat.html:
+        await _exportArtifact(BookHtmlExporter.create);
+      case BookExportFormat.markdown:
+        await _exportArtifact(BookMarkdownExporter.create);
+      case BookExportFormat.txt:
+        await _exportArtifact(BookTxtExporter.create);
+    }
   }
 
   Future<void> _showVersionHistory() => showBookLeatherBottomSheet<void>(
