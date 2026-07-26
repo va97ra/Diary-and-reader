@@ -1,6 +1,7 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/domain/book_section_trash.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/material.dart';
 
 enum _TrashAction { restore, delete }
@@ -23,28 +24,15 @@ class _BookSectionTrashSheetState extends State<BookSectionTrashSheet> {
       child: Column(
         key: const ValueKey('section-trash-sheet'),
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 8, 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    strings.sectionTrash,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ),
-                if (entries.isNotEmpty)
-                  TextButton(
+          BookLeatherModalHeader(
+            title: strings.sectionTrash,
+            trailing: entries.isEmpty
+                ? null
+                : TextButton(
                     onPressed: _emptyTrash,
                     child: Text(strings.emptyTrash),
                   ),
-                IconButton(
-                  tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
-                ),
-              ],
-            ),
+            onClose: () => Navigator.pop(context),
           ),
           const Divider(height: 1),
           Expanded(
@@ -130,7 +118,7 @@ class _BookSectionTrashSheetState extends State<BookSectionTrashSheet> {
   Future<bool> _confirm(String message) async =>
       await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => BookLeatherDialog(
           title: Text(AppStrings.of(context).sectionTrash),
           content: Text(message),
           actions: [

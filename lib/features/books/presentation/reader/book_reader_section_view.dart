@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:dnevnik/features/books/application/book_pagination_measurement.dart';
@@ -86,11 +85,7 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
   late FocusNode _continuousFocusNode;
   late ScrollController _continuousScrollController;
 
-  final _pageControllers = <QuillController>[];
-  final _pageFocusNodes = <FocusNode>[];
-  final _pageScrollControllers = <ScrollController>[];
-  final _pageEditorKeys = <GlobalKey<EditorState>>[];
-  final _pageViewportKeys = <GlobalKey>[];
+  final _pageResources = <int, _ReaderPageResources>{};
   List<RichDocument> _pageDocuments = const [];
   List<int> _pageStartOffsets = const [];
   List<int> _pageDisplayStartOffsets = const [];
@@ -105,6 +100,7 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
   int _paginationRequest = 0;
   final _paginationMeasurement = BookPaginationMeasurement(maxRetries: 8);
   bool _isPaginating = false;
+  bool _allowProgressivePagination = false;
   bool _navigationLocked = false;
   int? _continuousPointer;
   double? _continuousPointerStartY;
@@ -153,8 +149,7 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
     super.didUpdateWidget(oldWidget);
     final sectionChanged =
         oldWidget.section.id != widget.section.id ||
-        jsonEncode(oldWidget.section.content) !=
-            jsonEncode(widget.section.content);
+        !identical(oldWidget.section.content, widget.section.content);
     if (!identical(
       oldWidget.navigationController,
       widget.navigationController,
@@ -163,11 +158,10 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
       widget.navigationController._attach(this);
     }
     if (sectionChanged) _navigationLocked = false;
-    final highlightsChanged =
-        jsonEncode(
-          oldWidget.highlights.map((item) => item.toJson()).toList(),
-        ) !=
-        jsonEncode(widget.highlights.map((item) => item.toJson()).toList());
+    final highlightsChanged = !_sameHighlights(
+      oldWidget.highlights,
+      widget.highlights,
+    );
     final hyphenationChanged =
         oldWidget.settings.hyphenateWords != widget.settings.hyphenateWords ||
         oldWidget.languageCode != widget.languageCode;
@@ -180,10 +174,14 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
     } else if (highlightsChanged ||
         oldWidget.speechRange?.start != widget.speechRange?.start ||
         oldWidget.speechRange?.end != widget.speechRange?.end ||
-        oldWidget.settings.theme != widget.settings.theme) {
+        (oldWidget.settings.theme != widget.settings.theme &&
+            (widget.highlights.isNotEmpty || widget.speechRange != null))) {
       _replaceContinuousResources();
       _replaceVisiblePagesForHighlights();
     } else if (_layoutSettingsChanged(oldWidget.settings, widget.settings)) {
+      if (oldWidget.settings.justifyText != widget.settings.justifyText) {
+        _replaceContinuousResources();
+      }
       _invalidatePagination();
     }
 
@@ -219,7 +217,17 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
           widget.languageCode != languageCode) {
         return;
       }
-      _displayDocument = hyphenation.apply(widget.section.content);
+      final displayDocument = await hyphenation.applyInBackground(
+        widget.section.content,
+      );
+      if (!mounted ||
+          request != _hyphenationRequest ||
+          !widget.settings.hyphenateWords ||
+          widget.section.id != sectionId ||
+          widget.languageCode != languageCode) {
+        return;
+      }
+      _displayDocument = displayDocument;
       _replaceContinuousResources();
       _clearVisiblePages();
       _invalidatePagination();
@@ -238,6 +246,29 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
       oldSettings.contentWidth != newSettings.contentWidth ||
       oldSettings.horizontalPadding != newSettings.horizontalPadding ||
       oldSettings.verticalPadding != newSettings.verticalPadding;
+
+  bool _sameHighlights(
+    List<BookReaderHighlight> oldHighlights,
+    List<BookReaderHighlight> newHighlights,
+  ) {
+    if (identical(oldHighlights, newHighlights)) return true;
+    if (oldHighlights.length != newHighlights.length) return false;
+    for (var index = 0; index < oldHighlights.length; index++) {
+      final oldHighlight = oldHighlights[index];
+      final newHighlight = newHighlights[index];
+      if (oldHighlight.id != newHighlight.id ||
+          oldHighlight.sectionId != newHighlight.sectionId ||
+          oldHighlight.sectionProgress != newHighlight.sectionProgress ||
+          oldHighlight.startOffset != newHighlight.startOffset ||
+          oldHighlight.endOffset != newHighlight.endOffset ||
+          oldHighlight.excerpt != newHighlight.excerpt ||
+          oldHighlight.color != newHighlight.color ||
+          oldHighlight.createdAt != newHighlight.createdAt) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   void _replaceContinuousResources() {
     final oldController = _continuousController;
@@ -326,7 +357,7 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
     }
     final step = _effectiveMode == BookReaderViewMode.spread ? 2 : 1;
     final target = _activePage + direction * step;
-    if (target >= 0 && target < _pageControllers.length) {
+    if (target >= 0 && target < _pageDocuments.length) {
       _selectPage(target);
       return;
     }
@@ -353,18 +384,34 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
     _continuousController.dispose();
     _continuousFocusNode.dispose();
     _continuousScrollController.dispose();
-    for (final controller in _pageControllers) {
-      controller.dispose();
-    }
-    for (final node in _pageFocusNodes) {
-      node.dispose();
-    }
-    for (final controller in _pageScrollControllers) {
-      controller.dispose();
+    for (final resources in _pageResources.values) {
+      resources.dispose();
     }
     _measurementController?.dispose();
     _measurementFocusNode?.dispose();
     _measurementScrollController?.dispose();
     super.dispose();
+  }
+}
+
+class _ReaderPageResources {
+  _ReaderPageResources({
+    required this.controller,
+    required this.focusNode,
+    required this.scrollController,
+    required this.editorKey,
+    required this.viewportKey,
+  });
+
+  final QuillController controller;
+  final FocusNode focusNode;
+  final ScrollController scrollController;
+  final GlobalKey<EditorState> editorKey;
+  final GlobalKey viewportKey;
+
+  void dispose() {
+    controller.dispose();
+    focusNode.dispose();
+    scrollController.dispose();
   }
 }

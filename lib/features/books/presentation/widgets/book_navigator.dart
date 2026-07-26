@@ -3,6 +3,7 @@ import 'package:dnevnik/core/theme/app_theme.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/application/section_tree_editor.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/material.dart';
 
 class BookNavigator extends StatelessWidget {
@@ -20,32 +21,18 @@ class BookNavigator extends StatelessWidget {
     final strings = AppStrings.of(context);
     final project = controller.activeProject!;
     return Material(
-      color: Theme.of(context).colorScheme.surface,
+      color: Colors.transparent,
       child: SafeArea(
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-              child: Row(
+            BookLeatherModalHeader(
+              title: strings.structure,
+              subtitle: project.metadata.title,
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          strings.structure,
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        Text(
-                          project.metadata.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                  ),
                   FilledButton.tonalIcon(
                     key: const ValueKey('navigator-new-chapter'),
                     onPressed: () {
@@ -85,20 +72,15 @@ class BookNavigator extends StatelessWidget {
                       child: Center(child: Text(strings.more)),
                     ),
                   ),
-                  IconButton(
-                    key: const ValueKey('navigator-close'),
-                    tooltip: MaterialLocalizations.of(
-                      context,
-                    ).closeButtonTooltip,
-                    onPressed: () => Navigator.maybePop(context),
-                    icon: const Icon(Icons.close),
-                  ),
                 ],
               ),
+              onClose: () => Navigator.maybePop(context),
+              closeKey: const ValueKey('navigator-close'),
             ),
             const Divider(height: 1),
-            Expanded(
+            Flexible(
               child: ListView.builder(
+                shrinkWrap: true,
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 itemCount: project.sections.length,
                 itemBuilder: (context, index) {
@@ -147,7 +129,7 @@ class BookNavigator extends StatelessWidget {
     }
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => BookLeatherDialog(
         title: Text(AppStrings.of(context).deleteSection),
         content: Text(AppStrings.of(context).deleteSectionQuestion),
         actions: [

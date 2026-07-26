@@ -13,6 +13,7 @@ import 'package:dnevnik/features/books/domain/rich_document.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_editor_metrics.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_editor_page_stage.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_formatting_toolbar.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_image_embed_builder.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_mobile_editor.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_page_canvas.dart';
 import 'package:flutter/material.dart';
@@ -36,6 +37,7 @@ class BookSectionEditor extends StatefulWidget {
     required this.viewMode,
     required this.onMetricsChanged,
     required this.showChapterTitleOnPage,
+    this.onImageTap,
     this.onControllerReady,
     super.key,
   });
@@ -56,6 +58,7 @@ class BookSectionEditor extends StatefulWidget {
   final BookPageViewMode viewMode;
   final ValueChanged<BookEditorMetrics> onMetricsChanged;
   final bool showChapterTitleOnPage;
+  final BookImageTapCallback? onImageTap;
   final ValueChanged<QuillController>? onControllerReady;
 
   @override
@@ -88,6 +91,20 @@ class BookSectionEditorState extends State<BookSectionEditor> {
 
   QuillController get controller => _controllers[_activePage];
   int get pageCount => _controllers.length;
+
+  void suspendTextInputFocus() {
+    for (final focusNode in _focusNodes) {
+      focusNode
+        ..canRequestFocus = false
+        ..unfocus(disposition: UnfocusDisposition.scope);
+    }
+  }
+
+  void resumeTextInputFocus() {
+    for (final focusNode in _focusNodes) {
+      focusNode.canRequestFocus = true;
+    }
+  }
 
   @override
   void initState() {
@@ -493,6 +510,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
                       ? () => _selectPage(_activePage + 1)
                       : null,
                   showPageNavigation: widget.showPageNavigation,
+                  onImageTap: widget.onImageTap,
                 ),
         ),
       ],
@@ -632,6 +650,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     titleController: _titleController,
     onTitleChanged: widget.onTitleChanged,
     showChapterTitle: widget.showChapterTitleOnPage,
+    onImageTap: widget.onImageTap,
   );
 
   @override

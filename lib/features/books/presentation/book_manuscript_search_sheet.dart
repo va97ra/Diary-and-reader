@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/book_manuscript_search.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/material.dart';
 
 class BookReplaceRequest {
@@ -62,26 +63,14 @@ class _BookManuscriptSearchSheetState extends State<BookManuscriptSearchSheet> {
       child: SizedBox(
         height: height,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      strings.findAndReplace,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: MaterialLocalizations.of(
-                      context,
-                    ).closeButtonTooltip,
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
+              BookLeatherModalHeader(
+                title: strings.findAndReplace,
+                onClose: () => Navigator.pop(context),
+                padding: const EdgeInsets.fromLTRB(0, 12, 0, 8),
               ),
               const SizedBox(height: 8),
               TextField(
@@ -96,7 +85,7 @@ class _BookManuscriptSearchSheetState extends State<BookManuscriptSearchSheet> {
                   prefixIcon: const Icon(Icons.search),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               TextField(
                 key: const ValueKey('manuscript-replacement-field'),
                 controller: _replacementController,

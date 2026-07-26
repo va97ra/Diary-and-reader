@@ -46,21 +46,37 @@ class BookPageViewModeSelector extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(strings.viewMode, style: Theme.of(context).textTheme.labelLarge),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 6,
-          children: BookPageViewMode.values
-              .map(
-                (mode) => ChoiceChip(
-                  key: ValueKey('page-view-mode-${mode.name}'),
-                  avatar: Icon(_icon(mode), size: 17),
-                  label: Text(_label(strings, mode)),
-                  selected: value == mode,
-                  onSelected: (_) => onChanged(mode),
+        const SizedBox(height: 6),
+        SizedBox(
+          width: double.infinity,
+          child: SegmentedButton<BookPageViewMode>(
+            showSelectedIcon: false,
+            style: const ButtonStyle(
+              visualDensity: VisualDensity.compact,
+              padding: WidgetStatePropertyAll(
+                EdgeInsets.symmetric(horizontal: 6),
+              ),
+              shape: WidgetStatePropertyAll(
+                RoundedRectangleBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(10)),
                 ),
-              )
-              .toList(),
+              ),
+            ),
+            segments: [
+              for (final mode in BookPageViewMode.values)
+                ButtonSegment(
+                  value: mode,
+                  icon: Icon(_icon(mode), size: 17),
+                  label: Text(
+                    _compactLabel(strings, mode),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+            ],
+            selected: {value},
+            onSelectionChanged: (selection) => onChanged(selection.single),
+          ),
         ),
       ],
     );
@@ -77,4 +93,11 @@ class BookPageViewModeSelector extends StatelessWidget {
     BookPageViewMode.singlePage => strings.singlePage,
     BookPageViewMode.spread => strings.twoPageSpread,
   };
+
+  String _compactLabel(AppStrings strings, BookPageViewMode mode) =>
+      switch (mode) {
+        BookPageViewMode.continuous => strings.continuousPagesShort,
+        BookPageViewMode.singlePage => strings.singlePageShort,
+        BookPageViewMode.spread => strings.twoPageSpread,
+      };
 }

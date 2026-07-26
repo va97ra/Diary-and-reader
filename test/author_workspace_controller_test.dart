@@ -10,6 +10,7 @@ import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
 import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
+import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,6 +18,44 @@ import 'package:flutter_test/flutter_test.dart';
 import 'support/memory_author_workspace_repository.dart';
 
 void main() {
+  test(
+    'reader session updates persist without rebuilding the whole app',
+    () async {
+      final repository = MemoryAuthorWorkspaceRepository();
+      final controller = AuthorWorkspaceController(
+        repository,
+        saveDebounce: Duration.zero,
+      );
+      await controller.load(preferredLanguage: 'ru');
+      var notifications = 0;
+      controller.addListener(() => notifications++);
+      final sectionId = controller.activeSection!.id;
+      controller.beginReaderSession();
+
+      controller.updateReaderSettingsDuringReading(
+        const BookReaderSettings(fontSize: 24),
+      );
+      controller.updateReaderProgressDuringReading(
+        BookReaderProgress(sectionId: sectionId, sectionProgress: 0.35),
+      );
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(notifications, 0);
+      expect(controller.readerSettings.fontSize, 24);
+      expect(controller.activeProject!.readerProgress.sectionProgress, 0.35);
+
+      controller.finishReaderSession();
+      expect(notifications, 1);
+      await controller.flush();
+      expect(repository.snapshot!.appPreferences.readerSettings.fontSize, 24);
+      expect(
+        repository.snapshot!.activeProject!.readerProgress.sectionProgress,
+        0.35,
+      );
+    },
+  );
+
   test('creates a book and persists chapter and scene hierarchy', () async {
     final repository = MemoryAuthorWorkspaceRepository();
     final controller = AuthorWorkspaceController(repository);

@@ -7,7 +7,7 @@ extension _BookReaderPaginationFlow on _BookReaderSectionViewState {
     BookReaderViewMode mode,
   ) {
     final pagesMatchGeometry =
-        _pageControllers.isNotEmpty && _completedGeometry == geometry;
+        _pageDocuments.isNotEmpty && _completedGeometry == geometry;
     return ColoredBox(
       key: ValueKey(
         mode == BookReaderViewMode.spread
@@ -22,12 +22,13 @@ extension _BookReaderPaginationFlow on _BookReaderSectionViewState {
             child: pagesMatchGeometry
                 ? BookReaderPageStage(
                     activePage: _activePage,
-                    pageCount: _pageControllers.length,
+                    pageCount: _pageDocuments.length,
                     viewMode: mode,
                     pageBuilder: (index) => _buildPage(index, geometry),
                     onSelectPage: _selectPage,
                     onPreviousSection: widget.onPreviousSectionRequested,
                     onNextSection: widget.onNextSectionRequested,
+                    isPaginating: _isPaginating,
                   )
                 : const Center(
                     key: ValueKey('reader-page-loading'),
@@ -36,6 +37,7 @@ extension _BookReaderPaginationFlow on _BookReaderSectionViewState {
           ),
           if (_isPaginating && pagesMatchGeometry)
             const Positioned(
+              key: ValueKey('reader-page-background-loading'),
               left: 0,
               right: 0,
               bottom: 8,
@@ -62,6 +64,7 @@ extension _BookReaderPaginationFlow on _BookReaderSectionViewState {
                     viewportKey: _measurementViewportKey!,
                     assets: widget.assets,
                     showCursor: false,
+                    showPageNumber: false,
                     isMeasurement: true,
                   ),
                 ),
@@ -72,34 +75,53 @@ extension _BookReaderPaginationFlow on _BookReaderSectionViewState {
     );
   }
 
-  Widget _buildPage(int index, _ReaderPageGeometry geometry) =>
-      BookReaderPageCard(
-        width: geometry.width,
-        height: geometry.height,
-        pageNumber: index + 1,
-        pageCount: _pageControllers.length,
-        settings: widget.settings,
-        palette: widget.palette,
-        controller: _pageControllers[index],
-        focusNode: _pageFocusNodes[index],
-        scrollController: _pageScrollControllers[index],
-        editorKey: _pageEditorKeys[index],
-        viewportKey: _pageViewportKeys[index],
-        assets: widget.assets,
-        showCursor: widget.speechTargetMode,
-        onSpeechTargetSelected: widget.speechTargetMode
-            ? (localOffset) => _selectSpeechTarget(
-                displayOffset: localOffset,
-                displayStart: _pageDisplayStartOffsets[index],
-              )
-            : null,
+  Widget _buildPage(int index, _ReaderPageGeometry geometry) {
+    final resources = _resourcesForPage(index);
+    return BookReaderPageCard(
+      width: geometry.width,
+      height: geometry.height,
+      pageNumber: index + 1,
+      pageCount: _pageDocuments.length,
+      settings: widget.settings,
+      palette: widget.palette,
+      controller: resources.controller,
+      focusNode: resources.focusNode,
+      scrollController: resources.scrollController,
+      editorKey: resources.editorKey,
+      viewportKey: resources.viewportKey,
+      assets: widget.assets,
+      showCursor: widget.speechTargetMode,
+      showPageNumber: !_isPaginating,
+      onSpeechTargetSelected: widget.speechTargetMode
+          ? (localOffset) => _selectSpeechTarget(
+              displayOffset: localOffset,
+              displayStart: _pageDisplayStartOffsets[index],
+            )
+          : null,
+    );
+  }
+
+  _ReaderPageResources _resourcesForPage(int index) =>
+      _pageResources.putIfAbsent(
+        index,
+        () => _ReaderPageResources(
+          controller: _pageController(
+            _pageDocuments[index],
+            _pageDisplayStartOffsets[index],
+          ),
+          focusNode: FocusNode(),
+          scrollController: ScrollController(),
+          editorKey: GlobalKey<EditorState>(),
+          viewportKey: GlobalKey(),
+        ),
       );
 
   void _selectPage(int page) {
-    if (page < 0 || page >= _pageControllers.length || page == _activePage) {
+    if (page < 0 || page >= _pageDocuments.length || page == _activePage) {
       return;
     }
     _mutate(() => _activePage = page);
+    _schedulePageResourcePruning();
     final totalLength = _documentContentLength(widget.section.content);
     final offset = _pageStartOffsets[page];
     _progress = totalLength <= 0 ? 0 : (offset / totalLength).clamp(0, 1);
@@ -148,6 +170,8 @@ extension _BookReaderPaginationFlow on _BookReaderSectionViewState {
 
   void _beginPagination(int request) {
     if (!mounted || request != _paginationRequest || _geometry == null) return;
+    _allowProgressivePagination =
+        _pageDocuments.isEmpty && _pendingProgress <= 0.004;
     _paginationMeasurement.begin();
     _installMeasurementDocument(_displayDocument.document, request);
   }
@@ -185,12 +209,18 @@ extension _BookReaderPaginationFlow on _BookReaderSectionViewState {
         WidgetsBinding.instance.addPostFrameCallback(
           (_) => _measureCurrentDocument(request),
         );
+      } else {
+        _finishPaginationWithCurrentDocument(request);
       }
       return;
     }
     _paginationMeasurement.resetRetries();
     final lineHeight = widget.settings.fontSize * widget.settings.lineHeight;
-    final bottomSafety = (lineHeight * 1.5).clamp(24, viewport.size.height / 3);
+    final maximumBottomSafety = math.max(1.0, viewport.size.height / 3);
+    final bottomSafety = (lineHeight * 1.5).clamp(
+      math.min(24.0, maximumBottomSafety),
+      maximumBottomSafety,
+    );
     final probe = viewport.localToGlobal(
       Offset(viewport.size.width - 6, viewport.size.height - bottomSafety),
     );
@@ -206,6 +236,8 @@ extension _BookReaderPaginationFlow on _BookReaderSectionViewState {
         WidgetsBinding.instance.addPostFrameCallback(
           (_) => _measureCurrentDocument(request),
         );
+      } else {
+        _finishPaginationWithCurrentDocument(request);
       }
       return;
     }
@@ -215,6 +247,7 @@ extension _BookReaderPaginationFlow on _BookReaderSectionViewState {
       lastContentOffset: lastContentOffset,
     );
     if (step.nextDocument case final nextDocument?) {
+      _publishPaginationProgress(request);
       _installMeasurementDocument(nextDocument, request);
       return;
     }
@@ -223,19 +256,45 @@ extension _BookReaderPaginationFlow on _BookReaderSectionViewState {
     }
   }
 
+  void _finishPaginationWithCurrentDocument(int request) {
+    final document = _measurementDocument;
+    if (document == null) {
+      _clearMeasurement(rebuild: false);
+      _mutate(() => _isPaginating = false);
+      return;
+    }
+    _finishPagination([
+      ..._paginationMeasurement.completedPages,
+      document,
+    ], request);
+  }
+
   void _finishPagination(List<RichDocument> documents, int request) {
     if (!mounted || request != _paginationRequest) return;
-    final oldControllers = List<QuillController>.from(_pageControllers);
-    final oldFocusNodes = List<FocusNode>.from(_pageFocusNodes);
-    final oldScrollControllers = List<ScrollController>.from(
-      _pageScrollControllers,
-    );
-    _pageControllers.clear();
-    _pageFocusNodes.clear();
-    _pageScrollControllers.clear();
-    _pageEditorKeys.clear();
-    _pageViewportKeys.clear();
+    final preserveResources = _hasSamePagePrefix(_pageDocuments, documents);
+    final oldResources = preserveResources
+        ? const <_ReaderPageResources>[]
+        : _takePageResources();
 
+    _installPageDocuments(documents);
+    _allowProgressivePagination = false;
+    _selectPageForProgress(_pendingProgress, rebuild: false);
+    _clearMeasurement(rebuild: false);
+    _mutate(() => _isPaginating = false);
+
+    _disposePageResourcesAfterFrame(oldResources);
+  }
+
+  void _publishPaginationProgress(int request) {
+    if (!_allowProgressivePagination || request != _paginationRequest) return;
+    final documents = _paginationMeasurement.completedPages.toList(
+      growable: false,
+    );
+    if (documents.isEmpty) return;
+    _installPageDocuments(documents);
+  }
+
+  void _installPageDocuments(List<RichDocument> documents) {
     final starts = <int>[];
     final displayStarts = <int>[];
     var displayOffset = 0;
@@ -243,65 +302,79 @@ extension _BookReaderPaginationFlow on _BookReaderSectionViewState {
       displayStarts.add(displayOffset);
       starts.add(_displayDocument.displayToOriginal(displayOffset));
       displayOffset += _pageContentLength(document);
-      _pageControllers.add(_pageController(document, displayStarts.last));
-      _pageFocusNodes.add(FocusNode());
-      _pageScrollControllers.add(ScrollController());
-      _pageEditorKeys.add(GlobalKey<EditorState>());
-      _pageViewportKeys.add(GlobalKey());
     }
     _pageDocuments = documents;
     _pageStartOffsets = starts;
     _pageDisplayStartOffsets = displayStarts;
     _completedGeometry = _geometry;
-    _selectPageForProgress(_pendingProgress, rebuild: false);
-    _clearMeasurement(rebuild: false);
-    _mutate(() => _isPaginating = false);
+  }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      for (final controller in oldControllers) {
-        controller.dispose();
-      }
-      for (final node in oldFocusNodes) {
-        node.dispose();
-      }
-      for (final controller in oldScrollControllers) {
-        controller.dispose();
-      }
-    });
+  bool _hasSamePagePrefix(
+    List<RichDocument> current,
+    List<RichDocument> replacement,
+  ) {
+    if (current.length > replacement.length) return false;
+    for (var index = 0; index < current.length; index++) {
+      if (!identical(current[index], replacement[index])) return false;
+    }
+    return true;
   }
 
   void _invalidatePagination() {
     _paginationTimer?.cancel();
     _paginationRequest++;
+    _allowProgressivePagination = false;
     _geometry = null;
     _clearMeasurement();
   }
 
   void _clearVisiblePages() {
-    final oldControllers = List<QuillController>.from(_pageControllers);
-    final oldFocusNodes = List<FocusNode>.from(_pageFocusNodes);
-    final oldScrollControllers = List<ScrollController>.from(
-      _pageScrollControllers,
-    );
-    _pageControllers.clear();
-    _pageFocusNodes.clear();
-    _pageScrollControllers.clear();
-    _pageEditorKeys.clear();
-    _pageViewportKeys.clear();
+    final oldResources = _takePageResources();
     _pageDocuments = const [];
     _pageStartOffsets = const [];
     _pageDisplayStartOffsets = const [];
     _completedGeometry = null;
     _activePage = 0;
+    _allowProgressivePagination = false;
+    _disposePageResourcesAfterFrame(oldResources);
+  }
+
+  List<_ReaderPageResources> _takePageResources() {
+    final resources = _pageResources.values.toList(growable: false);
+    _pageResources.clear();
+    return resources;
+  }
+
+  void _schedulePageResourcePruning() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      for (final controller in oldControllers) {
-        controller.dispose();
+      if (!mounted || _pageResources.length <= 4) return;
+      final firstVisible = _effectiveMode == BookReaderViewMode.spread
+          ? (_activePage ~/ 2) * 2
+          : _activePage;
+      final lastVisible = _effectiveMode == BookReaderViewMode.spread
+          ? math.min(firstVisible + 1, _pageDocuments.length - 1)
+          : firstVisible;
+      final keepFrom = math.max(0, firstVisible - 1);
+      final keepThrough = math.min(_pageDocuments.length - 1, lastVisible + 1);
+      final stale = <_ReaderPageResources>[];
+      _pageResources.removeWhere((page, resources) {
+        final remove = page < keepFrom || page > keepThrough;
+        if (remove) stale.add(resources);
+        return remove;
+      });
+      for (final resources in stale) {
+        resources.dispose();
       }
-      for (final node in oldFocusNodes) {
-        node.dispose();
-      }
-      for (final controller in oldScrollControllers) {
-        controller.dispose();
+    });
+  }
+
+  void _disposePageResourcesAfterFrame(
+    Iterable<_ReaderPageResources> resources,
+  ) {
+    if (resources.isEmpty) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final item in resources) {
+        item.dispose();
       }
     });
   }
@@ -371,19 +444,22 @@ class _ReaderPageGeometry {
     required BookReaderSettings settings,
     required bool spread,
   }) {
-    final stageHorizontalPadding = constraints.maxWidth < 600 ? 48.0 : 72.0;
-    const stageVerticalPadding = 24.0;
+    const stageHorizontalPadding = 0.0;
+    const stageVerticalPadding = 0.0;
     const pageGap = 16.0;
     final visiblePages = spread ? 2 : 1;
     final availableWidth = math.max(
-      240,
+      1,
       constraints.maxWidth -
           stageHorizontalPadding -
           pageGap * (visiblePages - 1),
     );
     final maximumWidth = settings.contentWidth + settings.horizontalPadding * 2;
-    final width = math.min(maximumWidth, availableWidth / visiblePages);
-    final height = math.max(300, constraints.maxHeight - stageVerticalPadding);
+    final width = math.max(
+      1,
+      math.min(maximumWidth, availableWidth / visiblePages),
+    );
+    final height = math.max(1, constraints.maxHeight - stageVerticalPadding);
     return _ReaderPageGeometry(
       width: width.toDouble(),
       height: height.toDouble(),

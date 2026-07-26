@@ -67,9 +67,7 @@ void main() {
     await tester.pumpWidget(AuthorStudioApp(controller: controller));
     await tester.pumpAndSettle();
     await openLastManuscript(tester, controller);
-    await tester.tap(find.byKey(const ValueKey('writer-more-menu')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Корзина разделов'));
+    await tester.tap(find.byKey(const ValueKey('writer-panel-trash')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('section-trash-sheet')), findsOneWidget);

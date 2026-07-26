@@ -25,6 +25,7 @@ class BookReaderPageCard extends StatelessWidget {
     required this.viewportKey,
     required this.assets,
     required this.showCursor,
+    required this.showPageNumber,
     this.onSpeechTargetSelected,
     this.isMeasurement = false,
     super.key,
@@ -43,16 +44,24 @@ class BookReaderPageCard extends StatelessWidget {
   final GlobalKey viewportKey;
   final List<BookAsset> assets;
   final bool showCursor;
+  final bool showPageNumber;
   final ValueChanged<int>? onSpeechTargetSelected;
   final bool isMeasurement;
 
   @override
   Widget build(BuildContext context) {
     final horizontalPadding = math
-        .min(settings.horizontalPadding, math.max(12, (width - 140) / 2))
+        .min(
+          math.min(settings.horizontalPadding, math.max(12, (width - 140) / 2)),
+          math.max(0, (width - 1) / 2),
+        )
         .toDouble();
+    final footerHeight = math.min(16, height).toDouble();
     final verticalPadding = math
-        .min(settings.verticalPadding, math.max(12, (height - 220) / 2))
+        .min(
+          math.min(settings.verticalPadding, math.max(12, (height - 220) / 2)),
+          math.max(0, (height - footerHeight) / 1.5),
+        )
         .toDouble();
     return Container(
       key: ValueKey(
@@ -65,19 +74,6 @@ class BookReaderPageCard extends StatelessWidget {
         verticalPadding,
         horizontalPadding,
         verticalPadding / 2,
-      ),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: isMeasurement
-            ? null
-            : const [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 18,
-                  offset: Offset(0, 8),
-                ),
-              ],
       ),
       child: Column(
         children: [
@@ -112,8 +108,8 @@ class BookReaderPageCard extends StatelessWidget {
             ),
           ),
           SizedBox(
-            height: 16,
-            child: isMeasurement
+            height: footerHeight,
+            child: isMeasurement || !showPageNumber
                 ? null
                 : Align(
                     alignment: Alignment.bottomRight,

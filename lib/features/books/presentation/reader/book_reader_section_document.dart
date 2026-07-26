@@ -111,36 +111,7 @@ extension _BookReaderDocumentFlow on _BookReaderSectionViewState {
 
   void _replaceVisiblePagesForHighlights() {
     if (_pageDocuments.isEmpty || _pageStartOffsets.isEmpty) return;
-    final oldControllers = List<QuillController>.from(_pageControllers);
-    final oldFocusNodes = List<FocusNode>.from(_pageFocusNodes);
-    final oldScrollControllers = List<ScrollController>.from(
-      _pageScrollControllers,
-    );
-    _pageControllers.clear();
-    _pageFocusNodes.clear();
-    _pageScrollControllers.clear();
-    _pageEditorKeys.clear();
-    _pageViewportKeys.clear();
-    for (var index = 0; index < _pageDocuments.length; index++) {
-      _pageControllers.add(
-        _pageController(_pageDocuments[index], _pageDisplayStartOffsets[index]),
-      );
-      _pageFocusNodes.add(FocusNode());
-      _pageScrollControllers.add(ScrollController());
-      _pageEditorKeys.add(GlobalKey<EditorState>());
-      _pageViewportKeys.add(GlobalKey());
-    }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      for (final controller in oldControllers) {
-        controller.dispose();
-      }
-      for (final node in oldFocusNodes) {
-        node.dispose();
-      }
-      for (final controller in oldScrollControllers) {
-        controller.dispose();
-      }
-    });
+    _disposePageResourcesAfterFrame(_takePageResources());
   }
 
   int _selectableLength(RichDocument document) {
@@ -151,7 +122,10 @@ extension _BookReaderDocumentFlow on _BookReaderSectionViewState {
   }
 
   void _clearSelection() {
-    final controllers = [_continuousController, ..._pageControllers];
+    final controllers = [
+      _continuousController,
+      ..._pageResources.values.map((resources) => resources.controller),
+    ];
     for (final controller in controllers) {
       final selection = controller.selection;
       if (selection.isCollapsed) continue;
@@ -161,8 +135,8 @@ extension _BookReaderDocumentFlow on _BookReaderSectionViewState {
       );
     }
     _continuousFocusNode.unfocus();
-    for (final node in _pageFocusNodes) {
-      node.unfocus();
+    for (final resources in _pageResources.values) {
+      resources.focusNode.unfocus();
     }
     widget.onTextSelection(null);
   }

@@ -123,7 +123,164 @@ void registerAdaptiveWorkflowScenarios() {
     );
     await controller.load(preferredLanguage: 'ru');
     controller.updateSectionContent([
-      {'insert': 'Текст должен сохраниться.\n'},
+      {'insert': 'Текст должен сохраниться.\nВторой абзац.\n'},
+    ]);
+    final imageGateway = _MemoryBookImageGateway(
+      BookImageFile(
+        name: 'pixel.png',
+        bytes: base64Decode(
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+        ),
+      ),
+    );
+
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pumpWidget(
+      AuthorStudioApp(controller: controller, imageFileGateway: imageGateway),
+    );
+    await tester.pumpAndSettle();
+    await openLastManuscript(tester, controller);
+    final editor = tester.widget<QuillEditor>(find.byType(QuillEditor));
+    final firstParagraphEnd = 'Текст должен сохраниться.\n'.length;
+    editor.controller.updateSelection(
+      TextSelection.collapsed(offset: firstParagraphEnd),
+      ChangeSource.local,
+    );
+    await tester.tap(find.byKey(const ValueKey('writer-formatting-action')));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.byKey(const ValueKey('insert-book-image-button')));
+    await tester.pumpAndSettle();
+
+    expect(imageGateway.openCount, 1);
+    expect(controller.activeProject!.assets, hasLength(1));
+    expect(
+      jsonEncode(controller.activeSection!.content),
+      contains('bookImage'),
+    );
+    expect(
+      richDocumentPlainText(controller.activeSection!.content),
+      'Текст должен сохраниться.\n\nВторой абзац.\n',
+    );
+    expect(find.text('Изображение добавлено в рукопись'), findsOneWidget);
+
+    final assetId = controller.activeProject!.assets.single.id;
+    editor.controller.updateSelection(
+      TextSelection.collapsed(offset: editor.controller.document.length - 1),
+      ChangeSource.local,
+    );
+    await tester.tap(find.byKey(ValueKey('book-image-action-$assetId')));
+    await tester.pumpAndSettle();
+    expect(tester.testTextInput.isVisible, isFalse);
+    expect(editor.focusNode.canRequestFocus, isFalse);
+    expect(
+      find.byKey(const ValueKey('image-alignment-selector')),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Справа'));
+    expect(tester.testTextInput.isVisible, isFalse);
+    await tester.enterText(
+      find.byKey(const ValueKey('image-caption-field')),
+      'Подпись к рисунку',
+    );
+    expect(tester.testTextInput.isVisible, isTrue);
+    final sizeSlider = tester.widget<Slider>(
+      find.byKey(const ValueKey('image-size-slider')),
+    );
+    sizeSlider.onChangeStart!(sizeSlider.value);
+    sizeSlider.onChanged!(50);
+    await tester.pumpAndSettle();
+    expect(tester.testTextInput.isVisible, isFalse);
+    expect(find.text('50%'), findsOneWidget);
+    expect(
+      jsonEncode(controller.activeSection!.content),
+      isNot(contains('Подпись к рисунку')),
+      reason: 'Настройки должны оставаться локальными до закрытия окна.',
+    );
+
+    await tester.tap(find.byKey(const ValueKey('replace-book-image')));
+    await tester.pumpAndSettle();
+    expect(imageGateway.openCount, 2);
+    expect(controller.activeProject!.assets, hasLength(1));
+    await tester.tap(find.byKey(const ValueKey('image-settings-close')));
+    await tester.pumpAndSettle();
+    expect(tester.testTextInput.isVisible, isFalse);
+    expect(
+      tester
+          .widget<QuillEditor>(find.byType(QuillEditor))
+          .focusNode
+          .canRequestFocus,
+      isTrue,
+    );
+    expect(controller.activeProject!.assets, hasLength(2));
+    final replacedOperation = controller.activeSection!.content.firstWhere(
+      (operation) => operation['insert'] is Map,
+    );
+    final replacedCustom =
+        (replacedOperation['insert'] as Map)['custom'] as String;
+    final replacedId = BookImagePlacement.decode(
+      jsonDecode(replacedCustom)['bookImage'] as String,
+    ).assetId;
+    expect(replacedId, isNot(assetId));
+    final placement = BookImagePlacement.decode(
+      jsonDecode(replacedCustom)['bookImage'] as String,
+    );
+    expect(placement.alignment, BookImageAlignment.right);
+    expect(placement.widthPercent, 50);
+    expect(placement.caption, 'Подпись к рисунку');
+    final currentEditor = tester.widget<QuillEditor>(find.byType(QuillEditor));
+    currentEditor.controller.updateSelection(
+      TextSelection.collapsed(
+        offset: currentEditor.controller.document.length - 1,
+      ),
+      ChangeSource.local,
+    );
+    await tester.tap(find.byKey(ValueKey('book-image-action-$replacedId')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('move-image-to-cursor')));
+    await tester.pumpAndSettle();
+    expect(
+      controller.activeSection!.content.indexWhere(
+        (operation) => operation['insert'] is Map,
+      ),
+      greaterThan(0),
+    );
+    final movedImageOperation = controller.activeSection!.content.firstWhere(
+      (operation) => operation['insert'] is Map,
+    );
+    final movedCustom =
+        (movedImageOperation['insert'] as Map)['custom'] as String;
+    final replacementId = BookImagePlacement.decode(
+      jsonDecode(movedCustom)['bookImage'] as String,
+    ).assetId;
+    expect(replacementId, replacedId);
+    await tester.tap(find.byKey(ValueKey('book-image-action-$replacementId')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('delete-book-image')));
+    await tester.pumpAndSettle();
+    expect(
+      controller.activeSection!.content.where(
+        (operation) => operation['insert'] is Map,
+      ),
+      isEmpty,
+    );
+    final remainingText = richDocumentPlainText(
+      controller.activeSection!.content,
+    );
+    expect(remainingText, contains('Текст должен сохраниться.'));
+    expect(remainingText, contains('Второй абзац.'));
+
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('inserts consecutive images at the text cursor', (tester) async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(),
+    );
+    await controller.load(preferredLanguage: 'ru');
+    controller.updateSectionContent([
+      {'insert': 'Начало.\nКонец.\n'},
     ]);
     final imageGateway = _MemoryBookImageGateway(
       BookImageFile(
@@ -142,26 +299,76 @@ void registerAdaptiveWorkflowScenarios() {
     await openLastManuscript(tester, controller);
     final editor = tester.widget<QuillEditor>(find.byType(QuillEditor));
     editor.controller.updateSelection(
-      const TextSelection(baseOffset: 0, extentOffset: 5),
+      TextSelection.collapsed(offset: 'Начало.\n'.length),
       ChangeSource.local,
     );
-    await tester.tap(find.byKey(const ValueKey('writer-formatting-action')));
+
+    for (var index = 0; index < 2; index++) {
+      await tester.tap(find.byKey(const ValueKey('writer-formatting-action')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('insert-book-image-button')));
+      await tester.pumpAndSettle();
+    }
+
+    final content = controller.activeSection!.content;
+    final imageIndices = <int>[
+      for (var index = 0; index < content.length; index++)
+        if (content[index]['insert'] is Map) index,
+    ];
+    final endingIndex = content.indexWhere(
+      (operation) =>
+          operation['insert']?.toString().contains('Конец.') ?? false,
+    );
+    expect(imageIndices, hasLength(2));
+    expect(imageIndices.every((index) => index > 0), isTrue);
+    expect(
+      imageIndices.every((index) => index < endingIndex),
+      isTrue,
+      reason: jsonEncode(content),
+    );
+    expect(imageGateway.openCount, 2);
+
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('uploads and removes a manuscript cover', (tester) async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(),
+    );
+    await controller.load(preferredLanguage: 'ru');
+    final imageGateway = _MemoryBookImageGateway(
+      BookImageFile(
+        name: 'cover.png',
+        bytes: base64Decode(
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+        ),
+      ),
+    );
+
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pumpWidget(
+      AuthorStudioApp(controller: controller, imageFileGateway: imageGateway),
+    );
     await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull);
-    await tester.tap(find.byKey(const ValueKey('insert-book-image-button')));
+    await openLastManuscript(tester, controller);
+    await tester.tap(find.byKey(const ValueKey('writer-settings-action')));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('choose-book-cover')),
+      180,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(find.byKey(const ValueKey('choose-book-cover')));
     await tester.pumpAndSettle();
 
+    expect(controller.activeProject!.coverAsset, isNotNull);
     expect(imageGateway.openCount, 1);
-    expect(controller.activeProject!.assets, hasLength(1));
-    expect(
-      jsonEncode(controller.activeSection!.content),
-      contains('bookImage'),
-    );
-    expect(
-      richDocumentPlainText(controller.activeSection!.content),
-      'Текст должен сохраниться.\n',
-    );
-    expect(find.text('Изображение добавлено в рукопись'), findsOneWidget);
+    expect(find.byKey(const ValueKey('remove-book-cover')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('remove-book-cover')));
+    await tester.pumpAndSettle();
+    expect(controller.activeProject!.coverAsset, isNull);
+    expect(find.byKey(const ValueKey('remove-book-cover')), findsNothing);
 
     await tester.binding.setSurfaceSize(null);
   });
@@ -271,7 +478,7 @@ void registerAdaptiveWorkflowScenarios() {
     await openLastManuscript(tester, controller);
 
     await _openExportSheet(tester);
-    expect(find.text('Экспорт книги'), findsOneWidget);
+    expect(find.text('Экспорт книги'), findsWidgets);
     expect(find.text('EPUB 3.3 (.epub)'), findsOneWidget);
     expect(find.text('Печатный PDF (.pdf)'), findsOneWidget);
     expect(find.text('Документ Word (.docx)'), findsOneWidget);
@@ -402,9 +609,7 @@ void registerAdaptiveWorkflowScenarios() {
     await tester.pumpAndSettle();
     await openLastManuscript(tester, controller);
 
-    await tester.tap(find.byKey(const ValueKey('writer-more-menu')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('История версий'));
+    await tester.tap(find.byKey(const ValueKey('writer-panel-history')));
     await tester.pumpAndSettle();
     expect(find.textContaining('Снимков пока нет'), findsOneWidget);
 
@@ -438,9 +643,7 @@ void registerAdaptiveWorkflowScenarios() {
     await tester.pumpAndSettle();
     await openLastManuscript(tester, controller);
 
-    await tester.tap(find.byKey(const ValueKey('writer-more-menu')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Сохранить резервную копию'));
+    await tester.tap(find.byKey(const ValueKey('writer-panel-backup')));
     await tester.pumpAndSettle();
     expect(backupGateway.savedArchive, isNotNull);
     expect(
@@ -454,9 +657,7 @@ void registerAdaptiveWorkflowScenarios() {
       metadata: const BookMetadata(title: 'Восстановленная книга'),
     );
     backupGateway.archiveToOpen = BookProjectArchiveCodec.encode(imported);
-    await tester.tap(find.byKey(const ValueKey('writer-more-menu')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Восстановить проект из резервной копии'));
+    await tester.tap(find.byKey(const ValueKey('writer-panel-restore')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('confirm-project-restore')));
     await tester.pumpAndSettle();

@@ -4,6 +4,7 @@ import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_annotations_panel.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_contents.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_location_callback.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/material.dart';
 
 class BookReaderNavigationPanel extends StatelessWidget {
@@ -54,36 +55,18 @@ class BookReaderNavigationPanel extends StatelessWidget {
               return Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 4, 0),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            strings.tableOfContents,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                        ),
-                        IconButton(
-                          key: const ValueKey(
-                            'reader-export-annotations-button',
-                          ),
-                          tooltip: strings.exportAnnotations,
-                          onPressed: onExport,
-                          color: colors.onSurfaceVariant,
-                          icon: const Icon(Icons.download_outlined),
-                        ),
-                        IconButton(
-                          key: const ValueKey('reader-navigation-close'),
-                          tooltip: MaterialLocalizations.of(
-                            context,
-                          ).closeButtonTooltip,
-                          onPressed: () => Navigator.maybePop(context),
-                          color: colors.onSurfaceVariant,
-                          icon: const Icon(Icons.close),
-                        ),
-                      ],
+                  BookLeatherModalHeader(
+                    title: strings.tableOfContents,
+                    padding: const EdgeInsets.fromLTRB(16, 8, 4, 0),
+                    trailing: IconButton(
+                      key: const ValueKey('reader-export-annotations-button'),
+                      tooltip: strings.exportAnnotations,
+                      onPressed: onExport,
+                      color: colors.onSurfaceVariant,
+                      icon: const Icon(Icons.download_outlined),
                     ),
+                    closeKey: const ValueKey('reader-navigation-close'),
+                    onClose: () => Navigator.maybePop(context),
                   ),
                   TabBar(
                     isScrollable: !compact,

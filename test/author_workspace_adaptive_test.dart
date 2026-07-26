@@ -12,11 +12,14 @@ import 'package:dnevnik/features/books/application/book_project_archive_codec.da
 import 'package:dnevnik/features/books/data/book_export_file_service.dart';
 import 'package:dnevnik/features/books/data/book_import_file_service.dart';
 import 'package:dnevnik/features/books/data/book_project_backup_file_service.dart';
+import 'package:dnevnik/features/books/domain/book_image_placement.dart';
 import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
+import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_page.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,9 +36,12 @@ void main() {
 }
 
 Future<void> _openExportSheet(WidgetTester tester) async {
-  await tester.tap(find.byKey(const ValueKey('writer-more-menu')));
-  await tester.pumpAndSettle();
-  await tester.tap(find.text('Экспорт книги'));
+  final directExport = find.byKey(const ValueKey('writer-panel-export'));
+  if (directExport.evaluate().isEmpty) {
+    await tester.tap(find.byKey(const ValueKey('writer-more-menu')));
+    await tester.pumpAndSettle();
+  }
+  await tester.tap(find.byKey(const ValueKey('writer-panel-export')));
   await tester.pumpAndSettle();
 }
 

@@ -24,6 +24,7 @@ class BookPageCanvas extends StatelessWidget {
     required this.titleController,
     required this.onTitleChanged,
     required this.showChapterTitle,
+    this.onImageTap,
     this.isMeasurement = false,
     super.key,
   });
@@ -42,6 +43,7 @@ class BookPageCanvas extends StatelessWidget {
   final ValueChanged<String> onTitleChanged;
   final bool showChapterTitle;
   final bool isMeasurement;
+  final BookImageTapCallback? onImageTap;
 
   bool get _isFirstPage => pageNumber == 1;
 
@@ -114,7 +116,10 @@ class BookPageCanvas extends StatelessWidget {
                           ),
                           textSelectionThemeData: BookTypography.selectionTheme,
                           embedBuilders: [
-                            BookImageEmbedBuilder(assets),
+                            BookImageEmbedBuilder(
+                              assets,
+                              onTap: isMeasurement ? null : onImageTap,
+                            ),
                             const BookPageBreakEmbedBuilder(),
                           ],
                           scrollable: false,

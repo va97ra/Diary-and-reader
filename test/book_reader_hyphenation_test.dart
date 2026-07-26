@@ -71,4 +71,18 @@ void main() {
       );
     }
   });
+
+  test('background hyphenation preserves the synchronous result', () async {
+    const source = <Map<String, dynamic>>[
+      {'insert': 'Литературное произведение и повествование.\n'},
+    ];
+    final hyphenation = await BookReaderHyphenation.forLanguage('ru');
+
+    final background = await hyphenation.applyInBackground(source);
+    final synchronous = hyphenation.apply(source);
+
+    expect(background.document, synchronous.document);
+    expect(background.originalLength, synchronous.originalLength);
+    expect(background.displayLength, synchronous.displayLength);
+  });
 }

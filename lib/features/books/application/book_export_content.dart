@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:dnevnik/features/books/domain/book_image_placement.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 
 enum BookExportBlockType {
@@ -57,6 +58,9 @@ class BookExportBlock {
     this.rightToLeft = false,
     this.semanticStyle,
     this.assetId,
+    this.imageAlignment = BookImageAlignment.center,
+    this.imageWidthPercent = 100,
+    this.imageCaption = '',
   });
 
   final BookExportBlockType type;
@@ -67,6 +71,9 @@ class BookExportBlock {
   final bool rightToLeft;
   final String? semanticStyle;
   final String? assetId;
+  final BookImageAlignment imageAlignment;
+  final int imageWidthPercent;
+  final String imageCaption;
 
   bool get isListItem => switch (type) {
     BookExportBlockType.orderedListItem ||
@@ -102,14 +109,17 @@ abstract final class BookExportContentParser {
           skipEmbedNewline = true;
           continue;
         }
-        final assetId = _imageAssetId(insert);
-        if (assetId != null) {
+        final image = _imagePlacement(insert);
+        if (image != null) {
           if (runs.isNotEmpty) finish(const {});
           blocks.add(
             BookExportBlock(
               type: BookExportBlockType.image,
               runs: const [],
-              assetId: assetId,
+              assetId: image.assetId,
+              imageAlignment: image.alignment,
+              imageWidthPercent: image.widthPercent,
+              imageCaption: image.caption,
             ),
           );
           skipEmbedNewline = true;
@@ -208,16 +218,20 @@ abstract final class BookExportContentParser {
   static int? _integer(Object? value) =>
       value is num ? value.toInt() : int.tryParse(value?.toString() ?? '');
 
-  static String? _imageAssetId(Map insert) {
+  static BookImagePlacement? _imagePlacement(Map insert) {
     final direct = insert['bookImage']?.toString();
-    if (direct != null && direct.isNotEmpty) return direct;
+    if (direct != null && direct.isNotEmpty) {
+      return BookImagePlacement.decode(direct);
+    }
     final custom = insert['custom'];
     if (custom is! String) return null;
     try {
       final decoded = jsonDecode(custom);
       if (decoded is! Map) return null;
       final value = decoded['bookImage']?.toString();
-      return value == null || value.isEmpty ? null : value;
+      return value == null || value.isEmpty
+          ? null
+          : BookImagePlacement.decode(value);
     } on FormatException {
       return null;
     }

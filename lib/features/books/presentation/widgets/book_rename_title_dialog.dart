@@ -1,4 +1,5 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/material.dart';
 
 class BookRenameTitleDialog extends StatefulWidget {
@@ -41,7 +42,7 @@ class _BookRenameTitleDialogState extends State<BookRenameTitleDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
+  Widget build(BuildContext context) => BookLeatherDialog(
     title: Text(widget.label),
     content: TextField(
       key: widget.fieldKey,

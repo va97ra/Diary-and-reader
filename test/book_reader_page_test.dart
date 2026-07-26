@@ -3,8 +3,9 @@ import 'package:dnevnik/features/books/application/author_workspace_controller.d
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_contents.dart';
-import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_progress_rail.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_adaptive_control_shell.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -73,7 +74,9 @@ void main() {
     await openReaderPreview(tester, controller);
 
     expect(find.byKey(const ValueKey('reader-surface')), findsOneWidget);
-    expect(find.byKey(const ValueKey('reader-context-bar')), findsOneWidget);
+    expect(find.byKey(const ValueKey('reader-context-bar')), findsNothing);
+    expect(find.byKey(const ValueKey('reader-left-panel')), findsOneWidget);
+    expect(find.byKey(const ValueKey('reader-right-panel')), findsOneWidget);
     expect(find.byKey(const ValueKey('reader-contents')), findsNothing);
     await tester.tap(find.byKey(const ValueKey('reader-contents-action')));
     await tester.pumpAndSettle();
@@ -142,7 +145,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(controller.activeProject!.readerAnnotations.bookmarks, hasLength(1));
 
-    await tester.tap(find.byKey(const ValueKey('reader-next-section')));
+    await tester.tap(find.byKey(const ValueKey('reader-contents-action')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Вторая глава').last);
     await tester.pumpAndSettle();
     readerEditor = tester.widget<QuillEditor>(find.byType(QuillEditor));
     expect(
@@ -154,9 +159,7 @@ void main() {
       controller.activeProject!.sections.last.id,
     );
 
-    await tester.tap(find.byKey(const ValueKey('reader-more-menu')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Поиск по книге'));
+    await tester.tap(find.byKey(const ValueKey('reader-search-action')));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('reader-search-field')),
@@ -181,9 +184,10 @@ void main() {
     final noteDialogContext = tester.element(
       find.byKey(const ValueKey('reader-note-field')),
     );
+    expect(find.byType(BookLeatherModalSurface), findsWidgets);
     expect(
-      Theme.of(noteDialogContext).dialogTheme.backgroundColor,
-      BookReaderPalette.forTheme(BookReaderTheme.sepia).surface,
+      Theme.of(noteDialogContext).colorScheme.onSurface,
+      BookLeatherColors.foreground,
     );
     await tester.enterText(
       find.byKey(const ValueKey('reader-note-field')),
@@ -228,12 +232,15 @@ void main() {
       findsOneWidget,
     );
     expect(find.byIcon(Icons.more_horiz), findsNothing);
-    expect(find.text('Ещё'), findsOneWidget);
-    final moreButtonSize = tester.getSize(
-      find.byKey(const ValueKey('reader-more-menu')),
+    expect(find.text('Поиск'), findsOneWidget);
+    expect(find.text('Озвучка'), findsOneWidget);
+    final searchButtonSize = tester.getSize(
+      find.byKey(const ValueKey('reader-search-action')),
     );
-    expect(moreButtonSize.width, greaterThanOrEqualTo(48));
-    expect(moreButtonSize.height, greaterThanOrEqualTo(48));
+    expect(searchButtonSize.width, greaterThanOrEqualTo(48));
+    expect(searchButtonSize.height, greaterThanOrEqualTo(48));
+    expect(find.byKey(const ValueKey('reader-previous-section')), findsNothing);
+    expect(find.byKey(const ValueKey('reader-next-section')), findsNothing);
     expect(find.byKey(const ValueKey('reader-contents')), findsNothing);
     expect(find.byKey(const ValueKey('reader-progress')), findsNothing);
     expect(find.byKey(const ValueKey('reader-progress-rail')), findsOneWidget);

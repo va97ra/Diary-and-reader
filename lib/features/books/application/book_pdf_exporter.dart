@@ -61,6 +61,7 @@ abstract final class BookPdfExporter {
               blocks: BookExportContentParser.parse(section.content),
               settings: project.paragraphSettings,
               assets: project.assets,
+              maxImageWidth: pageFormat.availableWidth,
             ),
           ],
         ),
@@ -138,6 +139,14 @@ abstract final class BookPdfExporter {
           mainAxisAlignment: pw.MainAxisAlignment.center,
           children: [
             pw.Spacer(),
+            if (project.coverAsset case final cover?) ...[
+              pw.Image(
+                pw.MemoryImage(cover.bytes),
+                height: pageFormat.availableHeight * 0.52,
+                fit: pw.BoxFit.contain,
+              ),
+              pw.SizedBox(height: 18),
+            ],
             pw.Text(
               project.metadata.title,
               textAlign: pw.TextAlign.center,

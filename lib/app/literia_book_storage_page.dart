@@ -4,6 +4,7 @@ import 'package:dnevnik/features/books/application/author_workspace_controller.d
 import 'package:dnevnik/features/books/application/book_device_catalog.dart';
 import 'package:dnevnik/features/books/application/book_source_storage.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/material.dart';
 
 enum _StorageSort { size, title, lastRead }
@@ -243,7 +244,7 @@ class _LiteriaBookStoragePageState extends State<LiteriaBookStoragePage> {
   Future<bool> _confirm(String title, String body) async =>
       (await showDialog<bool>(
         context: context,
-        builder: (dialogContext) => AlertDialog(
+        builder: (dialogContext) => BookLeatherDialog(
           title: Text(title),
           content: Text(body),
           actions: [

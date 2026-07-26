@@ -29,6 +29,8 @@ void main() {
       'contentWidth': 10,
       'horizontalPadding': 500,
       'verticalPadding': 0,
+      'speechRate': double.nan,
+      'speechPitch': double.infinity,
     });
     final progress = BookReaderProgress.fromJson({
       'sectionId': 'chapter-2',
@@ -43,6 +45,8 @@ void main() {
     expect(settings.contentWidth, 480);
     expect(settings.horizontalPadding, 96);
     expect(settings.verticalPadding, 12);
+    expect(settings.speechRate, 0.5);
+    expect(settings.speechPitch, 1);
     expect(progress.sectionId, 'chapter-2');
     expect(progress.sectionProgress, 1);
   });
