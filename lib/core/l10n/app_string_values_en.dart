@@ -56,6 +56,7 @@ const appStringValuesEn = <String, String>{
   'about': 'About',
   'bookStorage': 'Book storage',
   'bookStorageSubtitle': 'Original books and occupied space',
+  'bookStorageLoadFailed': 'Book storage data could not be loaded',
   'totalBookData': 'Total book data',
   'storedOriginals': 'Stored originals',
   'processedBooks': 'Text, images, and covers',
@@ -82,7 +83,14 @@ const appStringValuesEn = <String, String>{
   'onboarding': 'Tutorial',
   'quickStart': 'Quick start',
   'quickStartBody':
-      'Write opens manuscripts and Read opens books. Tap a title to rename it, or the center of a page to hide controls.',
+      'Write is for creating and editing your own books.\n'
+      'Read is your library of imported books.\n\n'
+      'To add a book, choose Upload books or Scan.\n\n'
+      'In the writer, select a section, tap the text, and start editing. '
+      'Formatting tools are available on the control panel.\n\n'
+      'In the reader, swipe to turn pages. Contents, search, text-to-speech, '
+      'bookmarks, and settings are available from the control panel.\n\n'
+      'Supported formats:',
   'understood': 'Got it',
   'more': 'More',
   'previewBook': 'Preview book',
@@ -91,6 +99,7 @@ const appStringValuesEn = <String, String>{
   'librarySearchHint': 'Title, author, series, or collection',
   'manuscriptLibrarySearchHint': 'Manuscript or chapter title',
   'sortBy': 'Sort by',
+  'filterBooks': 'Filter',
   'recentlyUpdated': 'Recently opened',
   'byTitle': 'Title',
   'byAuthor': 'Author',
@@ -132,8 +141,18 @@ const appStringValuesEn = <String, String>{
   'newBook': 'New book',
   'importEbook': 'Import book',
   'importBooks': 'Import books',
-  'findOnDevice': 'Find on device',
-  'foundOnDevice': 'New books found',
+  'scanBooks': 'Scan',
+  'scanningBooks': 'Scanning…',
+  'noNewBooks': 'No new books found',
+  'scanFolders': 'Scan folders',
+  'scanFolderAccessLost':
+      'Literia lost access to one of the folders. Select it again.',
+  'selectScanFolder': 'Select folder',
+  'scanFailed': 'Could not scan the folders',
+  'downloadsAccessExplanation':
+      'Allow Literia to access all files so it can automatically find supported books in Downloads and its subfolders. The permission is used only to discover and import books.',
+  'grantFileAccess': 'Allow access',
+  'fileAccessNotGranted': 'Downloads access was not granted',
   'addBookFolder': 'Add folder',
   'refresh': 'Refresh',
   'addSelected': 'Add selected',
@@ -157,6 +176,7 @@ const appStringValuesEn = <String, String>{
   'imagesInBook': 'Images',
   'bookImported': 'Book added to the library',
   'importingBooks': 'Processing and adding the book to your library…',
+  'openingBook': 'Preparing the book for reading…',
   'bookImportFailed': 'The book could not be read',
   'unsupportedBookFormat': 'This book format is not supported yet',
   'conversionRequired':

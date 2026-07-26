@@ -195,9 +195,9 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
     final strings = AppStrings.of(context);
     return SizedBox(
       key: const ValueKey('writer-top-panel'),
-      height: 82,
+      height: 72,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 7),
+        padding: const EdgeInsets.fromLTRB(6, 5, 6, 5),
         child: Row(
           children: [
             BookPanelIconAction(
@@ -259,9 +259,9 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
     final strings = AppStrings.of(context);
     return SizedBox(
       key: const ValueKey('writer-context-bar'),
-      height: 74,
+      height: 64,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 7),
+        padding: const EdgeInsets.fromLTRB(6, 5, 6, 5),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -1206,7 +1206,7 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
         bookTitle: project.metadata.title,
       );
       if (mounted && saved) _showMessage(strings.projectBackupSaved);
-    } on Exception {
+    } on Object {
       if (mounted) _showMessage(strings.projectBackupFailed);
     }
   }

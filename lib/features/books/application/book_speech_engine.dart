@@ -26,7 +26,12 @@ abstract interface class BookSpeechEngine {
   Future<void> stop();
 }
 
-class FlutterBookSpeechEngine implements BookSpeechEngine {
+abstract interface class BookSpeechProgressEngine {
+  void setProgressHandler(void Function(int start, int end) handler);
+}
+
+class FlutterBookSpeechEngine
+    implements BookSpeechEngine, BookSpeechProgressEngine {
   FlutterBookSpeechEngine({FlutterTts? tts})
     : _delegate = tts != null || !_supportsSystemMediaSession
           ? _DirectBookSpeechEngine(tts: tts)
@@ -38,6 +43,14 @@ class FlutterBookSpeechEngine implements BookSpeechEngine {
       defaultTargetPlatform == TargetPlatform.macOS;
 
   final BookSpeechEngine _delegate;
+
+  @override
+  void setProgressHandler(void Function(int start, int end) handler) {
+    final delegate = _delegate;
+    if (delegate is BookSpeechProgressEngine) {
+      (delegate as BookSpeechProgressEngine).setProgressHandler(handler);
+    }
+  }
 
   @override
   Future<void> configure({
@@ -75,11 +88,22 @@ class FlutterBookSpeechEngine implements BookSpeechEngine {
   Future<void> stop() => _delegate.stop();
 }
 
-class _DirectBookSpeechEngine implements BookSpeechEngine {
+class _DirectBookSpeechEngine
+    implements BookSpeechEngine, BookSpeechProgressEngine {
   _DirectBookSpeechEngine({FlutterTts? tts}) : _tts = tts ?? FlutterTts();
 
   final FlutterTts _tts;
   String _currentText = '';
+
+  @override
+  void setProgressHandler(void Function(int start, int end) handler) {
+    _tts.setProgressHandler((spokenText, start, end, _) {
+      final base = spokenText == _currentText
+          ? 0
+          : _currentText.indexOf(spokenText).clamp(0, _currentText.length);
+      handler(base + start, base + end);
+    });
+  }
 
   @override
   Future<void> configure({
@@ -133,15 +157,18 @@ class _DirectBookSpeechEngine implements BookSpeechEngine {
   }
 }
 
-class _AudioServiceBookSpeechEngine implements BookSpeechEngine {
+class _AudioServiceBookSpeechEngine
+    implements BookSpeechEngine, BookSpeechProgressEngine {
   static Future<_BookTtsAudioHandler>? _handlerFuture;
   void Function()? _completionHandler;
   void Function(String message)? _errorHandler;
+  void Function(int start, int end)? _progressHandler;
 
   Future<_BookTtsAudioHandler> get _handler async {
     final handler = await (_handlerFuture ??= _createHandler());
     handler.completionHandler = _completionHandler;
     handler.errorHandler = _errorHandler;
+    handler.progressHandler = _progressHandler;
     return handler;
   }
 
@@ -194,6 +221,15 @@ class _AudioServiceBookSpeechEngine implements BookSpeechEngine {
   }
 
   @override
+  void setProgressHandler(void Function(int start, int end) handler) {
+    _progressHandler = handler;
+    final future = _handlerFuture;
+    if (future != null) {
+      unawaited(future.then((value) => value.progressHandler = handler));
+    }
+  }
+
+  @override
   Future<void> speak(String text) async => (await _handler).speakText(text);
 
   @override
@@ -219,11 +255,18 @@ class _BookTtsAudioHandler extends BaseAudioHandler {
       _broadcast(playing: false, state: AudioProcessingState.error);
       errorHandler?.call(message);
     });
+    _tts.setProgressHandler((spokenText, start, end, _) {
+      final base = spokenText == _currentText
+          ? 0
+          : _currentText.indexOf(spokenText).clamp(0, _currentText.length);
+      progressHandler?.call(base + start, base + end);
+    });
   }
 
   final FlutterTts _tts;
   void Function()? completionHandler;
   void Function(String message)? errorHandler;
+  void Function(int start, int end)? progressHandler;
   String _currentText = '';
 
   Future<void> configure({

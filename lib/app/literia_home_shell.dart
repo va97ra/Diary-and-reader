@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:dnevnik/app/literia_book_details_page.dart';
 import 'package:dnevnik/app/literia_book_storage_page.dart';
-import 'package:dnevnik/app/literia_device_books_page.dart';
 import 'package:dnevnik/app/literia_home_page.dart';
 import 'package:dnevnik/app/literia_library_page.dart';
 import 'package:dnevnik/app/literia_settings_page.dart';
@@ -14,6 +13,7 @@ import 'package:dnevnik/features/books/application/book_import_coordinator.dart'
 import 'package:dnevnik/features/books/application/book_import_file.dart';
 import 'package:dnevnik/features/books/application/book_pdf_font_assets.dart';
 import 'package:dnevnik/features/books/application/book_project_archive_codec.dart';
+import 'package:dnevnik/features/books/application/book_reading_session_loader.dart';
 import 'package:dnevnik/features/books/application/book_source_storage.dart';
 import 'package:dnevnik/features/books/data/book_export_file_service.dart';
 import 'package:dnevnik/features/books/data/book_image_file_service.dart';
@@ -71,8 +71,6 @@ class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
       final project = widget.controller.lastReading;
       if (project != null) _openReader(project);
     },
-    showOnboarding: !widget.controller.appPreferences.onboardingSeen,
-    onDismissOnboarding: widget.controller.markOnboardingSeen,
   );
 
   Future<void> _openManuscriptLibrary() => Navigator.of(context).push<void>(
@@ -94,11 +92,8 @@ class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
         mode: LiteriaLibraryMode.reading,
         controller: widget.controller,
         onPrimaryAction: _importBook,
-        onFindOnDevice: widget.deviceCatalog.supportsFolderScanning
-            ? _openDeviceBooks
-            : null,
-        countDeviceBooks: widget.deviceCatalog.supportsFolderScanning
-            ? _countDeviceBooks
+        onScanDeviceBooks: widget.deviceCatalog.supportsFolderScanning
+            ? _scanAndImportDeviceBooks
             : null,
         onOpen: _openReader,
         onDelete: _deleteProject,
@@ -157,7 +152,7 @@ class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
     }
   }
 
-  void _showImportProgress() {
+  void _showImportProgress({String? message}) {
     _isImportProgressVisible = true;
     final strings = AppStrings.of(context);
     unawaited(
@@ -175,7 +170,7 @@ class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
                   child: CircularProgressIndicator(strokeWidth: 3),
                 ),
                 const SizedBox(width: 20),
-                Expanded(child: Text(strings.importingBooks)),
+                Expanded(child: Text(message ?? strings.importingBooks)),
               ],
             ),
           ),
@@ -199,29 +194,45 @@ class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
     ).import(files, availableBytes: available);
   }
 
-  Future<BookImportBatchResult> _importDeviceBooks(
-    List<DeviceBookCandidate> candidates,
+  Future<BookImportBatchResult> _importFileStream(
+    Stream<BookImportFile> files,
   ) async {
-    final files = <BookImportFile>[];
+    final available = await widget.deviceCatalog.availableBytes();
+    return BookImportCoordinator(
+      controller: widget.controller,
+      sourceStorage: widget.sourceStorage,
+    ).importStream(files, availableBytes: available);
+  }
+
+  Future<BookImportBatchResult> _importDeviceBooks(
+    List<DeviceBookCandidate> candidates, {
+    bool openSingle = true,
+  }) async {
     final materializeFailures = <BookImportItemResult>[];
-    for (final candidate in candidates) {
-      try {
-        files.add(await widget.deviceCatalog.materialize(candidate));
-      } on Exception {
-        materializeFailures.add(
-          BookImportItemResult(
-            fileName: candidate.name,
-            failure: BookImportItemFailure.storage,
-          ),
-        );
+    Stream<BookImportFile> materializeSequentially() async* {
+      for (final candidate in candidates) {
+        try {
+          yield await widget.deviceCatalog.materialize(candidate);
+        } on Exception {
+          materializeFailures.add(
+            BookImportItemResult(
+              fileName: candidate.name,
+              failure: BookImportItemFailure.storage,
+            ),
+          );
+        }
       }
     }
-    final imported = await _importFiles(files);
+
+    final imported = await _importFileStream(materializeSequentially());
     final result = BookImportBatchResult([
       ...imported.items,
       ...materializeFailures,
     ]);
-    if (mounted && candidates.length == 1 && result.imported.length == 1) {
+    if (openSingle &&
+        mounted &&
+        candidates.length == 1 &&
+        result.imported.length == 1) {
       await _openReader(result.imported.single);
     }
     return result;
@@ -235,7 +246,6 @@ class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
     }
     if (result.items.length == 1 && result.imported.length == 1) {
       _showMessage(strings.bookImported);
-      await _openReader(result.imported.single);
       return;
     }
     final messages = <String>[
@@ -251,36 +261,207 @@ class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
     _showMessage(messages.join(' · '));
   }
 
-  Future<void> _openDeviceBooks() => Navigator.of(context).push<void>(
-    MaterialPageRoute(
-      builder: (_) => LiteriaDeviceBooksPage(
-        controller: widget.controller,
-        catalog: widget.deviceCatalog,
-        onImport: _importDeviceBooks,
-      ),
-    ),
-  );
+  Future<void> _scanAndImportDeviceBooks() async {
+    if (_isImporting) return;
+    _isImporting = true;
+    final strings = AppStrings.of(context);
+    try {
+      var scanResult = await _scanAutomaticSources();
+      if (scanResult == null || !mounted) return;
 
-  Future<int> _countDeviceBooks() async {
-    final result = await widget.deviceCatalog.scan(
-      widget.controller.appPreferences.bookScanFolders,
+      if (scanResult.inaccessibleFolderUris.isNotEmpty) {
+        final repaired = await _repairScanFolderAccess(
+          scanResult.inaccessibleFolderUris.toSet(),
+        );
+        if (!mounted) return;
+        if (repaired) {
+          scanResult = await _scanAutomaticSources();
+          if (scanResult == null || !mounted) return;
+        }
+      }
+
+      final importedSources = widget.controller.projects
+          .where((project) => project.isReadOnly)
+          .where((project) => project.sourceExternalUri.isNotEmpty)
+          .map(
+            (project) =>
+                '${project.sourceExternalUri}\n${project.sourceFileSize}\n'
+                '${project.sourceModifiedMillis}',
+          )
+          .toSet();
+      final candidates = scanResult.books
+          .where(
+            (book) => !importedSources.contains(
+              '${book.uri}\n${book.sizeBytes}\n'
+              '${book.modifiedAt?.millisecondsSinceEpoch ?? 0}',
+            ),
+          )
+          .toList();
+      if (candidates.isEmpty) {
+        _showMessage(strings.noNewBooks);
+        return;
+      }
+
+      _showImportProgress(message: strings.scanningBooks);
+      final result = await _importDeviceBooks(candidates, openSingle: false);
+      if (!mounted) return;
+      _hideImportProgress();
+      _showScanResult(result);
+    } on Exception {
+      if (mounted) {
+        _hideImportProgress();
+        _showMessage(strings.scanFailed);
+      }
+    } finally {
+      _isImporting = false;
+      if (mounted) _hideImportProgress();
+    }
+  }
+
+  Future<DeviceBookScanResult?> _scanAutomaticSources() async {
+    var downloads = const DeviceBookScanResult();
+    if (widget.deviceCatalog case final BookDownloadsCatalogGateway scanner) {
+      final hadAccess = await scanner.hasDownloadsAccess();
+      if (!hadAccess && !await _ensureDownloadsAccess(scanner)) return null;
+      if (!mounted) return null;
+      if (!hadAccess) {
+        final additionalFolder = await widget.deviceCatalog.chooseFolder();
+        if (additionalFolder != null && mounted) {
+          widget.controller.addBookScanFolder(additionalFolder);
+          await widget.controller.flush();
+        }
+      }
+      downloads = await scanner.scanDownloads();
+    } else if (widget.controller.appPreferences.bookScanFolders.isEmpty) {
+      final folder = await widget.deviceCatalog.chooseFolder();
+      if (folder == null || !mounted) return null;
+      widget.controller.addBookScanFolder(folder);
+      await widget.controller.flush();
+    }
+
+    final folders = widget.controller.appPreferences.bookScanFolders;
+    final additional = folders.isEmpty
+        ? const DeviceBookScanResult()
+        : await widget.deviceCatalog.scan(folders);
+    final books = <String, DeviceBookCandidate>{
+      for (final book in downloads.books) book.uri: book,
+      for (final book in additional.books) book.uri: book,
+    };
+    return DeviceBookScanResult(
+      books: books.values.toList(growable: false),
+      inaccessibleFolderUris: {
+        ...downloads.inaccessibleFolderUris,
+        ...additional.inaccessibleFolderUris,
+      }.toList(growable: false),
     );
-    final importedUris = widget.controller.projects
-        .where((project) => project.isReadOnly)
-        .map((project) => project.sourceExternalUri)
-        .where((uri) => uri.isNotEmpty)
-        .toSet();
-    return result.books
-        .where((book) => !importedUris.contains(book.uri))
-        .length;
+  }
+
+  Future<bool> _ensureDownloadsAccess(
+    BookDownloadsCatalogGateway scanner,
+  ) async {
+    if (await scanner.hasDownloadsAccess()) return true;
+    if (!mounted) return false;
+    final strings = AppStrings.of(context);
+    final confirmed =
+        await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => BookLeatherDialog(
+            title: Text(strings.scanBooks),
+            content: Text(strings.downloadsAccessExplanation),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: Text(strings.cancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: Text(strings.grantFileAccess),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!confirmed || !mounted) return false;
+    final granted = await scanner.requestDownloadsAccess();
+    if (!mounted) return false;
+    if (!granted) _showMessage(strings.fileAccessNotGranted);
+    return granted;
+  }
+
+  Future<bool> _repairScanFolderAccess(Set<String> inaccessibleUris) async {
+    final strings = AppStrings.of(context);
+    final replace =
+        await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => BookLeatherDialog(
+            title: Text(strings.scanBooks),
+            content: Text(strings.scanFolderAccessLost),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: Text(strings.cancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: Text(strings.selectScanFolder),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!replace || !mounted) return false;
+
+    final replacement = await widget.deviceCatalog.chooseFolder();
+    if (replacement == null || !mounted) return false;
+    final inaccessible = widget.controller.appPreferences.bookScanFolders
+        .where((folder) => inaccessibleUris.contains(folder.uri))
+        .toList();
+    for (final folder in inaccessible) {
+      await widget.deviceCatalog.releaseFolder(folder);
+      widget.controller.removeBookScanFolder(folder.uri);
+    }
+    widget.controller.addBookScanFolder(replacement);
+    await widget.controller.flush();
+    return true;
+  }
+
+  void _showScanResult(BookImportBatchResult result) {
+    final strings = AppStrings.of(context);
+    final messages = <String>[
+      if (result.imported.isNotEmpty)
+        '${strings.bookImported}: ${result.imported.length}',
+      if (result.duplicateCount > 0)
+        '${strings.duplicateBooksSkipped}: ${result.duplicateCount}',
+      if (result.failedCount > 0)
+        '${strings.someBooksFailed}: ${result.failedCount}',
+    ];
+    _showMessage(messages.isEmpty ? strings.noNewBooks : messages.join(' · '));
   }
 
   Future<void> _openReader(BookProject project) async {
     widget.controller.selectProject(project.id);
     if (!mounted) return;
-    final selected = widget.controller.activeProject;
-    if (selected == null || selected.sections.isEmpty) return;
-    widget.controller.beginReaderSession();
+    final activeProject = widget.controller.activeProject;
+    if (activeProject == null) return;
+    var selected = activeProject;
+    if (selected.isCatalogOnly) {
+      _showImportProgress(message: AppStrings.of(context).openingBook);
+      try {
+        selected = await BookReadingSessionLoader(
+          widget.sourceStorage,
+        ).load(selected);
+      } on Exception {
+        if (mounted) {
+          _hideImportProgress();
+          _showMessage(AppStrings.of(context).bookImportFailed);
+        }
+        return;
+      }
+      if (!mounted) return;
+      _hideImportProgress();
+    }
+    if (selected.sections.isEmpty) return;
+    widget.controller.beginReaderSession(hydratedProject: selected);
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (_) => BookReaderPage(
@@ -352,7 +533,6 @@ class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
           onBackup: _backupLastManuscript,
           onRestore: _restoreProject,
           onOpenBookStorage: _openBookStorage,
-          onShowOnboarding: _showOnboardingAgain,
         ),
       ),
     ),
@@ -370,11 +550,6 @@ class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
     );
   }
 
-  void _showOnboardingAgain() {
-    Navigator.of(context).pop();
-    widget.controller.resetOnboarding();
-  }
-
   Future<void> _backupLastManuscript() async {
     final strings = AppStrings.of(context);
     final project = widget.controller.lastManuscript;
@@ -387,7 +562,7 @@ class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
         bookTitle: project.metadata.title,
       );
       if (mounted && saved) _showMessage(strings.projectBackupSaved);
-    } on Exception {
+    } on Object {
       if (mounted) _showMessage(strings.projectBackupFailed);
     }
   }

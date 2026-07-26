@@ -73,6 +73,7 @@ class AppStrings {
   String get about => _text('about');
   String get bookStorage => _text('bookStorage');
   String get bookStorageSubtitle => _text('bookStorageSubtitle');
+  String get bookStorageLoadFailed => _text('bookStorageLoadFailed');
   String get totalBookData => _text('totalBookData');
   String get storedOriginals => _text('storedOriginals');
   String get processedBooks => _text('processedBooks');
@@ -106,6 +107,7 @@ class AppStrings {
   String get manuscriptLibrarySearchHint =>
       _text('manuscriptLibrarySearchHint');
   String get sortBy => _text('sortBy');
+  String get filterBooks => _text('filterBooks');
   String get recentlyUpdated => _text('recentlyUpdated');
   String get byTitle => _text('byTitle');
   String get byAuthor => _text('byAuthor');
@@ -147,8 +149,16 @@ class AppStrings {
   String get newBook => _text('newBook');
   String get importEbook => _text('importEbook');
   String get importBooks => _text('importBooks');
-  String get findOnDevice => _text('findOnDevice');
-  String get foundOnDevice => _text('foundOnDevice');
+  String get scanBooks => _text('scanBooks');
+  String get scanningBooks => _text('scanningBooks');
+  String get noNewBooks => _text('noNewBooks');
+  String get scanFolders => _text('scanFolders');
+  String get scanFolderAccessLost => _text('scanFolderAccessLost');
+  String get selectScanFolder => _text('selectScanFolder');
+  String get scanFailed => _text('scanFailed');
+  String get downloadsAccessExplanation => _text('downloadsAccessExplanation');
+  String get grantFileAccess => _text('grantFileAccess');
+  String get fileAccessNotGranted => _text('fileAccessNotGranted');
   String get addBookFolder => _text('addBookFolder');
   String get refresh => _text('refresh');
   String get addSelected => _text('addSelected');
@@ -168,6 +178,7 @@ class AppStrings {
   String get sourceFile => _text('sourceFile');
   String get bookImported => _text('bookImported');
   String get importingBooks => _text('importingBooks');
+  String get openingBook => _text('openingBook');
   String get bookImportFailed => _text('bookImportFailed');
   String get unsupportedBookFormat => _text('unsupportedBookFormat');
   String get conversionRequired => _text('conversionRequired');

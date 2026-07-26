@@ -100,6 +100,67 @@ class EpubBookFormatParser implements BookFormatParser {
     );
   }
 
+  BookProject parseCatalog(BookImportFile file, DateTime timestamp) {
+    final archive = ZipDecoder().decodeBytes(file.bytes);
+    final containerFile = BookImportParsingSupport.archiveFile(
+      archive,
+      'META-INF/container.xml',
+    );
+    if (containerFile == null) {
+      throw const BookImportException(BookImportFailure.invalidFile);
+    }
+    final container = _parseXml(containerFile);
+    final rootPath = BookImportParsingSupport.elements(container, 'rootfile')
+        .map((element) => element.getAttribute('full-path'))
+        .whereType<String>()
+        .firstOrNull;
+    if (rootPath == null || rootPath.isEmpty) {
+      throw const BookImportException(BookImportFailure.invalidFile);
+    }
+    final packageFile = BookImportParsingSupport.archiveFile(archive, rootPath);
+    if (packageFile == null) {
+      throw const BookImportException(BookImportFailure.invalidFile);
+    }
+    final package = _parseXml(packageFile);
+    final manifest = <String, XmlElement>{
+      for (final item in BookImportParsingSupport.elements(package, 'item'))
+        ?item.getAttribute('id'): item,
+    };
+    final metadataElement = BookImportParsingSupport.elements(
+      package,
+      'metadata',
+    ).firstOrNull;
+    final title = BookImportParsingSupport.textOf(
+      metadataElement,
+      'title',
+    ).ifEmpty(BookImportParsingSupport.baseName(file.name));
+    final cover = _readCatalogCover(archive, rootPath, package, manifest);
+    return BookImportParsingSupport.catalogProject(
+      file: file,
+      timestamp: timestamp,
+      sourceFormat: 'EPUB',
+      metadata: BookMetadata(
+        title: title,
+        author: BookImportParsingSupport.textOf(metadataElement, 'creator'),
+        description: BookImportParsingSupport.textOf(
+          metadataElement,
+          'description',
+        ),
+        languageCode: BookImportParsingSupport.language(
+          BookImportParsingSupport.textOf(metadataElement, 'language'),
+        ),
+        genre: BookImportParsingSupport.textOf(metadataElement, 'subject'),
+        publisher: BookImportParsingSupport.textOf(
+          metadataElement,
+          'publisher',
+        ),
+        rights: BookImportParsingSupport.textOf(metadataElement, 'rights'),
+      ),
+      assets: cover.assets,
+      coverAssetId: cover.coverAssetId,
+    );
+  }
+
   XmlDocument _parseXml(ArchiveFile file) => XmlDocument.parse(
     XmlTextDecoder.normalizeEntities(
       XmlTextDecoder.decode(BookImportParsingSupport.archiveBytes(file)),
@@ -390,6 +451,77 @@ class EpubBookFormatParser implements BookFormatParser {
       assets: assets,
       sourceToAssetId: pathToAssetId,
       coverAssetId: coverAssetId,
+    );
+  }
+
+  ImportedBookMedia _readCatalogCover(
+    Archive archive,
+    String packagePath,
+    XmlDocument package,
+    Map<String, XmlElement> manifest,
+  ) {
+    String? coverId = manifest.entries
+        .where((entry) {
+          final properties =
+              entry.value
+                  .getAttribute('properties')
+                  ?.toLowerCase()
+                  .split(RegExp(r'\s+')) ??
+              const <String>[];
+          return properties.contains('cover-image');
+        })
+        .map((entry) => entry.key)
+        .firstOrNull;
+    coverId ??= BookImportParsingSupport.elements(package, 'meta')
+        .where(
+          (element) => element.getAttribute('name')?.toLowerCase() == 'cover',
+        )
+        .map((element) => element.getAttribute('content'))
+        .whereType<String>()
+        .firstOrNull;
+    coverId ??= manifest.entries
+        .where((entry) {
+          final href = entry.value.getAttribute('href')?.toLowerCase() ?? '';
+          return href.contains('cover') &&
+              BookImportParsingSupport.normalizedImageMediaType(
+                    entry.value.getAttribute('media-type') ?? '',
+                  ) !=
+                  null;
+        })
+        .map((entry) => entry.key)
+        .firstOrNull;
+    final item = manifest[coverId];
+    final mediaType = BookImportParsingSupport.normalizedImageMediaType(
+      item?.getAttribute('media-type') ?? '',
+    );
+    final href = item?.getAttribute('href');
+    if (mediaType == null || href == null || href.isEmpty) {
+      return const ImportedBookMedia(
+        assets: [],
+        sourceToAssetId: {},
+        coverAssetId: null,
+      );
+    }
+    final path = BookImportParsingSupport.resolveArchivePath(packagePath, href);
+    final entry = BookImportParsingSupport.archiveFile(archive, path);
+    if (entry == null ||
+        !BookImportParsingSupport.canStoreImage(entry.size, 0)) {
+      return const ImportedBookMedia(
+        assets: [],
+        sourceToAssetId: {},
+        coverAssetId: null,
+      );
+    }
+    final asset = BookAsset(
+      id: 'asset-cover',
+      mediaType: mediaType,
+      bytes: BookImportParsingSupport.archiveBytes(entry),
+      sourcePath: path,
+    );
+    return ImportedBookMedia(
+      assets: [asset],
+      sourceToAssetId: {path.toLowerCase(): asset.id},
+      coverAssetId: asset.id,
     );
   }
 }

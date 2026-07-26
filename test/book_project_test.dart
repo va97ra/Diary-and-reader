@@ -133,6 +133,22 @@ void main() {
     expect(project.activeSectionId, 'chapter-1');
   });
 
+  test('catalog-only imported book keeps its invisible resume position', () {
+    final project = BookProject.fromJson({
+      'id': 'imported-1',
+      'metadata': {'title': 'Книга'},
+      'kind': 'importedBook',
+      'sections': const [],
+      'readerProgress': {'sectionId': 'chapter-7', 'sectionProgress': 0.42},
+      'catalogReadingProgress': 0.68,
+    });
+
+    expect(project.isCatalogOnly, isTrue);
+    expect(project.readerProgress.sectionId, 'chapter-7');
+    expect(project.readerProgress.sectionProgress, 0.42);
+    expect(project.catalogReadingProgress, 0.68);
+  });
+
   test('old projects preserve the former paragraph appearance', () {
     final project = BookProject.fromJson({
       'id': 'book-legacy',

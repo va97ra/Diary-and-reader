@@ -41,6 +41,14 @@ abstract interface class BookDeviceCatalogGateway {
   Future<int?> availableBytes();
 }
 
+abstract interface class BookDownloadsCatalogGateway {
+  Future<bool> hasDownloadsAccess();
+
+  Future<bool> requestDownloadsAccess();
+
+  Future<DeviceBookScanResult> scanDownloads();
+}
+
 class UnsupportedBookDeviceCatalog implements BookDeviceCatalogGateway {
   const UnsupportedBookDeviceCatalog();
 

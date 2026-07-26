@@ -98,8 +98,7 @@ void main() {
           mode: LiteriaLibraryMode.reading,
           controller: controller,
           onPrimaryAction: () async {},
-          onFindOnDevice: () async {},
-          countDeviceBooks: () async => 0,
+          onScanDeviceBooks: () async {},
           onOpen: (_) async {},
           onDelete: (_) async {},
           onAbout: (_) async {},
@@ -115,9 +114,30 @@ void main() {
       tester.getCenter(find.byKey(const ValueKey('library-sort-menu'))).dy,
     );
     expect(
+      tester.getCenter(find.byKey(const ValueKey('library-filter-menu'))).dy,
+      tester.getCenter(find.byKey(const ValueKey('library-sort-menu'))).dy,
+    );
+    final layoutSize = tester.getSize(
+      find.byKey(const ValueKey('library-layout-toggle')),
+    );
+    final sortSize = tester.getSize(
+      find.byKey(const ValueKey('library-sort-menu')),
+    );
+    final filterSize = tester.getSize(
+      find.byKey(const ValueKey('library-filter-menu')),
+    );
+    expect(layoutSize, sortSize);
+    expect(sortSize, filterSize);
+    expect(find.text('Недавно открытые'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('library-filter-menu')));
+    await tester.pumpAndSettle();
+    expect(find.text('Избранное'), findsOneWidget);
+    await tester.tap(find.text('Избранное'));
+    await tester.pumpAndSettle();
+    expect(
       tester.getCenter(find.byKey(const ValueKey('import-book-button'))).dy,
       tester
-          .getCenter(find.byKey(const ValueKey('find-device-books-button')))
+          .getCenter(find.byKey(const ValueKey('scan-device-books-button')))
           .dy,
     );
 
@@ -156,8 +176,9 @@ void main() {
     expect(find.textContaining('Глав: 1'), findsOneWidget);
     expect(find.textContaining('Слов: 0'), findsOneWidget);
     expect(find.textContaining('Изменено:'), findsOneWidget);
-    expect(find.textContaining('Режим просмотра:'), findsOneWidget);
-    expect(find.textContaining('Сортировка:'), findsOneWidget);
+    expect(find.text('Плитки'), findsOneWidget);
+    expect(find.text('Недавно открытые'), findsOneWidget);
+    expect(find.byKey(const ValueKey('library-filter-menu')), findsNothing);
     await tester.tap(find.byTooltip('Ещё'));
     await tester.pumpAndSettle();
     expect(find.text('Статус чтения'), findsNothing);

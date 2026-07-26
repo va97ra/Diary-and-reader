@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:collection';
 
+import 'package:dnevnik/features/books/application/book_catalog_project.dart';
+import 'package:dnevnik/features/books/application/book_source_storage.dart';
 import 'package:dnevnik/features/books/application/manuscript_project_editor.dart';
 import 'package:dnevnik/features/books/application/section_tree_editor.dart';
 import 'package:dnevnik/features/books/application/transient_book_version_repository.dart';
@@ -54,6 +56,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
   String _languageCode = 'ru';
   LiteriaAppPreferences _appPreferences = const LiteriaAppPreferences();
   bool _readerSessionActive = false;
+  final Set<String> _transientHydratedProjectIds = {};
 
   UnmodifiableListView<BookProject> get projects =>
       UnmodifiableListView(_projects);
@@ -93,6 +96,27 @@ class AuthorWorkspaceController extends ChangeNotifier {
     _languageCode = snapshot.languageCode;
     _activeProjectId = snapshot.activeProjectId;
     _appPreferences = snapshot.appPreferences;
+  }
+
+  Future<void> compactImportedCatalogs(BookSourceStorage sourceStorage) async {
+    if (sourceStorage is! BookReadingCacheStorage) return;
+    final cacheStorage = sourceStorage as BookReadingCacheStorage;
+    var changed = false;
+    for (var index = 0; index < _projects.length; index++) {
+      final project = _projects[index];
+      if (!project.isReadOnly || project.isCatalogOnly) continue;
+      try {
+        if (!await cacheStorage.hasOriginal(project)) continue;
+        await cacheStorage.storeProcessed(project, project);
+        _projects[index] = BookCatalogProject.compact(project);
+        changed = true;
+      } on Exception {
+        // Keep the embedded content as a lossless fallback.
+      }
+    }
+    if (!changed) return;
+    _markDirty();
+    await flush();
   }
 
   BookProject addProject() {
@@ -625,9 +649,27 @@ class AuthorWorkspaceController extends ChangeNotifier {
     notify ? _changed() : _changedWithoutNotification();
   }
 
-  void beginReaderSession() => _readerSessionActive = true;
+  void beginReaderSession({BookProject? hydratedProject}) {
+    _readerSessionActive = true;
+    if (hydratedProject == null) return;
+    final index = _projects.indexWhere(
+      (project) => project.id == hydratedProject.id && project.isReadOnly,
+    );
+    if (index >= 0 && _projects[index].isCatalogOnly) {
+      _projects[index] = hydratedProject;
+      _transientHydratedProjectIds.add(hydratedProject.id);
+    }
+  }
 
   void finishReaderSession() {
+    final project = activeProject;
+    if (project != null &&
+        _transientHydratedProjectIds.remove(project.id) &&
+        project.isReadOnly &&
+        !project.isCatalogOnly) {
+      _replaceActiveProject(BookCatalogProject.compact);
+      _markDirty();
+    }
     _readerSessionActive = false;
     notifyListeners();
   }
@@ -760,13 +802,18 @@ class AuthorWorkspaceController extends ChangeNotifier {
 
   void _changedWithoutNotification() {
     _markDirty();
-    _persistence.scheduleSave();
   }
 
   void _markDirty() => _persistence.markChanged();
 
   AuthorWorkspaceSnapshot get _snapshot => AuthorWorkspaceSnapshot(
-    projects: List.unmodifiable(_projects),
+    projects: List.unmodifiable(
+      _projects.map(
+        (project) => _transientHydratedProjectIds.contains(project.id)
+            ? BookCatalogProject.compact(project)
+            : project,
+      ),
+    ),
     activeProjectId: _activeProjectId,
     languageCode: _languageCode,
     appPreferences: _appPreferences,

@@ -60,17 +60,56 @@ abstract interface class BookSourceStorage {
   Future<void> cleanup(Iterable<BookProject> projects);
 }
 
-class EphemeralBookSourceStorage implements BookSourceStorage {
+abstract interface class BookReadingCacheStorage {
+  Future<BookImportFile?> loadOriginal(BookProject project);
+
+  Future<BookProject?> loadProcessed(BookProject project);
+
+  Future<void> storeProcessed(BookProject project, BookProject processed);
+
+  Future<bool> hasOriginal(BookProject project);
+}
+
+class EphemeralBookSourceStorage
+    implements BookSourceStorage, BookReadingCacheStorage {
   const EphemeralBookSourceStorage();
+
+  static final Map<String, BookImportFile> _sources = {};
+  static final Map<String, BookProject> _processed = {};
 
   @override
   Future<void> cleanup(Iterable<BookProject> projects) async {}
 
   @override
-  Future<void> deleteOriginal(BookProject project) async {}
+  Future<void> deleteOriginal(BookProject project) async {
+    _sources.remove(project.id);
+  }
 
   @override
-  Future<void> deleteProjectFiles(BookProject project) async {}
+  Future<void> deleteProjectFiles(BookProject project) async {
+    _sources.remove(project.id);
+    _processed.remove(project.id);
+  }
+
+  @override
+  Future<bool> hasOriginal(BookProject project) async =>
+      _sources.containsKey(project.id);
+
+  @override
+  Future<BookImportFile?> loadOriginal(BookProject project) async =>
+      _sources[project.id];
+
+  @override
+  Future<BookProject?> loadProcessed(BookProject project) async =>
+      _processed[project.id];
+
+  @override
+  Future<void> storeProcessed(
+    BookProject project,
+    BookProject processed,
+  ) async {
+    _processed[project.id] = processed;
+  }
 
   @override
   Future<BookStorageOverview> inspect(
@@ -100,5 +139,8 @@ class EphemeralBookSourceStorage implements BookSourceStorage {
   Future<StoredBookSource> store({
     required String projectId,
     required BookImportFile file,
-  }) async => StoredBookSource(relativePath: '', sizeBytes: file.bytes.length);
+  }) async {
+    _sources[projectId] = file;
+    return StoredBookSource(relativePath: '', sizeBytes: file.bytes.length);
+  }
 }

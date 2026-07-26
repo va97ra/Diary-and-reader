@@ -3,13 +3,13 @@ import 'package:dnevnik/features/books/application/author_workspace_controller.d
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_contents.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_document_view.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_progress_rail.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_adaptive_control_shell.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/literia_test_navigation.dart';
@@ -86,15 +86,13 @@ void main() {
       Navigator.of(tester.element(openContents)).pop();
       await tester.pumpAndSettle();
     }
-    var readerEditor = tester.widget<QuillEditor>(find.byType(QuillEditor));
-    expect(
-      readerEditor.controller.document.toPlainText(),
-      contains('Первый текст книги.'),
+    var readerFragment = tester.widget<BookReaderTextFragment>(
+      find.byType(BookReaderTextFragment).first,
     );
+    expect(readerFragment.span.toPlainText(), contains('Первый текст книги.'));
 
-    readerEditor.controller.updateSelection(
+    readerFragment.selectRange(
       const TextSelection(baseOffset: 0, extentOffset: 6),
-      ChangeSource.local,
     );
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('reader-selection-bar')), findsOneWidget);
@@ -111,10 +109,11 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1500));
     await tester.pumpAndSettle();
 
-    readerEditor = tester.widget<QuillEditor>(find.byType(QuillEditor));
-    readerEditor.controller.updateSelection(
+    readerFragment = tester.widget<BookReaderTextFragment>(
+      find.byType(BookReaderTextFragment).first,
+    );
+    readerFragment.selectRange(
       const TextSelection(baseOffset: 7, extentOffset: 12),
-      ChangeSource.local,
     );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('reader-save-quote')));
@@ -149,11 +148,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Вторая глава').last);
     await tester.pumpAndSettle();
-    readerEditor = tester.widget<QuillEditor>(find.byType(QuillEditor));
-    expect(
-      readerEditor.controller.document.toPlainText(),
-      contains('Продолжение книги.'),
+    readerFragment = tester.widget<BookReaderTextFragment>(
+      find.byType(BookReaderTextFragment).first,
     );
+    expect(readerFragment.span.toPlainText(), contains('Продолжение книги.'));
     expect(
       controller.activeProject!.readerProgress.sectionId,
       controller.activeProject!.sections.last.id,

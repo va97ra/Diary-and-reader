@@ -42,6 +42,30 @@ abstract final class BookImportParsingSupport {
     );
   }
 
+  static BookProject catalogProject({
+    required BookImportFile file,
+    required DateTime timestamp,
+    required String sourceFormat,
+    required BookMetadata metadata,
+    List<BookAsset> assets = const [],
+    String? coverAssetId,
+  }) => BookProject(
+    id: 'imported-${timestamp.microsecondsSinceEpoch}',
+    metadata: metadata,
+    sections: const [],
+    activeSectionId: null,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    paragraphSettings: BookParagraphSettings.forPreset(
+      BookParagraphPreset.modern,
+    ),
+    kind: BookProjectKind.importedBook,
+    sourceFormat: sourceFormat,
+    sourceFileName: file.name,
+    assets: assets,
+    coverAssetId: coverAssetId,
+  );
+
   static XmlElement? firstElement(XmlElement root, String localName) => root
       .descendantElements
       .where((element) => element.name.local == localName)

@@ -83,12 +83,14 @@ class BookReaderSpeechControls extends StatelessWidget {
                         icon: const Icon(Icons.stop),
                       ),
                       IconButton(
+                        key: const ValueKey('reader-speech-slower'),
                         tooltip: strings.slowerSpeech,
                         onPressed: onSlower,
                         icon: const Icon(Icons.remove),
                       ),
                       Text('${rate.toStringAsFixed(2)}×'),
                       IconButton(
+                        key: const ValueKey('reader-speech-faster'),
                         tooltip: strings.fasterSpeech,
                         onPressed: onFaster,
                         icon: const Icon(Icons.add),

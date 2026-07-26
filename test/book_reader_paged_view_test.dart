@@ -88,9 +88,9 @@ void main() {
 
     await tester.binding.setSurfaceSize(const Size(1024, 700));
     await tester.pump();
-    expect(find.byKey(const ValueKey('reader-page-loading')), findsOneWidget);
-    expect(find.byKey(const ValueKey('reader-page-1')), findsNothing);
-    await _pumpUntil(tester, find.byKey(const ValueKey('reader-page-2')));
+    expect(find.byKey(const ValueKey('reader-page-loading')), findsNothing);
+    expect(find.byKey(const ValueKey('reader-page-1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('reader-page-2')), findsOneWidget);
 
     await tester.binding.setSurfaceSize(null);
   });
@@ -133,14 +133,16 @@ void main() {
     await tester.pumpAndSettle();
     await openReaderPreview(tester, controller);
     await _pumpUntil(tester, find.byKey(const ValueKey('reader-page-1')));
-    await tester.binding.setSurfaceSize(const Size(640, 420));
+    // Cross the adaptive-control breakpoint to exercise stateful reparenting
+    // between the compact top/bottom bars and the wide side panels.
+    await tester.binding.setSurfaceSize(const Size(900, 420));
     await tester.pump(const Duration(seconds: 1));
 
     expect(tester.takeException(), isNull);
     await tester.binding.setSurfaceSize(null);
   });
 
-  testWidgets('next chapter shows its first page before full pagination', (
+  testWidgets('next chapter appears without a pagination placeholder', (
     tester,
   ) async {
     final controller = AuthorWorkspaceController(
@@ -176,26 +178,17 @@ void main() {
       find.byKey(const ValueKey('reader-page-swipe-area')),
       const Offset(-360, 0),
       1200,
+      warnIfMissed: false,
     );
-    for (var attempt = 0; attempt < 12; attempt++) {
-      await tester.pump(const Duration(milliseconds: 50));
-      if (find
-          .byKey(const ValueKey('reader-page-background-loading'))
-          .evaluate()
-          .isNotEmpty) {
-        break;
-      }
-    }
+    await tester.pumpAndSettle();
 
     expect(controller.activeProject!.readerProgress.sectionId, nextChapterId);
     expect(find.byKey(const ValueKey('reader-page-1')), findsOneWidget);
     expect(
       find.byKey(const ValueKey('reader-page-background-loading')),
-      findsOneWidget,
+      findsNothing,
     );
     expect(find.byKey(const ValueKey('reader-page-loading')), findsNothing);
-
-    await tester.pump(const Duration(milliseconds: 350));
     await tester.binding.setSurfaceSize(null);
   });
 

@@ -11,8 +11,7 @@ abstract final class WorkspaceLibraryEditor {
     required Iterable<String> existingIds,
     required BookReaderSettings readerSettings,
   }) {
-    if (project.kind != BookProjectKind.importedBook ||
-        project.sections.isEmpty) {
+    if (project.kind != BookProjectKind.importedBook) {
       throw ArgumentError.value(project, 'project', 'Invalid imported book');
     }
     final id = existingIds.contains(project.id)
@@ -37,6 +36,8 @@ abstract final class WorkspaceLibraryEditor {
       sourceFingerprint: project.sourceFingerprint,
       sourceExternalUri: project.sourceExternalUri,
       sourceFileSize: project.sourceFileSize,
+      sourceModifiedMillis: project.sourceModifiedMillis,
+      catalogReadingProgress: project.catalogReadingProgress,
       collectionName: project.collectionName,
       assets: project.assets,
       coverAssetId: project.coverAssetId,

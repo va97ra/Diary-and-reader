@@ -84,7 +84,7 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Text(strings.readerTheme),
             const SizedBox(height: 8),
             _ReaderChoiceWrap<BookReaderTheme>(
@@ -96,7 +96,7 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
               ],
               onChanged: (value) => _change(_settings.copyWith(theme: value)),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _settings.fontFamily,
               decoration: InputDecoration(labelText: strings.readerFont),
@@ -113,7 +113,7 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
                 }
               },
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             _ReaderSlider(
               label: strings.readerFontSize,
               value: _settings.fontSize,
@@ -156,7 +156,7 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
               min: 480,
               max: 1000,
               divisions: 13,
-              displayValue: '${_settings.contentWidth.round()} px',
+              displayValue: '≤ ${_settings.contentWidth.round()} px',
               onChanged: (value) =>
                   _preview(_settings.copyWith(contentWidth: value)),
               onChangeEnd: (value) =>
@@ -188,6 +188,8 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
+              dense: true,
+              visualDensity: VisualDensity.compact,
               title: Text(strings.justifyText),
               value: _settings.justifyText,
               onChanged: (value) =>
@@ -195,6 +197,8 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
+              dense: true,
+              visualDensity: VisualDensity.compact,
               title: Text(strings.hyphenateWords),
               value: _settings.hyphenateWords,
               onChanged: (value) =>
@@ -202,6 +206,8 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
+              dense: true,
+              visualDensity: VisualDensity.compact,
               title: Text(strings.centerTapControls),
               value: _settings.centerTapControls,
               onChanged: (value) =>
@@ -209,6 +215,8 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
+              dense: true,
+              visualDensity: VisualDensity.compact,
               title: Text(strings.swipeChapterNavigation),
               value: _settings.swipeChapterNavigation,
               onChanged: (value) =>
@@ -305,24 +313,45 @@ class _ReaderSlider extends StatelessWidget {
   final ValueChanged<double> onChangeEnd;
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Row(
-        children: [
-          Expanded(child: Text(label)),
-          Text(displayValue, style: Theme.of(context).textTheme.labelLarge),
-        ],
-      ),
-      Slider(
-        value: value,
-        min: min,
-        max: max,
-        divisions: divisions,
-        label: displayValue,
-        onChanged: onChanged,
-        onChangeEnd: onChangeEnd,
-      ),
-    ],
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 3),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(displayValue, style: Theme.of(context).textTheme.labelMedium),
+          ],
+        ),
+        SizedBox(
+          height: 32,
+          child: SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: 3,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+            ),
+            child: Slider(
+              value: value,
+              min: min,
+              max: max,
+              divisions: divisions,
+              label: displayValue,
+              onChanged: onChanged,
+              onChangeEnd: onChangeEnd,
+            ),
+          ),
+        ),
+      ],
+    ),
   );
 }

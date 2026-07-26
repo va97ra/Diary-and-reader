@@ -3,21 +3,23 @@ part of 'book_reader_section_view.dart';
 extension _BookReaderContinuousFlow on _BookReaderSectionViewState {
   Widget _buildContinuousView() => BookReaderContinuousView(
     sectionId: widget.section.id,
+    document: _readerDocument,
     settings: widget.settings,
     palette: widget.palette,
     assets: widget.assets,
-    controller: _continuousController,
-    focusNode: _continuousFocusNode,
     scrollController: _continuousScrollController,
+    highlights: _renderHighlights,
+    selectionGeneration: _selectionGeneration,
+    onSelectionChanged: _handleDisplaySelection,
     onPointerDown: _handleContinuousPointerDown,
     onPointerUp: _handleContinuousPointerUp,
     onPointerMove: _handleContinuousPointerMove,
     onPointerSignal: _handleContinuousPointerSignal,
     onPointerCancel: (_) => _resetContinuousPointer(),
-    showCursor: widget.speechTargetMode,
+    speechTargetMode: widget.speechTargetMode,
+    speechRange: _renderSpeechRange,
     onSpeechTargetSelected: widget.speechTargetMode
-        ? (displayOffset) =>
-              _selectSpeechTarget(displayOffset: displayOffset, displayStart: 0)
+        ? _selectSpeechTarget
         : null,
   );
 

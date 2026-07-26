@@ -3,6 +3,8 @@ import 'package:dnevnik/features/books/application/author_workspace_controller.d
 import 'package:dnevnik/features/books/application/book_device_catalog.dart';
 import 'package:dnevnik/features/books/application/book_import_coordinator.dart';
 import 'package:dnevnik/features/books/domain/book_scan_folder.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_adaptive_control_shell.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/material.dart';
 
 class LiteriaDeviceBooksPage extends StatefulWidget {
@@ -39,8 +41,8 @@ class _LiteriaDeviceBooksPageState extends State<LiteriaDeviceBooksPage> {
     final strings = AppStrings.of(context);
     final folders = widget.controller.appPreferences.bookScanFolders;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(strings.findOnDevice),
+      appBar: LiteriaLeatherAppBar(
+        title: Text(strings.scanBooks),
         actions: [
           IconButton(
             tooltip: strings.refresh,
@@ -49,17 +51,19 @@ class _LiteriaDeviceBooksPageState extends State<LiteriaDeviceBooksPage> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          _FolderBar(
-            folders: folders,
-            inaccessibleUris: _scanResult.inaccessibleFolderUris.toSet(),
-            onAdd: _chooseFolder,
-            onRemove: _removeFolder,
-          ),
-          if (_loading) const LinearProgressIndicator(),
-          Expanded(child: _buildBooks(strings, folders)),
-        ],
+      body: LiteriaParchmentBackground(
+        child: Column(
+          children: [
+            _FolderBar(
+              folders: folders,
+              inaccessibleUris: _scanResult.inaccessibleFolderUris.toSet(),
+              onAdd: _chooseFolder,
+              onRemove: _removeFolder,
+            ),
+            if (_loading) const LinearProgressIndicator(),
+            Expanded(child: _buildBooks(strings, folders)),
+          ],
+        ),
       ),
       bottomNavigationBar: _selectedUris.isEmpty
           ? null
@@ -116,36 +120,41 @@ class _LiteriaDeviceBooksPageState extends State<LiteriaDeviceBooksPage> {
       itemBuilder: (context, index) {
         final book = _scanResult.books[index];
         final imported = importedUris.contains(book.uri);
-        return Card(
-          margin: EdgeInsets.zero,
-          child: CheckboxListTile(
-            key: ValueKey('device-book-${book.uri}'),
-            value: imported ? true : _selectedUris.contains(book.uri),
-            onChanged: imported
-                ? null
-                : (selected) => setState(() {
-                    if (selected ?? false) {
-                      _selectedUris.add(book.uri);
-                    } else {
-                      _selectedUris.remove(book.uri);
-                    }
-                  }),
-            secondary: Icon(
-              _iconFor(book.name),
-              semanticLabel: imported
-                  ? strings.alreadyInLibrary
-                  : strings.notAdded,
+        return Theme(
+          data: bookLeatherModalTheme(context),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: BookLeatherPanel(
+              child: CheckboxListTile(
+                key: ValueKey('device-book-${book.uri}'),
+                value: imported ? true : _selectedUris.contains(book.uri),
+                onChanged: imported
+                    ? null
+                    : (selected) => setState(() {
+                        if (selected ?? false) {
+                          _selectedUris.add(book.uri);
+                        } else {
+                          _selectedUris.remove(book.uri);
+                        }
+                      }),
+                secondary: Icon(
+                  _iconFor(book.name),
+                  semanticLabel: imported
+                      ? strings.alreadyInLibrary
+                      : strings.notAdded,
+                ),
+                title: Text(
+                  book.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(
+                  '${book.folderName} · ${formatFileSize(book.sizeBytes)}\n'
+                  '${imported ? strings.alreadyInLibrary : strings.notAdded}',
+                ),
+                isThreeLine: true,
+              ),
             ),
-            title: Text(
-              book.name,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            subtitle: Text(
-              '${book.folderName} · ${formatFileSize(book.sizeBytes)}\n'
-              '${imported ? strings.alreadyInLibrary : strings.notAdded}',
-            ),
-            isThreeLine: true,
           ),
         );
       },
@@ -246,36 +255,39 @@ class _FolderBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
-    return Material(
-      color: Theme.of(context).colorScheme.surfaceContainerLow,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(
-          children: [
-            ActionChip(
-              avatar: const Icon(Icons.create_new_folder_outlined),
-              label: Text(strings.addBookFolder),
-              onPressed: onAdd,
-            ),
-            for (final folder in folders) ...[
-              const SizedBox(width: 8),
-              InputChip(
-                avatar: Icon(
-                  inaccessibleUris.contains(folder.uri)
-                      ? Icons.warning_amber
-                      : Icons.folder_outlined,
-                ),
-                label: Text(
-                  inaccessibleUris.contains(folder.uri)
-                      ? '${folder.name} · ${strings.noAccess}'
-                      : folder.name,
-                ),
-                tooltip: strings.removeFolder,
-                onDeleted: () => onRemove(folder),
+    return BookLeatherPanel(
+      safeArea: const EdgeInsets.only(left: 1, right: 1),
+      child: Theme(
+        data: bookLeatherModalTheme(context),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          child: Row(
+            children: [
+              ActionChip(
+                avatar: const Icon(Icons.create_new_folder_outlined),
+                label: Text(strings.addBookFolder),
+                onPressed: onAdd,
               ),
+              for (final folder in folders) ...[
+                const SizedBox(width: 8),
+                InputChip(
+                  avatar: Icon(
+                    inaccessibleUris.contains(folder.uri)
+                        ? Icons.warning_amber
+                        : Icons.folder_outlined,
+                  ),
+                  label: Text(
+                    inaccessibleUris.contains(folder.uri)
+                        ? '${folder.name} · ${strings.noAccess}'
+                        : folder.name,
+                  ),
+                  tooltip: strings.removeFolder,
+                  onDeleted: () => onRemove(folder),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

@@ -1,5 +1,6 @@
 import 'package:crypto/crypto.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
+import 'package:dnevnik/features/books/application/book_cover_thumbnail.dart';
 import 'package:dnevnik/features/books/application/book_import_file.dart';
 import 'package:dnevnik/features/books/application/book_import_parser.dart';
 import 'package:dnevnik/features/books/application/book_source_storage.dart';
@@ -68,10 +69,21 @@ class BookImportCoordinator {
   Future<BookImportBatchResult> import(
     Iterable<BookImportFile> files, {
     int? availableBytes,
+  }) => importStream(
+    Stream<BookImportFile>.fromIterable(files),
+    availableBytes: availableBytes,
+  );
+
+  Future<BookImportBatchResult> importStream(
+    Stream<BookImportFile> files, {
+    int? availableBytes,
   }) async {
     final results = <BookImportItemResult>[];
+    final successful = <({int resultIndex, BookProject project})>[];
     var remainingBytes = availableBytes;
-    for (final file in files) {
+    final previousActiveProjectId = controller.activeProject?.id;
+    final previousLastReadingId = controller.appPreferences.lastReadingId;
+    await for (final file in files) {
       _PreparedBookImport prepared;
       try {
         prepared = await compute(
@@ -108,7 +120,9 @@ class BookImportCoordinator {
       final fingerprint = prepared.fingerprint;
       final duplicate = controller.projects.any(
         (project) =>
-            project.isReadOnly && project.sourceFingerprint == fingerprint,
+            project.isReadOnly &&
+            (project.sourceFingerprint == fingerprint ||
+                _sameSource(project, file)),
       );
       if (duplicate) {
         results.add(
@@ -131,8 +145,6 @@ class BookImportCoordinator {
 
       var parsed = prepared.project;
       BookProject? imported;
-      final previousActiveProjectId = controller.activeProject?.id;
-      final previousLastReadingId = controller.appPreferences.lastReadingId;
 
       try {
         final stored = await sourceStorage.store(
@@ -144,27 +156,14 @@ class BookImportCoordinator {
           sourceFingerprint: fingerprint,
           sourceExternalUri: file.sourceUri,
           sourceFileSize: stored.sizeBytes,
+          sourceModifiedMillis: file.sourceModifiedMillis,
         );
         imported = controller.addImportedBook(parsed);
-        final persisted = await controller.flushWithResult();
-        if (!persisted) {
-          await _rollbackFailedImport(
-            imported: imported,
-            parsed: parsed,
-            previousActiveProjectId: previousActiveProjectId,
-            previousLastReadingId: previousLastReadingId,
-          );
-          results.add(
-            BookImportItemResult(
-              fileName: file.name,
-              failure: BookImportItemFailure.storage,
-            ),
-          );
-          continue;
-        }
+        final resultIndex = results.length;
         results.add(
           BookImportItemResult(fileName: file.name, project: imported),
         );
+        successful.add((resultIndex: resultIndex, project: imported));
         if (remainingBytes != null) remainingBytes -= stored.sizeBytes;
       } on Exception {
         if (imported != null) {
@@ -184,6 +183,21 @@ class BookImportCoordinator {
           ),
         );
       }
+    }
+    if (successful.isNotEmpty && !await controller.flushWithResult()) {
+      for (final item in successful.reversed) {
+        controller.rollbackImportedBook(
+          item.project.id,
+          activeProjectId: previousActiveProjectId,
+          lastReadingId: previousLastReadingId,
+        );
+        await _deleteFailedImportFiles(item.project);
+        results[item.resultIndex] = BookImportItemResult(
+          fileName: results[item.resultIndex].fileName,
+          failure: BookImportItemFailure.storage,
+        );
+      }
+      await controller.flush();
     }
     return BookImportBatchResult(List.unmodifiable(results));
   }
@@ -215,8 +229,14 @@ class BookImportCoordinator {
 _PreparedBookImport _prepareBookImport(BookImportFile file) =>
     _PreparedBookImport(
       fingerprint: sha256.convert(file.bytes).toString(),
-      project: BookImportParser.parse(file),
+      project: BookCoverThumbnail.compact(BookImportParser.parseCatalog(file)),
     );
+
+bool _sameSource(BookProject project, BookImportFile file) =>
+    file.sourceUri.isNotEmpty &&
+    project.sourceExternalUri == file.sourceUri &&
+    project.sourceFileSize == file.effectiveSizeBytes &&
+    project.sourceModifiedMillis == file.sourceModifiedMillis;
 
 class _PreparedBookImport {
   const _PreparedBookImport({required this.fingerprint, required this.project});

@@ -42,6 +42,8 @@ class WorkspaceVersionCoordinator {
       sourceFingerprint: current.sourceFingerprint,
       sourceExternalUri: current.sourceExternalUri,
       sourceFileSize: current.sourceFileSize,
+      sourceModifiedMillis: current.sourceModifiedMillis,
+      catalogReadingProgress: current.catalogReadingProgress,
       collectionName: current.collectionName,
       libraryState: current.libraryState,
       writingState: copied.writingState,
