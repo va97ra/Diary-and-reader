@@ -90,7 +90,6 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _commitWritingSession();
     super.dispose();
   }
 
@@ -112,7 +111,11 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
         return PopScope(
           canPop: !_isFocusMode,
           onPopInvokedWithResult: (didPop, _) {
-            if (!didPop && _isFocusMode) {
+            if (didPop) {
+              _commitWritingSession(deferNotification: true);
+              return;
+            }
+            if (_isFocusMode) {
               setState(() => _isFocusMode = false);
             }
           },
@@ -241,18 +244,25 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
     );
   }
 
-  void _commitWritingSession() {
+  void _commitWritingSession({bool deferNotification = false}) {
     final project = widget.controller.activeProject;
     if (project != null && !project.isReadOnly) {
-      widget.controller.recordWritingSession(
+      final controller = widget.controller;
+      final startedAt = _writingSessionStartedAt;
+      final duration = _activeWritingDuration;
+      final wordsAdded = (_projectWordCount() - _writingSessionStartWords)
+          .clamp(0, 10000000);
+      void record() => controller.recordWritingSession(
         project.id,
-        startedAt: _writingSessionStartedAt,
-        duration: _activeWritingDuration,
-        wordsAdded: (_projectWordCount() - _writingSessionStartWords).clamp(
-          0,
-          10000000,
-        ),
+        startedAt: startedAt,
+        duration: duration,
+        wordsAdded: wordsAdded,
       );
+      if (deferNotification) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => record());
+      } else {
+        record();
+      }
     }
     _writingSessionStartedAt = DateTime.now();
     _writingSessionStartWords = _projectWordCount();

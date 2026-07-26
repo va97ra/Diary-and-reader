@@ -1,11 +1,10 @@
-import 'dart:isolate';
-
 import 'package:crypto/crypto.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/application/book_import_file.dart';
 import 'package:dnevnik/features/books/application/book_import_parser.dart';
 import 'package:dnevnik/features/books/application/book_source_storage.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
+import 'package:flutter/foundation.dart';
 
 enum BookImportItemFailure {
   duplicate,
@@ -75,7 +74,11 @@ class BookImportCoordinator {
     for (final file in files) {
       _PreparedBookImport prepared;
       try {
-        prepared = await Isolate.run(() => _prepareBookImport(file));
+        prepared = await compute(
+          _prepareBookImport,
+          file,
+          debugLabel: 'prepare-book-import',
+        );
       } on BookImportException catch (error) {
         results.add(
           BookImportItemResult(
@@ -127,6 +130,9 @@ class BookImportCoordinator {
       }
 
       var parsed = prepared.project;
+      BookProject? imported;
+      final previousActiveProjectId = controller.activeProject?.id;
+      final previousLastReadingId = controller.appPreferences.lastReadingId;
 
       try {
         final stored = await sourceStorage.store(
@@ -139,14 +145,38 @@ class BookImportCoordinator {
           sourceExternalUri: file.sourceUri,
           sourceFileSize: stored.sizeBytes,
         );
-        final imported = controller.addImportedBook(parsed);
-        await controller.flush();
+        imported = controller.addImportedBook(parsed);
+        final persisted = await controller.flushWithResult();
+        if (!persisted) {
+          await _rollbackFailedImport(
+            imported: imported,
+            parsed: parsed,
+            previousActiveProjectId: previousActiveProjectId,
+            previousLastReadingId: previousLastReadingId,
+          );
+          results.add(
+            BookImportItemResult(
+              fileName: file.name,
+              failure: BookImportItemFailure.storage,
+            ),
+          );
+          continue;
+        }
         results.add(
           BookImportItemResult(fileName: file.name, project: imported),
         );
         if (remainingBytes != null) remainingBytes -= stored.sizeBytes;
       } on Exception {
-        await sourceStorage.deleteProjectFiles(parsed);
+        if (imported != null) {
+          await _rollbackFailedImport(
+            imported: imported,
+            parsed: parsed,
+            previousActiveProjectId: previousActiveProjectId,
+            previousLastReadingId: previousLastReadingId,
+          );
+        } else {
+          await _deleteFailedImportFiles(parsed);
+        }
         results.add(
           BookImportItemResult(
             fileName: file.name,
@@ -156,6 +186,29 @@ class BookImportCoordinator {
       }
     }
     return BookImportBatchResult(List.unmodifiable(results));
+  }
+
+  Future<void> _rollbackFailedImport({
+    required BookProject imported,
+    required BookProject parsed,
+    required String? previousActiveProjectId,
+    required String? previousLastReadingId,
+  }) async {
+    controller.rollbackImportedBook(
+      imported.id,
+      activeProjectId: previousActiveProjectId,
+      lastReadingId: previousLastReadingId,
+    );
+    await controller.flush();
+    await _deleteFailedImportFiles(parsed);
+  }
+
+  Future<void> _deleteFailedImportFiles(BookProject project) async {
+    try {
+      await sourceStorage.deleteProjectFiles(project);
+    } on Exception {
+      // The import has already failed; cleanup must not abort the batch.
+    }
   }
 }
 

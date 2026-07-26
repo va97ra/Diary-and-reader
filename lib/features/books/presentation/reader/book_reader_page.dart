@@ -15,6 +15,7 @@ import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_reading_progress.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_annotation_actions.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_annotation_export_sheet.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_context_bar.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_navigation_panel.dart';
@@ -107,7 +108,6 @@ class _BookReaderPageState extends State<BookReaderPage> {
   void dispose() {
     _readingStopwatch.stop();
     unawaited(_speechEngine.stop());
-    widget.onReadingTimeChanged?.call(_readingStopwatch.elapsed);
     super.dispose();
   }
 
@@ -144,6 +144,21 @@ class _BookReaderPageState extends State<BookReaderPage> {
     ),
   );
 
+  void _saveSessionAfterPop() {
+    _readingStopwatch.stop();
+    final onProgressChanged = widget.onProgressChanged;
+    final onReadingTimeChanged = widget.onReadingTimeChanged;
+    final progress = BookReaderProgress(
+      sectionId: _section.id,
+      sectionProgress: _sectionProgress,
+    );
+    final elapsed = _readingStopwatch.elapsed;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      onProgressChanged(progress);
+      onReadingTimeChanged?.call(elapsed);
+    });
+  }
+
   void _handleSectionProgress(double progress) {
     final normalized = progress.clamp(0, 1).toDouble();
     if ((normalized - _sectionProgress).abs() < 0.001) return;
@@ -172,10 +187,14 @@ class _BookReaderPageState extends State<BookReaderPage> {
             return PopScope(
               canPop: !_isFocusMode && !_isChoosingSpeechStart,
               onPopInvokedWithResult: (didPop, _) {
+                if (didPop) {
+                  _saveSessionAfterPop();
+                  return;
+                }
                 _saveProgress();
-                if (!didPop && _isChoosingSpeechStart) {
+                if (_isChoosingSpeechStart) {
                   _cancelSpeechTargetSelection();
-                } else if (!didPop && _isFocusMode) {
+                } else if (_isFocusMode) {
                   setState(() => _isFocusMode = false);
                 }
               },
@@ -689,13 +708,12 @@ class _BookReaderPageState extends State<BookReaderPage> {
     );
   }
 
-  BookReaderBookmark? get _currentBookmark => _annotations.bookmarks
-      .where(
-        (bookmark) =>
-            bookmark.sectionId == _section.id &&
-            (bookmark.sectionProgress - _sectionProgress).abs() < 0.02,
-      )
-      .firstOrNull;
+  BookReaderBookmark? get _currentBookmark =>
+      BookReaderAnnotationActions.bookmarkAt(
+        annotations: _annotations,
+        sectionId: _section.id,
+        sectionProgress: _sectionProgress,
+      );
 
   Widget _navigationPanel(
     BuildContext panelContext, {
@@ -790,18 +808,11 @@ class _BookReaderPageState extends State<BookReaderPage> {
       _goToLocation(result.sectionId, result.sectionProgress);
 
   void _toggleBookmark() {
-    final current = _currentBookmark;
-    if (current != null) {
-      _updateAnnotations(_annotations.removeBookmark(current.id));
-      return;
-    }
     _updateAnnotations(
-      _annotations.addBookmark(
-        BookReaderBookmark.create(
-          sectionId: _section.id,
-          sectionProgress: _sectionProgress,
-          excerpt: _currentExcerpt(),
-        ),
+      BookReaderAnnotationActions.toggleBookmark(
+        annotations: _annotations,
+        section: _section,
+        sectionProgress: _sectionProgress,
       ),
     );
   }
@@ -828,15 +839,11 @@ class _BookReaderPageState extends State<BookReaderPage> {
     final selection = _textSelection;
     if (selection == null) return;
     _updateAnnotations(
-      _annotations.addHighlight(
-        BookReaderHighlight.create(
-          sectionId: _section.id,
-          sectionProgress: selection.sectionProgress,
-          startOffset: selection.startOffset,
-          endOffset: selection.endOffset,
-          excerpt: selection.text,
-          color: color,
-        ),
+      BookReaderAnnotationActions.addHighlight(
+        annotations: _annotations,
+        sectionId: _section.id,
+        selection: selection,
+        color: color,
       ),
     );
     _showMessage(AppStrings.of(context).highlightSaved);
@@ -847,14 +854,10 @@ class _BookReaderPageState extends State<BookReaderPage> {
     final selection = _textSelection;
     if (selection == null) return;
     _updateAnnotations(
-      _annotations.addQuote(
-        BookReaderQuote.create(
-          sectionId: _section.id,
-          sectionProgress: selection.sectionProgress,
-          startOffset: selection.startOffset,
-          endOffset: selection.endOffset,
-          text: selection.text,
-        ),
+      BookReaderAnnotationActions.addQuote(
+        annotations: _annotations,
+        sectionId: _section.id,
+        selection: selection,
       ),
     );
     _showMessage(AppStrings.of(context).quoteSaved);
@@ -955,17 +958,10 @@ class _BookReaderPageState extends State<BookReaderPage> {
       );
   }
 
-  String _currentExcerpt() {
-    final text = richDocumentPlainText(
-      _section.content,
-    ).replaceAll(RegExp(r'\s+'), ' ').trim();
-    if (text.isEmpty) return _section.title;
-    const length = 72;
-    final center = (text.length * _sectionProgress).round();
-    final start = (center - length ~/ 2).clamp(0, text.length);
-    final end = (start + length).clamp(0, text.length);
-    return '${start > 0 ? '…' : ''}${text.substring(start, end)}${end < text.length ? '…' : ''}';
-  }
+  String _currentExcerpt() => BookReaderAnnotationActions.excerpt(
+    section: _section,
+    sectionProgress: _sectionProgress,
+  );
 
   Future<void> _addNote(BuildContext themedContext) async {
     final text = await _showNoteEditor(themedContext);
