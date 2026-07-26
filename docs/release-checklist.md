@@ -34,7 +34,10 @@
    в `PATH`, скрипт загрузит подписанный Microsoft CLI в игнорируемый каталог
    `build/tools`:
 
-       .\tool\package_windows_release.ps1 -Flutter C:\Users\va97r\.flutter-sdk\flutter\bin\flutter.bat -Version 1.0.0
+       .\tool\package_windows_release.ps1 -Flutter C:\Users\va97r\.flutter-sdk\flutter\bin\flutter.bat
+
+   Версия архива берётся из `pubspec.yaml` без build-номера. Параметр
+   `-Version` можно передать явно для нестандартной сборки.
 
 2. Установить/распаковать пакет на другом компьютере без Flutter SDK.
 3. Перед публичным распространением добавить установщик и подпись кода,
