@@ -4,6 +4,8 @@ import 'package:dnevnik/features/books/application/author_workspace_controller.d
 import 'package:dnevnik/features/books/application/book_import_coordinator.dart';
 import 'package:dnevnik/features/books/application/book_import_file.dart';
 import 'package:dnevnik/features/books/data/file_book_source_storage.dart';
+import 'package:dnevnik/features/books/domain/author_workspace_repository.dart';
+import 'package:dnevnik/features/books/domain/author_workspace_snapshot.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/memory_author_workspace_repository.dart';
@@ -82,6 +84,31 @@ void main() {
     expect(overview.processedBytes, greaterThan(0));
   });
 
+  test('rolls back the import when the workspace cannot be saved', () async {
+    final controller = AuthorWorkspaceController(_FailingSaveRepository());
+    await controller.load(preferredLanguage: 'ru');
+    final storage = FileBookSourceStorage(supportDirectory: directory);
+    final file = BookImportFile(
+      name: 'sample.fb2',
+      bytes: File('test/fixtures/import_sample.fb2').readAsBytesSync(),
+    );
+
+    final result = await BookImportCoordinator(
+      controller: controller,
+      sourceStorage: storage,
+    ).import([file]);
+
+    expect(result.imported, isEmpty);
+    expect(result.items.single.failure, BookImportItemFailure.storage);
+    expect(controller.projects, isEmpty);
+    final retainedFiles = await directory
+        .list(recursive: true)
+        .where((entity) => entity is File)
+        .toList();
+    expect(retainedFiles, isEmpty);
+    controller.dispose();
+  });
+
   test('cleanup removes orphaned and temporary source directories', () async {
     final storage = FileBookSourceStorage(supportDirectory: directory);
     final orphan = Directory(
@@ -106,4 +133,13 @@ void main() {
     expect(await orphan.exists(), isFalse);
     expect(await temporary.exists(), isFalse);
   });
+}
+
+class _FailingSaveRepository implements AuthorWorkspaceRepository {
+  @override
+  Future<AuthorWorkspaceSnapshot?> load() async => null;
+
+  @override
+  Future<void> save(AuthorWorkspaceSnapshot snapshot) =>
+      Future<void>.error(Exception('Storage unavailable'));
 }

@@ -42,17 +42,21 @@ class WorkspacePersistenceCoordinator {
     _maxSaveTimer ??= Timer(maxSaveDelay, () => unawaited(flush()));
   }
 
-  Future<void> flush() async {
+  Future<bool> flush() async {
     _cancelTimers();
     final revision = _changeRevision;
     final snapshot = _snapshot();
     try {
       await _enqueueSave(snapshot);
-      if (_isDisposed || revision != _changeRevision) return;
-      _setSaveState(WorkspaceSaveState.saved);
+      if (!_isDisposed && revision == _changeRevision) {
+        _setSaveState(WorkspaceSaveState.saved);
+      }
+      return true;
     } catch (_) {
-      if (_isDisposed || revision != _changeRevision) return;
-      _setSaveState(WorkspaceSaveState.error);
+      if (!_isDisposed && revision == _changeRevision) {
+        _setSaveState(WorkspaceSaveState.error);
+      }
+      return false;
     }
   }
 

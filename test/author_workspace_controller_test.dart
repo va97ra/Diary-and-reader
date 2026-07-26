@@ -105,11 +105,11 @@ void main() {
       {'insert': 'Текст для повторного сохранения\n'},
     ]);
 
-    await controller.flush();
+    expect(await controller.flushWithResult(), isFalse);
     expect(controller.saveState, WorkspaceSaveState.error);
 
     repository.failWrites = false;
-    await controller.flush();
+    expect(await controller.flushWithResult(), isTrue);
     expect(controller.saveState, WorkspaceSaveState.saved);
     expect(
       richDocumentPlainText(

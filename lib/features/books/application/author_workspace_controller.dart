@@ -114,6 +114,24 @@ class AuthorWorkspaceController extends ChangeNotifier {
     return imported;
   }
 
+  void rollbackImportedBook(
+    String id, {
+    required String? activeProjectId,
+    required String? lastReadingId,
+  }) {
+    _projects.removeWhere((project) => project.id == id);
+    _activeProjectId =
+        activeProjectId != null &&
+            _projects.any((project) => project.id == activeProjectId)
+        ? activeProjectId
+        : null;
+    _appPreferences = _appPreferences.copyWith(
+      lastReadingId: lastReadingId,
+      clearLastReading: lastReadingId == null,
+    );
+    _changed();
+  }
+
   void deleteProject(String id) {
     final index = _projects.indexWhere((project) => project.id == id);
     if (index < 0) return;
@@ -590,7 +608,11 @@ class AuthorWorkspaceController extends ChangeNotifier {
     safetyLabel: safetyLabel,
   );
 
-  Future<void> flush() => _persistence.flush();
+  Future<void> flush() async {
+    await _persistence.flush();
+  }
+
+  Future<bool> flushWithResult() => _persistence.flush();
 
   Future<void> _replaceActiveProjectFromExternalSource(
     BookProject source, {
