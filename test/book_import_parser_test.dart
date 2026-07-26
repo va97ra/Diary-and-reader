@@ -187,6 +187,27 @@ void main() {
       ]);
     });
 
+    test('splits chapters stored in one flat EPUB document', () {
+      final imported = BookImportParser.parse(
+        BookImportFile(name: 'flat.epub', bytes: _flatEpub()),
+        now: _importTime,
+      );
+
+      expect(imported.sections.map((section) => section.title), [
+        'Глава 1',
+        'Глава 2',
+        'Эпилог',
+      ]);
+      expect(
+        richDocumentPlainText(imported.sections[1].content),
+        contains('Второй текст.'),
+      );
+      expect(
+        richDocumentPlainText(imported.sections[1].content),
+        isNot(contains('Первый текст.')),
+      );
+    });
+
     test('imports an EPUB cover and relative inline images', () {
       final imported = BookImportParser.parse(
         BookImportFile(name: 'illustrated.epub', bytes: _illustratedEpub()),
@@ -367,6 +388,29 @@ Uint8List _navigationEpub() {
       ArchiveFile.string(
         'EPUB/text/two.xhtml',
         '''<?xml version="1.0"?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>Алиса</title></head><body><p>Второй текст.</p></body></html>''',
+      ),
+    );
+  return Uint8List.fromList(ZipEncoder().encodeBytes(archive));
+}
+
+Uint8List _flatEpub() {
+  final archive = Archive()
+    ..add(
+      ArchiveFile.string(
+        'META-INF/container.xml',
+        '''<?xml version="1.0"?><container xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="EPUB/package.opf"/></rootfiles></container>''',
+      ),
+    )
+    ..add(
+      ArchiveFile.string(
+        'EPUB/package.opf',
+        '''<?xml version="1.0"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>Плоский EPUB</dc:title></metadata><manifest><item id="book" href="text/book.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="book"/></spine></package>''',
+      ),
+    )
+    ..add(
+      ArchiveFile.string(
+        'EPUB/text/book.xhtml',
+        '''<?xml version="1.0"?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>Плоский EPUB</title></head><body><h1>Глава 1</h1><p>Первый текст.</p><h1>Глава 2</h1><p>Второй текст.</p><h2>Эпилог</h2><p>Финальный текст.</p></body></html>''',
       ),
     );
   return Uint8List.fromList(ZipEncoder().encodeBytes(archive));

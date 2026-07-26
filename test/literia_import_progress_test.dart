@@ -3,10 +3,12 @@ import 'dart:io';
 
 import 'package:dnevnik/app/literia_home_shell.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
+import 'package:dnevnik/features/books/application/book_device_catalog.dart';
 import 'package:dnevnik/features/books/application/book_import_file.dart';
 import 'package:dnevnik/features/books/application/book_source_storage.dart';
 import 'package:dnevnik/features/books/data/book_import_file_service.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
+import 'package:dnevnik/features/books/domain/book_scan_folder.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -109,6 +111,44 @@ void main() {
     await tester.pump();
     controller.dispose();
   });
+
+  testWidgets('starts scanning without opening a folder picker after access', (
+    tester,
+  ) async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(seedManuscript: false),
+    );
+    await controller.load(preferredLanguage: 'ru');
+    controller.markOnboardingSeen();
+    final catalog = _FirstScanCatalog();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('ru'),
+        supportedLocales: const [Locale('ru'), Locale('en')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        home: LiteriaHomeShell(controller: controller, deviceCatalog: catalog),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Читать').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Сканировать'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Разрешить доступ'), findsOneWidget);
+    await tester.tap(find.text('Разрешить доступ'));
+    await tester.pumpAndSettle();
+
+    expect(catalog.requestAccessCount, 1);
+    expect(catalog.scanDownloadsCount, 1);
+    expect(catalog.chooseFolderCount, 0);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    controller.dispose();
+  });
 }
 
 class _DeferredBookGateway implements BookImportFileGateway {
@@ -174,4 +214,49 @@ class _DeferredBookSourceStorage implements BookSourceStorage {
     originalBytes: 0,
     availableBytes: availableBytes,
   );
+}
+
+class _FirstScanCatalog
+    implements BookDeviceCatalogGateway, BookDownloadsCatalogGateway {
+  int requestAccessCount = 0;
+  int scanDownloadsCount = 0;
+  int chooseFolderCount = 0;
+
+  @override
+  bool get supportsFolderScanning => true;
+
+  @override
+  Future<bool> hasDownloadsAccess() async => false;
+
+  @override
+  Future<bool> requestDownloadsAccess() async {
+    requestAccessCount++;
+    return true;
+  }
+
+  @override
+  Future<DeviceBookScanResult> scanDownloads() async {
+    scanDownloadsCount++;
+    return const DeviceBookScanResult();
+  }
+
+  @override
+  Future<BookScanFolder?> chooseFolder() async {
+    chooseFolderCount++;
+    return null;
+  }
+
+  @override
+  Future<DeviceBookScanResult> scan(List<BookScanFolder> folders) async =>
+      const DeviceBookScanResult();
+
+  @override
+  Future<BookImportFile> materialize(DeviceBookCandidate candidate) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> releaseFolder(BookScanFolder folder) async {}
+
+  @override
+  Future<int?> availableBytes() async => null;
 }

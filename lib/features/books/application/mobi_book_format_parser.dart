@@ -5,6 +5,7 @@ import 'package:dnevnik/features/books/application/book_format_parser.dart';
 import 'package:dnevnik/features/books/application/book_import_file.dart';
 import 'package:dnevnik/features/books/application/book_import_parsing_support.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
+import 'package:dnevnik/features/books/domain/book_plain_text_chunk.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 
@@ -65,24 +66,34 @@ class MobiBookFormatParser implements BookFormatParser {
     if (plainText.isEmpty) {
       throw const BookImportException(BookImportFailure.noReadableText);
     }
-    final section =
+    final baseId = 'imported-${timestamp.microsecondsSinceEpoch}-section-1';
+    final chunks = BookPlainTextChunker.split(plainText);
+    final sections = [
+      for (var index = 0; index < chunks.length; index++)
         BookSection.create(
-          id: 'imported-${timestamp.microsecondsSinceEpoch}-section-1',
-          title: title,
+          id: index == 0 ? baseId : '$baseId-part-${index + 1}',
+          title:
+              chunks[index].heading ??
+              (index == 0 ? title : '$title — ${index + 1}'),
           type: BookSectionType.chapter,
           now: timestamp,
         ).copyWith(
           content: [
-            {'insert': '$plainText\n'},
+            {
+              'insert': chunks[index].text.endsWith('\n')
+                  ? chunks[index].text
+                  : '${chunks[index].text}\n',
+            },
           ],
           status: DraftStatus.complete,
-        );
+        ),
+    ];
     return BookImportParsingSupport.project(
       file: file,
       timestamp: timestamp,
       sourceFormat: 'MOBI',
       metadata: BookMetadata(title: title),
-      sections: [section],
+      sections: sections,
     );
   }
 

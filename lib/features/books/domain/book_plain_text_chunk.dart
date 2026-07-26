@@ -1,3 +1,5 @@
+import 'package:dnevnik/features/books/domain/book_chapter_heading.dart';
+
 class BookPlainTextChunk {
   const BookPlainTextChunk({
     required this.text,
@@ -17,24 +19,36 @@ abstract final class BookPlainTextChunker {
   static const int maximumCharacters = 32_000;
   static const int minimumCharactersBeforeHeading = 8_000;
 
-  static final RegExp _headingLine = RegExp(
-    r'^(?:chapter|book|part|volume|глава|часть|том)\b.{0,90}$',
-    caseSensitive: false,
-  );
-
   static List<BookPlainTextChunk> split(String text) {
-    if (text.length <= maximumCharacters) {
-      return [
-        BookPlainTextChunk(
-          text: text,
-          startOffset: 0,
-          endOffset: text.length,
-          heading: _heading(text),
-        ),
-      ];
+    final headingOffsets = _chapterHeadingOffsets(text);
+    if (headingOffsets.length >= 2) {
+      final chunks = <BookPlainTextChunk>[];
+      if (text.substring(0, headingOffsets.first).trim().isNotEmpty) {
+        chunks.addAll(_splitRange(text, 0, headingOffsets.first));
+      }
+      for (var index = 0; index < headingOffsets.length; index++) {
+        chunks.addAll(
+          _splitRange(
+            text,
+            headingOffsets[index],
+            index + 1 < headingOffsets.length
+                ? headingOffsets[index + 1]
+                : text.length,
+          ),
+        );
+      }
+      return chunks;
     }
+    return _splitRange(text, 0, text.length);
+  }
 
+  static List<BookPlainTextChunk> _splitRange(
+    String source,
+    int rangeStart,
+    int rangeEnd,
+  ) {
     final chunks = <BookPlainTextChunk>[];
+    final text = source.substring(rangeStart, rangeEnd);
     var start = 0;
     while (start < text.length) {
       final remaining = text.length - start;
@@ -45,14 +59,24 @@ abstract final class BookPlainTextChunker {
       chunks.add(
         BookPlainTextChunk(
           text: chunkText,
-          startOffset: start,
-          endOffset: end,
+          startOffset: rangeStart + start,
+          endOffset: rangeStart + end,
           heading: _heading(chunkText),
         ),
       );
       start = end;
     }
     return chunks;
+  }
+
+  static List<int> _chapterHeadingOffsets(String text) {
+    final offsets = <int>[];
+    var offset = 0;
+    for (final line in text.split('\n')) {
+      if (BookChapterHeading.isRecognized(line)) offsets.add(offset);
+      offset += line.length + 1;
+    }
+    return offsets;
   }
 
   static int _splitOffset(String text, int start) {
@@ -85,7 +109,7 @@ abstract final class BookPlainTextChunker {
       if (boundedEnd > end) return null;
       final line = text.substring(lineStart, boundedEnd).trim();
       if (line.isNotEmpty &&
-          _headingLine.hasMatch(line) &&
+          BookChapterHeading.isRecognized(line) &&
           _hasBlankLineBefore(text, lineStart)) {
         return lineStart;
       }
@@ -103,7 +127,7 @@ abstract final class BookPlainTextChunker {
     for (final line in text.split('\n')) {
       final candidate = line.trim();
       if (candidate.isEmpty) continue;
-      return _headingLine.hasMatch(candidate) ? candidate : null;
+      return BookChapterHeading.isRecognized(candidate) ? candidate : null;
     }
     return null;
   }

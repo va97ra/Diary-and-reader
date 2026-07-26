@@ -6,7 +6,7 @@ import 'package:dnevnik/features/books/application/book_import_file.dart';
 import 'package:dnevnik/features/books/application/book_source_storage.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 
-const _processedCacheVersion = 2;
+const _processedCacheVersion = 3;
 
 class FileBookSourceStorage
     implements BookSourceStorage, BookReadingCacheStorage {
@@ -242,7 +242,9 @@ BookProject? _decodeProcessed(
   final cacheVersion = envelope['cacheVersion'];
   final supportedVersion =
       cacheVersion == _processedCacheVersion ||
-      (allowLegacy && cacheVersion == 1);
+      (allowLegacy &&
+          cacheVersion is int &&
+          cacheVersion < _processedCacheVersion);
   if (!supportedVersion ||
       envelope['sourceFingerprint']?.toString() != expectedFingerprint ||
       envelope['project'] is! Map) {

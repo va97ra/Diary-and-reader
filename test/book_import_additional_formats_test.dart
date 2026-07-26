@@ -30,6 +30,27 @@ void main() {
     );
   });
 
+  test('splits short TXT books by visible chapter headings', () {
+    final project = BookImportParser.parse(
+      BookImportFile(
+        name: 'chapters.txt',
+        bytes: Uint8List.fromList(
+          utf8.encode(
+            'Глава 1\n\nПервый текст.\n\n'
+            'Глава 2\n\nВторой текст.\n\n'
+            'Эпилог\n\nФинальный текст.',
+          ),
+        ),
+      ),
+    );
+
+    expect(project.sections.map((section) => section.title), [
+      'Глава 1',
+      'Глава 2',
+      'Эпилог',
+    ]);
+  });
+
   test('imports RTF paragraphs and Unicode escapes', () {
     final project = BookImportParser.parse(
       BookImportFile(
@@ -44,6 +65,25 @@ void main() {
     expect(project.sourceFormat, 'RTF');
     expect(text, contains('Первая'));
     expect(text, contains('Вторая'));
+  });
+
+  test('splits short RTF books by visible chapter headings', () {
+    final project = BookImportParser.parse(
+      BookImportFile(
+        name: 'chapters.rtf',
+        bytes: Uint8List.fromList(
+          utf8.encode(
+            r'{\rtf1\ansi Глава 1\par Первый текст.\par '
+            r'Глава 2\par Второй текст.}',
+          ),
+        ),
+      ),
+    );
+
+    expect(project.sections.map((section) => section.title), [
+      'Глава 1',
+      'Глава 2',
+    ]);
   });
 
   test('imports DOCX text and core metadata', () {
@@ -79,6 +119,32 @@ void main() {
     );
   });
 
+  test('splits short DOCX books by visible chapter headings', () {
+    final archive = Archive()
+      ..addFile(
+        ArchiveFile.string(
+          'word/document.xml',
+          '<w:document xmlns:w="urn:w"><w:body>'
+              '<w:p><w:r><w:t>Глава 1</w:t></w:r></w:p>'
+              '<w:p><w:r><w:t>Первый текст.</w:t></w:r></w:p>'
+              '<w:p><w:r><w:t>Глава 2</w:t></w:r></w:p>'
+              '<w:p><w:r><w:t>Второй текст.</w:t></w:r></w:p>'
+              '</w:body></w:document>',
+        ),
+      );
+    final project = BookImportParser.parse(
+      BookImportFile(
+        name: 'chapters.docx',
+        bytes: Uint8List.fromList(ZipEncoder().encode(archive)),
+      ),
+    );
+
+    expect(project.sections.map((section) => section.title), [
+      'Глава 1',
+      'Глава 2',
+    ]);
+  });
+
   test('imports unencrypted PalmDOC MOBI content', () {
     final project = BookImportParser.parse(
       BookImportFile(name: 'sample.mobi', bytes: _mobiFixture()),
@@ -91,6 +157,23 @@ void main() {
       contains('Second paragraph'),
     );
   });
+
+  test('splits flat MOBI content by visible chapter headings', () {
+    final project = BookImportParser.parse(
+      BookImportFile(
+        name: 'chapters.mobi',
+        bytes: _mobiFixture(
+          '<html><h1>Chapter 1</h1><p>First text.</p>'
+          '<h1>Chapter 2</h1><p>Second text.</p></html>',
+        ),
+      ),
+    );
+
+    expect(project.sections.map((section) => section.title), [
+      'Chapter 1',
+      'Chapter 2',
+    ]);
+  });
 }
 
 Uint8List _utf16Le(String value) {
@@ -101,10 +184,10 @@ Uint8List _utf16Le(String value) {
   return output.takeBytes();
 }
 
-Uint8List _mobiFixture() {
-  final text = Uint8List.fromList(
-    utf8.encode('<html><p>First paragraph</p><p>Second paragraph</p></html>'),
-  );
+Uint8List _mobiFixture([
+  String source = '<html><p>First paragraph</p><p>Second paragraph</p></html>',
+]) {
+  final text = Uint8List.fromList(utf8.encode(source));
   final record0 = Uint8List(140);
   final recordData = ByteData.sublistView(record0)
     ..setUint16(0, 1)
