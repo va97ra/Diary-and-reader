@@ -1,13 +1,20 @@
 import 'dart:async';
 import 'dart:collection';
 
-import 'package:dnevnik/features/books/application/book_manuscript_search.dart';
+import 'package:dnevnik/features/books/application/book_catalog_project.dart';
+import 'package:dnevnik/features/books/application/book_source_storage.dart';
+import 'package:dnevnik/features/books/application/manuscript_project_editor.dart';
 import 'package:dnevnik/features/books/application/section_tree_editor.dart';
+import 'package:dnevnik/features/books/application/transient_book_version_repository.dart';
+import 'package:dnevnik/features/books/application/workspace_library_editor.dart';
+import 'package:dnevnik/features/books/application/workspace_persistence_coordinator.dart';
 import 'package:dnevnik/features/books/application/workspace_save_state.dart';
+import 'package:dnevnik/features/books/application/workspace_version_coordinator.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_repository.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_snapshot.dart';
 import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
+import 'package:dnevnik/features/books/domain/book_library_state.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
@@ -24,27 +31,37 @@ import 'package:flutter/foundation.dart';
 
 class AuthorWorkspaceController extends ChangeNotifier {
   AuthorWorkspaceController(
-    this._repository, {
+    AuthorWorkspaceRepository repository, {
     BookVersionRepository? versionRepository,
-  }) : _versionRepository =
-           versionRepository ?? _TransientBookVersionRepository();
+    Duration saveDebounce = const Duration(milliseconds: 350),
+    Duration maxSaveDelay = const Duration(seconds: 2),
+  }) : _versions = WorkspaceVersionCoordinator(
+         versionRepository ?? TransientBookVersionRepository(),
+       ) {
+    _persistence = WorkspacePersistenceCoordinator(
+      repository,
+      () => _snapshot,
+      onStateChanged: () {
+        if (!_readerSessionActive) notifyListeners();
+      },
+      saveDebounce: saveDebounce,
+      maxSaveDelay: maxSaveDelay,
+    );
+  }
 
-  final AuthorWorkspaceRepository _repository;
-  final BookVersionRepository _versionRepository;
+  final WorkspaceVersionCoordinator _versions;
+  late final WorkspacePersistenceCoordinator _persistence;
   final List<BookProject> _projects = [];
-  Future<void> _saveQueue = Future.value();
-  Timer? _saveTimer;
   String? _activeProjectId;
   String _languageCode = 'ru';
   LiteriaAppPreferences _appPreferences = const LiteriaAppPreferences();
-  WorkspaceSaveState _saveState = WorkspaceSaveState.saved;
-  int _changeRevision = 0;
-  bool _isDisposed = false;
+  bool _readerSessionActive = false;
+  final Set<String> _transientHydratedProjectIds = {};
 
   UnmodifiableListView<BookProject> get projects =>
       UnmodifiableListView(_projects);
   String get languageCode => _languageCode;
-  WorkspaceSaveState get saveState => _saveState;
+  WorkspaceSaveState get saveState => _persistence.saveState;
   LiteriaAppPreferences get appPreferences => _appPreferences;
   BookReaderSettings get readerSettings => _appPreferences.readerSettings;
   LiteriaThemePreference get themePreference => _appPreferences.theme;
@@ -70,7 +87,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
   BookSection? get activeSection => activeProject?.activeSection;
 
   Future<void> load({required String preferredLanguage}) async {
-    final snapshot = await _repository.load();
+    final snapshot = await _persistence.load();
     if (snapshot == null) {
       _languageCode = preferredLanguage == 'en' ? 'en' : 'ru';
       return;
@@ -79,6 +96,27 @@ class AuthorWorkspaceController extends ChangeNotifier {
     _languageCode = snapshot.languageCode;
     _activeProjectId = snapshot.activeProjectId;
     _appPreferences = snapshot.appPreferences;
+  }
+
+  Future<void> compactImportedCatalogs(BookSourceStorage sourceStorage) async {
+    if (sourceStorage is! BookReadingCacheStorage) return;
+    final cacheStorage = sourceStorage as BookReadingCacheStorage;
+    var changed = false;
+    for (var index = 0; index < _projects.length; index++) {
+      final project = _projects[index];
+      if (!project.isReadOnly || project.isCatalogOnly) continue;
+      try {
+        if (!await cacheStorage.hasOriginal(project)) continue;
+        await cacheStorage.storeProcessed(project, project);
+        _projects[index] = BookCatalogProject.compact(project);
+        changed = true;
+      } on Exception {
+        // Keep the embedded content as a lossless fallback.
+      }
+    }
+    if (!changed) return;
+    _markDirty();
+    await flush();
   }
 
   BookProject addProject() {
@@ -91,41 +129,34 @@ class AuthorWorkspaceController extends ChangeNotifier {
   }
 
   BookProject addImportedBook(BookProject project) {
-    if (project.kind != BookProjectKind.importedBook ||
-        project.sections.isEmpty) {
-      throw ArgumentError.value(project, 'project', 'Invalid imported book');
-    }
-    final id = _projects.any((candidate) => candidate.id == project.id)
-        ? 'imported-${DateTime.now().microsecondsSinceEpoch}'
-        : project.id;
-    final imported = BookProject(
-      id: id,
-      metadata: project.metadata,
-      sections: project.sections,
-      activeSectionId: project.activeSectionId,
-      createdAt: project.createdAt,
-      updatedAt: project.updatedAt,
-      layoutSettings: project.layoutSettings,
-      paragraphSettings: project.paragraphSettings,
+    final imported = WorkspaceLibraryEditor.importedCopy(
+      project,
+      existingIds: _projects.map((candidate) => candidate.id),
       readerSettings: _appPreferences.readerSettings,
-      readerProgress: project.readerProgress,
-      readerAnnotations: project.readerAnnotations,
-      kind: BookProjectKind.importedBook,
-      sourceFormat: project.sourceFormat,
-      sourceFileName: project.sourceFileName,
-      sourceStoredPath: project.sourceStoredPath,
-      sourceFingerprint: project.sourceFingerprint,
-      sourceExternalUri: project.sourceExternalUri,
-      sourceFileSize: project.sourceFileSize,
-      collectionName: project.collectionName,
-      assets: project.assets,
-      coverAssetId: project.coverAssetId,
     );
     _projects.add(imported);
     _activeProjectId = imported.id;
     _appPreferences = _appPreferences.copyWith(lastReadingId: imported.id);
     _changed();
     return imported;
+  }
+
+  void rollbackImportedBook(
+    String id, {
+    required String? activeProjectId,
+    required String? lastReadingId,
+  }) {
+    _projects.removeWhere((project) => project.id == id);
+    _activeProjectId =
+        activeProjectId != null &&
+            _projects.any((project) => project.id == activeProjectId)
+        ? activeProjectId
+        : null;
+    _appPreferences = _appPreferences.copyWith(
+      lastReadingId: lastReadingId,
+      clearLastReading: lastReadingId == null,
+    );
+    _changed();
   }
 
   void deleteProject(String id) {
@@ -137,12 +168,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
           ? null
           : _projects[index.clamp(0, _projects.length - 1)].id;
     }
-    if (_appPreferences.lastManuscriptId == id) {
-      _appPreferences = _appPreferences.copyWith(clearLastManuscript: true);
-    }
-    if (_appPreferences.lastReadingId == id) {
-      _appPreferences = _appPreferences.copyWith(clearLastReading: true);
-    }
+    _appPreferences = WorkspaceLibraryEditor.removeProject(_appPreferences, id);
     _changed();
   }
 
@@ -155,11 +181,12 @@ class AuthorWorkspaceController extends ChangeNotifier {
   }) {
     final index = _projects.indexWhere((project) => project.id == projectId);
     if (index < 0 || !_projects[index].isReadOnly) return;
-    _projects[index] = _projects[index].copyWith(
-      sourceStoredPath: storedPath,
-      sourceFingerprint: fingerprint,
-      sourceExternalUri: externalUri,
-      sourceFileSize: fileSize,
+    _projects[index] = WorkspaceLibraryEditor.updateSource(
+      _projects[index],
+      storedPath: storedPath,
+      fingerprint: fingerprint,
+      externalUri: externalUri,
+      fileSize: fileSize,
     );
     _changed();
   }
@@ -167,39 +194,41 @@ class AuthorWorkspaceController extends ChangeNotifier {
   void clearImportedBookStoredSource(String projectId) {
     final index = _projects.indexWhere((project) => project.id == projectId);
     if (index < 0 || !_projects[index].isReadOnly) return;
-    _projects[index] = _projects[index].copyWith(clearStoredSource: true);
+    _projects[index] = WorkspaceLibraryEditor.clearStoredSource(
+      _projects[index],
+    );
     _changed();
   }
 
   void addBookScanFolder(BookScanFolder folder) {
-    final folders = [..._appPreferences.bookScanFolders];
-    final index = folders.indexWhere((item) => item.uri == folder.uri);
-    if (index >= 0) {
-      folders[index] = folder;
-    } else {
-      folders.add(folder);
-    }
-    _appPreferences = _appPreferences.copyWith(bookScanFolders: folders);
+    _appPreferences = WorkspaceLibraryEditor.addScanFolder(
+      _appPreferences,
+      folder,
+    );
     _changed();
   }
 
   void removeBookScanFolder(String uri) {
-    final folders = _appPreferences.bookScanFolders
-        .where((folder) => folder.uri != uri)
-        .toList();
-    if (folders.length == _appPreferences.bookScanFolders.length) return;
-    _appPreferences = _appPreferences.copyWith(bookScanFolders: folders);
+    if (!_appPreferences.bookScanFolders.any((folder) => folder.uri == uri)) {
+      return;
+    }
+    _appPreferences = WorkspaceLibraryEditor.removeScanFolder(
+      _appPreferences,
+      uri,
+    );
     _changed();
   }
 
   void selectProject(String id) {
     if (_activeProjectId == id) return;
+    unawaited(flush());
     _activeProjectId = id;
     final selected = _projects.where((project) => project.id == id).firstOrNull;
-    if (selected?.isReadOnly == true) {
-      _appPreferences = _appPreferences.copyWith(lastReadingId: id);
-    } else if (selected != null) {
-      _appPreferences = _appPreferences.copyWith(lastManuscriptId: id);
+    if (selected != null) {
+      _appPreferences = WorkspaceLibraryEditor.selectProject(
+        _appPreferences,
+        selected,
+      );
     }
     _changed();
   }
@@ -209,14 +238,74 @@ class AuthorWorkspaceController extends ChangeNotifier {
     if (index < 0) return;
     final normalized = collectionName.trim();
     if (_projects[index].collectionName == normalized) return;
-    _projects[index] = _projects[index].copyWith(
-      collectionName: normalized,
-      updatedAt: DateTime.now(),
+    _projects[index] = WorkspaceLibraryEditor.updateCollection(
+      _projects[index],
+      normalized,
     );
     _changed();
   }
 
+  void updateProjectMetadata(String id, BookMetadata metadata) {
+    final index = _projects.indexWhere((project) => project.id == id);
+    if (index < 0) return;
+    _projects[index] = WorkspaceLibraryEditor.updateMetadata(
+      _projects[index],
+      metadata,
+    );
+    _changed();
+  }
+
+  void updateProjectFavorite(String id, bool isFavorite) {
+    final index = _projects.indexWhere((project) => project.id == id);
+    if (index < 0 || _projects[index].libraryState.isFavorite == isFavorite) {
+      return;
+    }
+    _projects[index] = WorkspaceLibraryEditor.updateFavorite(
+      _projects[index],
+      isFavorite,
+    );
+    _changed();
+  }
+
+  void updateProjectReadingStatus(String id, BookReadingStatus status) {
+    final index = _projects.indexWhere((project) => project.id == id);
+    if (index < 0 || _projects[index].libraryState.readingStatus == status) {
+      return;
+    }
+    _projects[index] = WorkspaceLibraryEditor.updateReadingStatus(
+      _projects[index],
+      status,
+    );
+    _changed();
+  }
+
+  void recordReadingTime(String id, Duration duration) {
+    _recordReadingTime(id, duration, notify: true);
+  }
+
+  void recordReadingTimeDuringReading(String id, Duration duration) {
+    _readerSessionActive = true;
+    _recordReadingTime(id, duration, notify: false);
+  }
+
+  void _recordReadingTime(
+    String id,
+    Duration duration, {
+    required bool notify,
+  }) {
+    if (duration.inSeconds <= 0) return;
+    final index = _projects.indexWhere((project) => project.id == id);
+    if (index < 0) return;
+    _projects[index] = WorkspaceLibraryEditor.recordReading(
+      _projects[index],
+      duration,
+    );
+    notify ? _changed() : _changedWithoutNotification();
+  }
+
   void selectSection(String id) {
+    if (activeProject?.activeSectionId == id) return;
+    unawaited(flush());
     _replaceActiveProject((project) => project.copyWith(activeSectionId: id));
     _changed();
   }
@@ -224,20 +313,11 @@ class AuthorWorkspaceController extends ChangeNotifier {
   void addSection(BookSectionType type) {
     final project = activeProject;
     if (project == null || project.isReadOnly) return;
-    final parentId = _parentForNewSection(project, type);
-    final section = BookSection.create(
-      title: _defaultSectionTitle(type),
-      type: type,
-      parentId: parentId,
-    );
     _replaceActiveProject(
-      (current) => current.copyWith(
-        sections: SectionTreeEditor.insertAtEndOfParent(
-          current.sections,
-          section,
-        ),
-        activeSectionId: section.id,
-        updatedAt: DateTime.now(),
+      (current) => ManuscriptProjectEditor.addSection(
+        current,
+        type,
+        languageCode: _languageCode,
       ),
     );
     _changed();
@@ -246,11 +326,19 @@ class AuthorWorkspaceController extends ChangeNotifier {
   void moveSection(String id, TreeMoveDirection direction) {
     if (activeProject?.isReadOnly ?? true) return;
     _replaceActiveProject(
+      (project) => ManuscriptProjectEditor.moveSection(project, id, direction),
+    );
+    _changed();
+  }
+
+  void moveSectionToTarget(String id, String targetId) {
+    if (activeProject?.isReadOnly ?? true) return;
+    _replaceActiveProject(
       (project) => project.copyWith(
-        sections: SectionTreeEditor.moveSubtree(
+        sections: SectionTreeEditor.moveToTarget(
           project.sections,
           id,
-          direction,
+          targetId,
         ),
         updatedAt: DateTime.now(),
       ),
@@ -261,53 +349,68 @@ class AuthorWorkspaceController extends ChangeNotifier {
   void deleteSection(String id) {
     final project = activeProject;
     if (project == null || project.isReadOnly) return;
-    var sections = SectionTreeEditor.removeSubtree(project.sections, id);
-    if (sections.isEmpty) {
-      sections = [
-        BookSection.create(
-          title: _languageCode == 'en' ? 'Chapter 1' : 'Глава 1',
-          type: BookSectionType.chapter,
-        ),
-      ];
-    }
-    final activeStillExists = sections.any(
-      (section) => section.id == project.activeSectionId,
+    _replaceActiveProject(
+      (current) => ManuscriptProjectEditor.deleteSection(
+        current,
+        id,
+        languageCode: _languageCode,
+      ),
     );
-    _replaceActiveProject((current) {
-      final sectionIds = sections.map((section) => section.id).toSet();
-      final readerSectionExists = sectionIds.contains(
-        current.readerProgress.sectionId,
-      );
-      return current.copyWith(
-        sections: sections,
-        activeSectionId: activeStillExists
-            ? current.activeSectionId
-            : sections.first.id,
-        readerProgress: readerSectionExists
-            ? current.readerProgress
-            : BookReaderProgress(sectionId: sections.first.id),
-        readerAnnotations: current.readerAnnotations.retainSections(sectionIds),
-        updatedAt: DateTime.now(),
-      );
-    });
+    _changed();
+  }
+
+  Future<void> deleteSectionSafely(
+    String id, {
+    required String safetyLabel,
+  }) async {
+    final project = activeProject;
+    if (project == null || project.isReadOnly) return;
+    await flush();
+    await _versions.create(project, label: safetyLabel);
+    deleteSection(id);
+    await flush();
+  }
+
+  void restoreDeletedSection(String trashId) {
+    if (activeProject?.isReadOnly ?? true) return;
+    _replaceActiveProject(
+      (project) =>
+          ManuscriptProjectEditor.restoreDeletedSection(project, trashId),
+    );
+    _changed();
+  }
+
+  void permanentlyDeleteSection(String trashId) {
+    if (activeProject?.isReadOnly ?? true) return;
+    _replaceActiveProject(
+      (project) => ManuscriptProjectEditor.deleteTrashEntry(project, trashId),
+    );
+    _changed();
+  }
+
+  void emptySectionTrash() {
+    if (activeProject?.isReadOnly ?? true) return;
+    _replaceActiveProject(ManuscriptProjectEditor.emptySectionTrash);
     _changed();
   }
 
   void updateSectionTitle(String title) {
     if (activeProject?.isReadOnly ?? true) return;
-    _updateActiveSection((section) => section.copyWith(title: title));
+    _replaceActiveProject(
+      (project) => ManuscriptProjectEditor.updateSectionTitle(project, title),
+    );
     _changed();
   }
 
   void updateSectionContent(RichDocument content) {
     if (activeProject?.isReadOnly ?? true) return;
-    _updateActiveSection(
-      (section) =>
-          section.copyWith(content: content, updatedAt: DateTime.now()),
+    _replaceActiveProject(
+      (project) =>
+          ManuscriptProjectEditor.updateSectionContent(project, content),
     );
     _markDirty();
     notifyListeners();
-    _scheduleSave();
+    _persistence.scheduleSave();
   }
 
   void addAsset(BookAsset asset) {
@@ -316,13 +419,33 @@ class AuthorWorkspaceController extends ChangeNotifier {
       return;
     }
     _replaceActiveProject(
-      (current) => current.copyWith(
-        assets: [
-          ...current.assets.where((existing) => existing.id != asset.id),
-          asset,
-        ],
-        updatedAt: DateTime.now(),
-      ),
+      (current) => ManuscriptProjectEditor.addAsset(current, asset),
+    );
+    _changed();
+  }
+
+  void setCoverAsset(BookAsset asset) {
+    final project = activeProject;
+    if (project == null || project.isReadOnly || !asset.isRenderableImage) {
+      return;
+    }
+    _replaceActiveProject(
+      (current) => ManuscriptProjectEditor.addAsset(
+        current,
+        asset,
+      ).copyWith(coverAssetId: asset.id, updatedAt: DateTime.now()),
+    );
+    _changed();
+  }
+
+  void clearCoverAsset() {
+    final project = activeProject;
+    if (project == null || project.isReadOnly || project.coverAssetId == null) {
+      return;
+    }
+    _replaceActiveProject(
+      (current) =>
+          current.copyWith(clearCoverAsset: true, updatedAt: DateTime.now()),
     );
     _changed();
   }
@@ -334,44 +457,95 @@ class AuthorWorkspaceController extends ChangeNotifier {
   }) {
     final project = activeProject;
     if (project == null || project.isReadOnly || query.isEmpty) return 0;
-    var replacementCount = 0;
-    final sections = project.sections.map((section) {
-      final result = BookManuscriptSearch.replaceAll(
-        section.content,
-        query,
-        replacement,
-        caseSensitive: caseSensitive,
-      );
-      replacementCount += result.count;
-      return result.count == 0
-          ? section
-          : section.copyWith(
-              content: result.document,
-              updatedAt: DateTime.now(),
-            );
-    }).toList();
-    if (replacementCount == 0) return 0;
-    _replaceActiveProject(
-      (current) =>
-          current.copyWith(sections: sections, updatedAt: DateTime.now()),
+    final result = ManuscriptProjectEditor.replaceAll(
+      project,
+      query,
+      replacement,
+      caseSensitive: caseSensitive,
     );
+    if (result.count == 0) return 0;
+    _replaceActiveProject((_) => result.project);
     _changed();
-    return replacementCount;
+    return result.count;
+  }
+
+  Future<int> replaceAllInManuscriptSafely(
+    String query,
+    String replacement, {
+    bool caseSensitive = false,
+    required String safetyLabel,
+  }) async {
+    final project = activeProject;
+    if (project == null || project.isReadOnly || query.isEmpty) return 0;
+    final result = ManuscriptProjectEditor.replaceAll(
+      project,
+      query,
+      replacement,
+      caseSensitive: caseSensitive,
+    );
+    if (result.count == 0) return 0;
+    await flush();
+    await _versions.create(project, label: safetyLabel);
+    _replaceActiveProject((_) => result.project);
+    _changed();
+    await flush();
+    return result.count;
   }
 
   void updateSectionStatus(DraftStatus status) {
     if (activeProject?.isReadOnly ?? true) return;
-    _updateActiveSection(
-      (section) => section.copyWith(status: status, updatedAt: DateTime.now()),
+    _replaceActiveProject(
+      (project) => ManuscriptProjectEditor.updateSectionStatus(project, status),
     );
     _changed();
   }
 
   void updateSectionTargetWords(int targetWords) {
     if (activeProject?.isReadOnly ?? true) return;
-    _updateActiveSection(
-      (section) =>
-          section.copyWith(targetWords: targetWords, updatedAt: DateTime.now()),
+    _replaceActiveProject(
+      (project) => ManuscriptProjectEditor.updateSectionTargetWords(
+        project,
+        targetWords,
+      ),
+    );
+    _changed();
+  }
+
+  void updateWritingGoals({
+    required int dailyTargetWords,
+    required int projectTargetWords,
+  }) {
+    if (activeProject?.isReadOnly ?? true) return;
+    _replaceActiveProject(
+      (project) => project.copyWith(
+        writingState: project.writingState.copyWith(
+          dailyTargetWords: dailyTargetWords,
+          projectTargetWords: projectTargetWords,
+        ),
+        updatedAt: DateTime.now(),
+      ),
+    );
+    _changed();
+  }
+
+  void recordWritingSession(
+    String projectId, {
+    required DateTime startedAt,
+    required Duration duration,
+    required int wordsAdded,
+  }) {
+    final index = _projects.indexWhere((project) => project.id == projectId);
+    if (index < 0 || _projects[index].isReadOnly) return;
+    final project = _projects[index];
+    final next = project.writingState.record(
+      startedAt: startedAt,
+      duration: duration,
+      wordsAdded: wordsAdded,
+    );
+    if (identical(next, project.writingState)) return;
+    _projects[index] = project.copyWith(
+      writingState: next,
+      updatedAt: DateTime.now(),
     );
     _changed();
   }
@@ -379,8 +553,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
   void updateMetadata(BookMetadata metadata) {
     if (activeProject?.isReadOnly ?? true) return;
     _replaceActiveProject(
-      (project) =>
-          project.copyWith(metadata: metadata, updatedAt: DateTime.now()),
+      (project) => ManuscriptProjectEditor.updateMetadata(project, metadata),
     );
     _changed();
   }
@@ -388,10 +561,8 @@ class AuthorWorkspaceController extends ChangeNotifier {
   void updateLayoutSettings(BookLayoutSettings layoutSettings) {
     if (activeProject?.isReadOnly ?? true) return;
     _replaceActiveProject(
-      (project) => project.copyWith(
-        layoutSettings: layoutSettings,
-        updatedAt: DateTime.now(),
-      ),
+      (project) =>
+          ManuscriptProjectEditor.updateLayoutSettings(project, layoutSettings),
     );
     _changed();
   }
@@ -399,42 +570,108 @@ class AuthorWorkspaceController extends ChangeNotifier {
   void updateParagraphSettings(BookParagraphSettings paragraphSettings) {
     if (activeProject?.isReadOnly ?? true) return;
     _replaceActiveProject(
-      (project) => project.copyWith(
-        paragraphSettings: paragraphSettings,
-        updatedAt: DateTime.now(),
+      (project) => ManuscriptProjectEditor.updateParagraphSettings(
+        project,
+        paragraphSettings,
       ),
     );
     _changed();
   }
 
   void updateReaderSettings(BookReaderSettings readerSettings) {
+    _updateReaderSettings(readerSettings, notify: true);
+  }
+
+  void updateReaderSettingsDuringReading(BookReaderSettings readerSettings) {
+    _readerSessionActive = true;
+    _updateReaderSettings(readerSettings, notify: false);
+  }
+
+  void _updateReaderSettings(
+    BookReaderSettings readerSettings, {
+    required bool notify,
+  }) {
+    if (_appPreferences.readerSettings == readerSettings) return;
     _appPreferences = _appPreferences.copyWith(readerSettings: readerSettings);
     for (var index = 0; index < _projects.length; index++) {
       _projects[index] = _projects[index].copyWith(
         readerSettings: readerSettings,
       );
     }
-    _changed();
+    notify ? _changed() : _changedWithoutNotification();
   }
 
   void updateReaderProgress(BookReaderProgress readerProgress) {
+    _updateReaderProgress(readerProgress, notify: true);
+  }
+
+  void updateReaderProgressDuringReading(BookReaderProgress readerProgress) {
+    _readerSessionActive = true;
+    _updateReaderProgress(readerProgress, notify: false);
+  }
+
+  void _updateReaderProgress(
+    BookReaderProgress readerProgress, {
+    required bool notify,
+  }) {
+    if (activeProject?.readerProgress == readerProgress) return;
     _replaceActiveProject(
       (project) => project.copyWith(
         readerProgress: readerProgress,
         updatedAt: DateTime.now(),
       ),
     );
-    _changed();
+    notify ? _changed() : _changedWithoutNotification();
   }
 
   void updateReaderAnnotations(BookReaderAnnotations readerAnnotations) {
+    _updateReaderAnnotations(readerAnnotations, notify: true);
+  }
+
+  void updateReaderAnnotationsDuringReading(
+    BookReaderAnnotations readerAnnotations,
+  ) {
+    _readerSessionActive = true;
+    _updateReaderAnnotations(readerAnnotations, notify: false);
+  }
+
+  void _updateReaderAnnotations(
+    BookReaderAnnotations readerAnnotations, {
+    required bool notify,
+  }) {
+    if (activeProject?.readerAnnotations == readerAnnotations) return;
     _replaceActiveProject(
       (project) => project.copyWith(
         readerAnnotations: readerAnnotations,
         updatedAt: DateTime.now(),
       ),
     );
-    _changed();
+    notify ? _changed() : _changedWithoutNotification();
+  }
+
+  void beginReaderSession({BookProject? hydratedProject}) {
+    _readerSessionActive = true;
+    if (hydratedProject == null) return;
+    final index = _projects.indexWhere(
+      (project) => project.id == hydratedProject.id && project.isReadOnly,
+    );
+    if (index >= 0 && _projects[index].isCatalogOnly) {
+      _projects[index] = hydratedProject;
+      _transientHydratedProjectIds.add(hydratedProject.id);
+    }
+  }
+
+  void finishReaderSession() {
+    final project = activeProject;
+    if (project != null &&
+        _transientHydratedProjectIds.remove(project.id) &&
+        project.isReadOnly &&
+        !project.isCatalogOnly) {
+      _replaceActiveProject(BookCatalogProject.compact);
+      _markDirty();
+    }
+    _readerSessionActive = false;
+    notifyListeners();
   }
 
   void setLanguage(String languageCode) {
@@ -463,23 +700,20 @@ class AuthorWorkspaceController extends ChangeNotifier {
   Future<List<BookProjectVersion>> listVersions() async {
     final project = activeProject;
     if (project == null || project.isReadOnly) return const [];
-    return _versionRepository.list(project.id);
+    return _versions.list(project);
   }
 
   Future<BookProjectVersion?> createVersion({String? label}) async {
     await flush();
     final project = activeProject;
     if (project == null || project.isReadOnly) return null;
-    return _versionRepository.create(project: project, label: label);
+    return _versions.create(project, label: label);
   }
 
   Future<void> deleteVersion(String versionId) async {
     final project = activeProject;
     if (project == null || project.isReadOnly) return;
-    await _versionRepository.delete(
-      projectId: project.id,
-      versionId: versionId,
-    );
+    await _versions.delete(project, versionId);
   }
 
   Future<void> restoreVersion(
@@ -507,18 +741,10 @@ class AuthorWorkspaceController extends ChangeNotifier {
   );
 
   Future<void> flush() async {
-    _saveTimer?.cancel();
-    final revision = _changeRevision;
-    final snapshot = _snapshot;
-    try {
-      await _enqueueSave(snapshot);
-      if (_isDisposed || revision != _changeRevision) return;
-      _setSaveState(WorkspaceSaveState.saved);
-    } catch (_) {
-      if (_isDisposed || revision != _changeRevision) return;
-      _setSaveState(WorkspaceSaveState.error);
-    }
+    await _persistence.flush();
   }
+
+  Future<bool> flushWithResult() => _persistence.flush();
 
   Future<void> _replaceActiveProjectFromExternalSource(
     BookProject source, {
@@ -529,32 +755,12 @@ class AuthorWorkspaceController extends ChangeNotifier {
     if (current == null || current.isReadOnly || source.sections.isEmpty) {
       return;
     }
-    await _versionRepository.create(project: current, label: safetyLabel);
     final index = _projects.indexWhere((project) => project.id == current.id);
     if (index < 0) return;
-    final copied = BookProject.fromJson(source.toJson());
-    _projects[index] = BookProject(
-      id: current.id,
-      metadata: copied.metadata,
-      sections: copied.sections,
-      activeSectionId: copied.activeSectionId,
-      createdAt: current.createdAt,
-      updatedAt: DateTime.now(),
-      layoutSettings: copied.layoutSettings,
-      paragraphSettings: copied.paragraphSettings,
-      readerSettings: copied.readerSettings,
-      readerProgress: copied.readerProgress,
-      readerAnnotations: copied.readerAnnotations,
-      kind: current.kind,
-      sourceFormat: current.sourceFormat,
-      sourceFileName: current.sourceFileName,
-      sourceStoredPath: current.sourceStoredPath,
-      sourceFingerprint: current.sourceFingerprint,
-      sourceExternalUri: current.sourceExternalUri,
-      sourceFileSize: current.sourceFileSize,
-      collectionName: current.collectionName,
-      assets: current.assets,
-      coverAssetId: current.coverAssetId,
+    _projects[index] = await _versions.replaceFromExternalSource(
+      current: current,
+      source: source,
+      safetyLabel: safetyLabel,
     );
     _activeProjectId = current.id;
     _markDirty();
@@ -567,40 +773,6 @@ class AuthorWorkspaceController extends ChangeNotifier {
     chapterTitle: _languageCode == 'en' ? 'Chapter 1' : 'Глава 1',
     languageCode: _languageCode,
   ).copyWith(readerSettings: _appPreferences.readerSettings);
-
-  String _defaultSectionTitle(BookSectionType type) => switch (type) {
-    BookSectionType.part => _languageCode == 'en' ? 'New part' : 'Новая часть',
-    BookSectionType.chapter =>
-      _languageCode == 'en' ? 'New chapter' : 'Новая глава',
-    BookSectionType.scene =>
-      _languageCode == 'en' ? 'New scene' : 'Новая сцена',
-  };
-
-  String? _parentForNewSection(BookProject project, BookSectionType type) {
-    final active = project.activeSection;
-    if (active == null || type == BookSectionType.part) return null;
-    if (type == BookSectionType.chapter) {
-      if (active.type == BookSectionType.part) return active.id;
-      if (active.type == BookSectionType.chapter) return active.parentId;
-      final parentChapter = project.sections
-          .where((section) => section.id == active.parentId)
-          .firstOrNull;
-      return parentChapter?.parentId;
-    }
-    if (active.type == BookSectionType.chapter) return active.id;
-    return active.type == BookSectionType.scene ? active.parentId : null;
-  }
-
-  void _updateActiveSection(BookSection Function(BookSection section) update) {
-    final activeId = activeProject?.activeSectionId;
-    if (activeId == null) return;
-    _replaceActiveProject((project) {
-      final sections = project.sections
-          .map((section) => section.id == activeId ? update(section) : section)
-          .toList();
-      return project.copyWith(sections: sections, updatedAt: DateTime.now());
-    });
-  }
 
   void _replaceActiveProject(BookProject Function(BookProject project) update) {
     final index = _projects.indexWhere(
@@ -625,36 +797,23 @@ class AuthorWorkspaceController extends ChangeNotifier {
   void _changed() {
     _markDirty();
     notifyListeners();
-    _scheduleSave();
+    _persistence.scheduleSave();
   }
 
-  void _markDirty() {
-    _changeRevision++;
-    _saveState = WorkspaceSaveState.saving;
+  void _changedWithoutNotification() {
+    _markDirty();
   }
 
-  void _setSaveState(WorkspaceSaveState state) {
-    if (_saveState == state) return;
-    _saveState = state;
-    notifyListeners();
-  }
-
-  void _scheduleSave() {
-    _saveTimer?.cancel();
-    _saveTimer = Timer(
-      const Duration(milliseconds: 350),
-      () => unawaited(flush()),
-    );
-  }
-
-  Future<void> _enqueueSave(AuthorWorkspaceSnapshot snapshot) {
-    final save = _saveQueue.then((_) => _repository.save(snapshot));
-    _saveQueue = save.catchError((_) {});
-    return save;
-  }
+  void _markDirty() => _persistence.markChanged();
 
   AuthorWorkspaceSnapshot get _snapshot => AuthorWorkspaceSnapshot(
-    projects: List.unmodifiable(_projects),
+    projects: List.unmodifiable(
+      _projects.map(
+        (project) => _transientHydratedProjectIds.contains(project.id)
+            ? BookCatalogProject.compact(project)
+            : project,
+      ),
+    ),
     activeProjectId: _activeProjectId,
     languageCode: _languageCode,
     appPreferences: _appPreferences,
@@ -662,51 +821,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
 
   @override
   void dispose() {
-    _isDisposed = true;
-    _saveTimer?.cancel();
-    unawaited(_enqueueSave(_snapshot).catchError((_) {}));
+    _persistence.dispose();
     super.dispose();
-  }
-}
-
-class _TransientBookVersionRepository implements BookVersionRepository {
-  final List<BookProjectVersion> _versions = [];
-
-  @override
-  Future<List<BookProjectVersion>> list(String projectId) async {
-    final versions =
-        _versions.where((version) => version.projectId == projectId).toList()
-          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return versions;
-  }
-
-  @override
-  Future<BookProjectVersion> create({
-    required BookProject project,
-    String? label,
-  }) async {
-    final now = DateTime.now().toUtc();
-    final normalizedLabel = label?.trim();
-    final version = BookProjectVersion(
-      id: 'version-${now.microsecondsSinceEpoch}',
-      projectId: project.id,
-      createdAt: now,
-      label: normalizedLabel == null || normalizedLabel.isEmpty
-          ? null
-          : normalizedLabel,
-      project: BookProject.fromJson(project.toJson()),
-    );
-    _versions.add(version);
-    return version;
-  }
-
-  @override
-  Future<void> delete({
-    required String projectId,
-    required String versionId,
-  }) async {
-    _versions.removeWhere(
-      (version) => version.projectId == projectId && version.id == versionId,
-    );
   }
 }

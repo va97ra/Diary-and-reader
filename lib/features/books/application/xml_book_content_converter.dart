@@ -27,6 +27,10 @@ abstract final class XmlBookContentConverter {
     }
     if (node is! XmlElement) return;
     final tag = node.name.local.toLowerCase();
+    if (_isVerseContainer(node)) {
+      _appendVerseBlock(node, operations, imageResolver);
+      return;
+    }
     switch (tag) {
       case 'p':
         _appendBlock(node, operations, const {}, imageResolver: imageResolver);
@@ -127,6 +131,25 @@ abstract final class XmlBookContentConverter {
     });
   }
 
+  static void _appendVerseBlock(
+    XmlElement element,
+    List<Map<String, dynamic>> operations,
+    BookImageResolver? imageResolver,
+  ) {
+    final start = operations.length;
+    _appendInline(
+      element,
+      const {},
+      operations,
+      raw: false,
+      imageResolver: imageResolver,
+      softLineBreaks: true,
+    );
+    _trimBlockRuns(operations, start);
+    if (operations.length == start) return;
+    operations.add({'insert': '\n'});
+  }
+
   static void _appendParagraphText(
     String text,
     List<Map<String, dynamic>> operations,
@@ -142,9 +165,11 @@ abstract final class XmlBookContentConverter {
     List<Map<String, dynamic>> operations, {
     required bool raw,
     BookImageResolver? imageResolver,
+    bool softLineBreaks = false,
   }) {
     if (node is XmlText) {
       final text = raw ? node.value : _normalized(node.value);
+      if (softLineBreaks && text.trim().isEmpty) return;
       if (text.isNotEmpty) {
         operations.add({
           'insert': text,
@@ -160,7 +185,7 @@ abstract final class XmlBookContentConverter {
       return;
     }
     if (tag == 'br') {
-      operations.add({'insert': '\n'});
+      operations.add({'insert': softLineBreaks ? '\u2028' : '\n'});
       return;
     }
     final attributes = Map<String, dynamic>.from(inherited);
@@ -201,7 +226,13 @@ abstract final class XmlBookContentConverter {
         operations,
         raw: raw,
         imageResolver: imageResolver,
+        softLineBreaks: softLineBreaks,
       );
+    }
+    if (softLineBreaks && tag == 'v') {
+      operations.add({'insert': '\u2028'});
+    } else if (softLineBreaks && tag == 'stanza') {
+      operations.add({'insert': '\u2028'});
     }
   }
 
@@ -244,4 +275,17 @@ abstract final class XmlBookContentConverter {
 
   static String _normalized(String value) =>
       value.replaceAll(RegExp(r'\s+'), ' ');
+
+  static bool _isVerseContainer(XmlElement element) {
+    final tag = element.name.local.toLowerCase();
+    if (const {'poem', 'poetry', 'verse', 'stanza', 'v'}.contains(tag)) {
+      return true;
+    }
+    final classes = (element.getAttribute('class') ?? '').toLowerCase().split(
+      RegExp(r'\s+'),
+    );
+    return classes.any(
+      (name) => const {'poem', 'poetry', 'verse', 'stanza'}.contains(name),
+    );
+  }
 }

@@ -11,6 +11,9 @@ class BookReaderSelectionBar extends StatelessWidget {
     required this.onSaveQuote,
     required this.onAddNote,
     required this.onCopy,
+    required this.onDictionary,
+    required this.onTranslate,
+    required this.onWebSearch,
     required this.onClose,
     super.key,
   });
@@ -20,6 +23,9 @@ class BookReaderSelectionBar extends StatelessWidget {
   final VoidCallback onSaveQuote;
   final VoidCallback onAddNote;
   final VoidCallback onCopy;
+  final VoidCallback onDictionary;
+  final VoidCallback onTranslate;
+  final VoidCallback onWebSearch;
   final VoidCallback onClose;
 
   @override
@@ -70,6 +76,24 @@ class BookReaderSelectionBar extends StatelessWidget {
                 tooltip: strings.copySelection,
                 onPressed: onCopy,
                 icon: const Icon(Icons.copy_outlined),
+              ),
+              IconButton(
+                key: const ValueKey('reader-dictionary-selection'),
+                tooltip: strings.dictionary,
+                onPressed: onDictionary,
+                icon: const Icon(Icons.menu_book_outlined),
+              ),
+              IconButton(
+                key: const ValueKey('reader-translate-selection'),
+                tooltip: strings.translate,
+                onPressed: onTranslate,
+                icon: const Icon(Icons.translate),
+              ),
+              IconButton(
+                key: const ValueKey('reader-web-search-selection'),
+                tooltip: strings.webSearch,
+                onPressed: onWebSearch,
+                icon: const Icon(Icons.travel_explore),
               ),
               IconButton(
                 tooltip: strings.closeSelectionActions,

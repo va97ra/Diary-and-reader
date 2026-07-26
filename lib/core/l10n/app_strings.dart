@@ -1,3 +1,5 @@
+import 'package:dnevnik/core/l10n/app_string_values_en.dart';
+import 'package:dnevnik/core/l10n/app_string_values_ru.dart';
 import 'package:flutter/widgets.dart';
 
 class AppStrings {
@@ -71,6 +73,7 @@ class AppStrings {
   String get about => _text('about');
   String get bookStorage => _text('bookStorage');
   String get bookStorageSubtitle => _text('bookStorageSubtitle');
+  String get bookStorageLoadFailed => _text('bookStorageLoadFailed');
   String get totalBookData => _text('totalBookData');
   String get storedOriginals => _text('storedOriginals');
   String get processedBooks => _text('processedBooks');
@@ -101,7 +104,10 @@ class AppStrings {
   String get resetSettings => _text('resetSettings');
   String get library => _text('library');
   String get librarySearchHint => _text('librarySearchHint');
+  String get manuscriptLibrarySearchHint =>
+      _text('manuscriptLibrarySearchHint');
   String get sortBy => _text('sortBy');
+  String get filterBooks => _text('filterBooks');
   String get recentlyUpdated => _text('recentlyUpdated');
   String get byTitle => _text('byTitle');
   String get byAuthor => _text('byAuthor');
@@ -112,6 +118,22 @@ class AppStrings {
   String get unreadBooks => _text('unreadBooks');
   String get readingBooks => _text('readingBooks');
   String get finishedBooks => _text('finishedBooks');
+  String get favoriteBooks => _text('favoriteBooks');
+  String get readingStatus => _text('readingStatus');
+  String get statusAutomatic => _text('statusAutomatic');
+  String get wantToRead => _text('wantToRead');
+  String get pausedReading => _text('pausedReading');
+  String get gridView => _text('gridView');
+  String get listView => _text('listView');
+  String get aboutBook => _text('aboutBook');
+  String get editMetadata => _text('editMetadata');
+  String get readingTime => _text('readingTime');
+  String get lastRead => _text('lastRead');
+  String get readingHistory => _text('readingHistory');
+  String get series => _text('series');
+  String get genre => _text('genre');
+  String get isbn => _text('isbn');
+  String get publisher => _text('publisher');
   String get allCollections => _text('allCollections');
   String get noCollection => _text('noCollection');
   String get moveToCollection => _text('moveToCollection');
@@ -121,12 +143,22 @@ class AppStrings {
   String get noBooksFound => _text('noBooksFound');
   String get emptyLibrary => _text('emptyLibrary');
   String get manuscript => _text('manuscript');
+  String get chapters => _text('chapters');
+  String get updated => _text('updated');
   String get properties => _text('properties');
   String get newBook => _text('newBook');
   String get importEbook => _text('importEbook');
   String get importBooks => _text('importBooks');
-  String get findOnDevice => _text('findOnDevice');
-  String get foundOnDevice => _text('foundOnDevice');
+  String get scanBooks => _text('scanBooks');
+  String get scanningBooks => _text('scanningBooks');
+  String get noNewBooks => _text('noNewBooks');
+  String get scanFolders => _text('scanFolders');
+  String get scanFolderAccessLost => _text('scanFolderAccessLost');
+  String get selectScanFolder => _text('selectScanFolder');
+  String get scanFailed => _text('scanFailed');
+  String get downloadsAccessExplanation => _text('downloadsAccessExplanation');
+  String get grantFileAccess => _text('grantFileAccess');
+  String get fileAccessNotGranted => _text('fileAccessNotGranted');
   String get addBookFolder => _text('addBookFolder');
   String get refresh => _text('refresh');
   String get addSelected => _text('addSelected');
@@ -145,8 +177,11 @@ class AppStrings {
   String get importedBookHint => _text('importedBookHint');
   String get sourceFile => _text('sourceFile');
   String get bookImported => _text('bookImported');
+  String get importingBooks => _text('importingBooks');
+  String get openingBook => _text('openingBook');
   String get bookImportFailed => _text('bookImportFailed');
   String get unsupportedBookFormat => _text('unsupportedBookFormat');
+  String get conversionRequired => _text('conversionRequired');
   String get noReadableBookText => _text('noReadableBookText');
   String sectionsInBook(int count) => '${_text('sectionsInBook')}: $count';
   String imagesInBook(int count) => '${_text('imagesInBook')}: $count';
@@ -154,6 +189,7 @@ class AppStrings {
   String get newChapter => _text('newChapter');
   String get newScene => _text('newScene');
   String get bookTitle => _text('bookTitle');
+  String get chapterTitle => _text('chapterTitle');
   String get author => _text('author');
   String get subtitle => _text('subtitle');
   String get description => _text('description');
@@ -171,12 +207,27 @@ class AppStrings {
   String get moreActions => _text('moreActions');
   String get moveUp => _text('moveUp');
   String get moveDown => _text('moveDown');
+  String get dragSectionHint => _text('dragSectionHint');
   String get deleteSection => _text('deleteSection');
   String get deleteBook => _text('deleteBook');
   String get deleteSectionQuestion => _text('deleteSectionQuestion');
+  String get sectionTrash => _text('sectionTrash');
+  String get sectionTrashEmpty => _text('sectionTrashEmpty');
+  String get emptyTrash => _text('emptyTrash');
+  String get emptyTrashHint => _text('emptyTrashHint');
+  String get restoreSection => _text('restoreSection');
+  String get sectionRestored => _text('sectionRestored');
+  String get deletePermanently => _text('deletePermanently');
+  String get deleteForeverHint => _text('deleteForeverHint');
+  String get automaticBeforeDelete => _text('automaticBeforeDelete');
+  String get automaticBeforeReplace => _text('automaticBeforeReplace');
   String get deleteBookQuestion => _text('deleteBookQuestion');
   String get pageLayout => _text('pageLayout');
   String get paperFormat => _text('paperFormat');
+  String get paperFormatShort => _text('paperFormatShort');
+  String get showChapterTitlesInBody => _text('showChapterTitlesInBody');
+  String get showChapterTitlesInBodyHint =>
+      _text('showChapterTitlesInBodyHint');
   String get orientation => _text('orientation');
   String get portrait => _text('portrait');
   String get landscape => _text('landscape');
@@ -185,6 +236,16 @@ class AppStrings {
   String get paragraphs => _text('paragraphs');
   String get writingGoal => _text('writingGoal');
   String get writingGoalHint => _text('writingGoalHint');
+  String get writingStatistics => _text('writingStatistics');
+  String get today => _text('today');
+  String get wholeBook => _text('wholeBook');
+  String get writingTime => _text('writingTime');
+  String get activeDays => _text('activeDays');
+  String get writingStreak => _text('writingStreak');
+  String get goals => _text('goals');
+  String get dailyWritingGoal => _text('dailyWritingGoal');
+  String get projectWritingGoal => _text('projectWritingGoal');
+  String get saveGoals => _text('saveGoals');
   String get saved => _text('saved');
   String get saving => _text('saving');
   String get saveError => _text('saveError');
@@ -203,11 +264,18 @@ class AppStrings {
   String get spacingAfter => _text('spacingAfter');
   String get viewMode => _text('viewMode');
   String get continuousPages => _text('continuousPages');
+  String get continuousPagesShort => _text('continuousPagesShort');
   String get singlePage => _text('singlePage');
+  String get singlePageShort => _text('singlePageShort');
   String get twoPageSpread => _text('twoPageSpread');
   String get previousPage => _text('previousPage');
   String get nextPage => _text('nextPage');
   String get paragraphType => _text('paragraphType');
+  String get insertIntoText => _text('insertIntoText');
+  String get image => _text('image');
+  String get characterFormatting => _text('characterFormatting');
+  String get paragraphFormatting => _text('paragraphFormatting');
+  String get wholeManuscriptFormatting => _text('wholeManuscriptFormatting');
   String get bodyText => _text('bodyText');
   String get heading1 => _text('heading1');
   String get heading2 => _text('heading2');
@@ -218,6 +286,27 @@ class AppStrings {
   String get insertImage => _text('insertImage');
   String get imageInserted => _text('imageInserted');
   String get imageInsertFailed => _text('imageInsertFailed');
+  String get bookCover => _text('bookCover');
+  String get coverHint => _text('coverHint');
+  String get uploadCover => _text('uploadCover');
+  String get replaceCover => _text('replaceCover');
+  String get removeCover => _text('removeCover');
+  String get coverUpdated => _text('coverUpdated');
+  String get illustrationSettings => _text('illustrationSettings');
+  String get illustrationSettingsHint => _text('illustrationSettingsHint');
+  String get imagePosition => _text('imagePosition');
+  String get alignLeft => _text('alignLeft');
+  String get alignCenter => _text('alignCenter');
+  String get alignRight => _text('alignRight');
+  String get imageSize => _text('imageSize');
+  String get imageCaption => _text('imageCaption');
+  String get imageCaptionHint => _text('imageCaptionHint');
+  String get moveImageUp => _text('moveImageUp');
+  String get moveImageDown => _text('moveImageDown');
+  String get moveImageToCursor => _text('moveImageToCursor');
+  String get imageMoveHint => _text('imageMoveHint');
+  String get replaceImage => _text('replaceImage');
+  String get deleteImage => _text('deleteImage');
   String get insertPageBreak => _text('insertPageBreak');
   String get pageBreak => _text('pageBreak');
   String get pageBreakInserted => _text('pageBreakInserted');
@@ -232,6 +321,25 @@ class AppStrings {
   String get darkTheme => _text('darkTheme');
   String get readerFont => _text('readerFont');
   String get readerFontSize => _text('readerFontSize');
+  String get fontWeight => _text('fontWeight');
+  String get justifyText => _text('justifyText');
+  String get hyphenateWords => _text('hyphenateWords');
+  String get centerTapControls => _text('centerTapControls');
+  String get swipeChapterNavigation => _text('swipeChapterNavigation');
+  String get textToSpeech => _text('textToSpeech');
+  String get voiceSettings => _text('voiceSettings');
+  String get speechRate => _text('speechRate');
+  String get speechPitch => _text('speechPitch');
+  String get speechShort => _text('speechShort');
+  String get startReadingAloud => _text('startReadingAloud');
+  String get stopReadingAloud => _text('stopReadingAloud');
+  String get chooseSpeechStart => _text('chooseSpeechStart');
+  String get cancelSpeechStart => _text('cancelSpeechStart');
+  String get pauseReadingAloud => _text('pauseReadingAloud');
+  String get resumeReadingAloud => _text('resumeReadingAloud');
+  String get slowerSpeech => _text('slowerSpeech');
+  String get fasterSpeech => _text('fasterSpeech');
+  String get speechError => _text('speechError');
   String get textWidth => _text('textWidth');
   String get previousSection => _text('previousSection');
   String get nextSection => _text('nextSection');
@@ -253,6 +361,7 @@ class AppStrings {
   String get deleteNote => _text('deleteNote');
   String get noteText => _text('noteText');
   String get save => _text('save');
+  String get searchShort => _text('searchShort');
   String get searchInBook => _text('searchInBook');
   String get clearSearch => _text('clearSearch');
   String get searchHint => _text('searchHint');
@@ -284,6 +393,10 @@ class AppStrings {
   String get saveQuote => _text('saveQuote');
   String get addNoteToSelection => _text('addNoteToSelection');
   String get copySelection => _text('copySelection');
+  String get dictionary => _text('dictionary');
+  String get translate => _text('translate');
+  String get webSearch => _text('webSearch');
+  String get externalActionFailed => _text('externalActionFailed');
   String get closeSelectionActions => _text('closeSelectionActions');
   String get deleteHighlight => _text('deleteHighlight');
   String get deleteQuote => _text('deleteQuote');
@@ -350,720 +463,10 @@ class AppStrings {
       '${_text('readerPage')} $current ${_text('ofPages')} $count';
   String sectionOf(int current, int count) =>
       '${_text('section')} $current ${_text('ofPages')} $count';
+  String sectionTitle(int number) => '${_text('section')} $number';
 
   static const _values = <String, Map<String, String>>{
-    'ru': {
-      'appTitle': 'Литерия',
-      'quote': 'Путешествие в тысячу миль начинается с одного шага.',
-      'openBook': 'Открыть книгу',
-      'entries': 'Записи',
-      'newEntry': 'Новая запись',
-      'newEntryTitle': 'Заголовок записи',
-      'deleteEntry': 'Удалить',
-      'deleteQuestion': 'Удалить эту запись без возможности восстановления?',
-      'cancel': 'Отмена',
-      'formatting': 'Форматирование',
-      'margins': 'Поля страницы',
-      'startWriting': 'Начните писать…',
-      'addPage': 'Добавить страницу',
-      'page': 'Страница',
-      'a4Sheet': 'Лист A4',
-      'ofPages': 'из',
-      'normal': 'Обычные',
-      'narrow': 'Узкие',
-      'wide': 'Широкие',
-      'top': 'Верх',
-      'right': 'Право',
-      'bottom': 'Низ',
-      'left': 'Лево',
-      'apply': 'Применить',
-      'language': 'Язык',
-      'data': 'Данные',
-      'exportData': 'Экспортировать',
-      'importData': 'Импортировать',
-      'exportSuccess': 'Резервная копия сохранена',
-      'importSuccess': 'Данные восстановлены из файла',
-      'importFailed': 'Не удалось прочитать файл дневника',
-      'confirmImport': 'Текущие записи будут заменены данными из файла.',
-      'millimeters': 'мм',
-      'studioTitle': 'Литерия',
-      'homeTagline': 'Ваши книги — от первой строки до последней страницы',
-      'write': 'Писать',
-      'writeSubtitle': 'Создавайте и оформляйте свои книги',
-      'read': 'Читать',
-      'readSubtitle': 'Загружайте и читайте книги',
-      'settings': 'Настройки',
-      'settingsSubtitle': 'Внешний вид, язык и данные',
-      'continueWriting': 'Продолжить писать',
-      'continueReading': 'Продолжить чтение',
-      'createFirstManuscript': 'Создать первую рукопись',
-      'importFirstBook': 'Загрузить первую книгу',
-      'manuscriptLibrary': 'Мои рукописи',
-      'readingLibrary': 'Мои книги',
-      'createBook': 'Создать книгу',
-      'supportedBookFormats': 'EPUB, FB2 и FB2.ZIP без DRM',
-      'emptyManuscripts': 'Здесь появятся книги, которые вы пишете',
-      'emptyReadingLibrary': 'Здесь появятся загруженные книги',
-      'appearance': 'Оформление приложения',
-      'systemTheme': 'Как в системе',
-      'help': 'Как пользоваться',
-      'about': 'О приложении',
-      'bookStorage': 'Хранилище книг',
-      'bookStorageSubtitle': 'Оригиналы книг и занимаемое место',
-      'totalBookData': 'Всего данных книг',
-      'storedOriginals': 'Сохранённые оригиналы',
-      'processedBooks': 'Текст, изображения и обложки',
-      'freeSpace': 'Свободно на устройстве',
-      'storedOriginal': 'Оригинал сохранён',
-      'originalNotStored': 'Оригинал не сохранён',
-      'deleteStoredOriginal': 'Удалить сохранённый оригинал',
-      'deleteBooksCompletely': 'Удалить книги полностью',
-      'clearTemporaryFiles': 'Очистить временные файлы',
-      'originalDeleteWarning':
-          'Точный исходный EPUB, FB2 или ZIP будет удалён. Книга, прогресс, закладки и заметки останутся.',
-      'completeDeleteWarning':
-          'Книги, их главы, изображения, прогресс, закладки, заметки и сохранённые оригиналы будут удалены.',
-      'temporaryFilesCleared': 'Временные файлы очищены',
-      'originalFilesDeleted': 'Сохранённые оригиналы удалены',
-      'booksDeleted': 'Выбранные книги удалены',
-      'bySize': 'По размеру',
-      'byLastRead': 'По последнему чтению',
-      'structure': 'Структура',
-      'undo': 'Отменить',
-      'redo': 'Повторить',
-      'writerSettings': 'Настройки рукописи',
-      'writerFormatting': 'Оформление',
-      'onboarding': 'Обучение',
-      'quickStart': 'Быстрый старт',
-      'quickStartBody':
-          '«Писать» открывает ваши рукописи, «Читать» — загруженные книги. Все настройки текущего режима находятся на нижней панели.',
-      'understood': 'Понятно',
-      'more': 'Ещё',
-      'previewBook': 'Предпросмотр книги',
-      'resetSettings': 'Сбросить настройки',
-      'library': 'Библиотека',
-      'librarySearchHint': 'Название, автор, серия или коллекция',
-      'sortBy': 'Сортировка',
-      'recentlyUpdated': 'Недавно открытые',
-      'byTitle': 'По названию',
-      'byAuthor': 'По автору',
-      'byProgress': 'По прогрессу',
-      'allBooks': 'Все',
-      'manuscripts': 'Рукописи',
-      'importedBooks': 'Загруженные',
-      'unreadBooks': 'Не начаты',
-      'readingBooks': 'Читаю',
-      'finishedBooks': 'Прочитаны',
-      'allCollections': 'Все коллекции',
-      'noCollection': 'Без коллекции',
-      'moveToCollection': 'Добавить в коллекцию',
-      'collectionName': 'Коллекция',
-      'collectionHint': 'Например: Фантастика',
-      'removeFromCollection': 'Убрать из коллекции',
-      'noBooksFound': 'По заданным условиям книг не найдено',
-      'emptyLibrary': 'Создайте рукопись или импортируйте книгу',
-      'manuscript': 'Рукопись',
-      'properties': 'Свойства',
-      'newBook': 'Новая книга',
-      'importEbook': 'Загрузить книгу',
-      'importBooks': 'Загрузить книги',
-      'findOnDevice': 'Найти на устройстве',
-      'foundOnDevice': 'Найдено новых книг',
-      'addBookFolder': 'Добавить папку',
-      'refresh': 'Обновить',
-      'addSelected': 'Добавить выбранные',
-      'removeFolder': 'Удалить папку из поиска',
-      'noBookFolders':
-          'Добавьте папку с книгами — Литерия запомнит её и будет проверять автоматически.',
-      'noDeviceBooks': 'В выбранных папках новых книг не найдено',
-      'alreadyInLibrary': 'Уже в библиотеке',
-      'notAdded': 'Не добавлена',
-      'noAccess': 'Нет доступа',
-      'savingBooks': 'Сохраняем книги в Литерии…',
-      'duplicateBooksSkipped': 'Повторные книги пропущены',
-      'someBooksFailed': 'Некоторые файлы не удалось прочитать',
-      'notEnoughStorage': 'Недостаточно свободного места',
-      'importEbookHint': 'Поддерживаются EPUB, FB2 и FB2.ZIP без DRM',
-      'importedBook': 'Импортированная книга',
-      'importedBookHint':
-          'Текст защищён от случайного редактирования. Прогресс, закладки и заметки сохраняются.',
-      'sourceFile': 'Исходный файл',
-      'sectionsInBook': 'Разделов',
-      'imagesInBook': 'Изображений',
-      'bookImported': 'Книга добавлена в библиотеку',
-      'bookImportFailed': 'Не удалось прочитать книгу',
-      'unsupportedBookFormat': 'Поддерживаются EPUB, FB2 и FB2.ZIP',
-      'noReadableBookText':
-          'В книге не найдено доступное содержимое. Возможно, файл повреждён или защищён DRM.',
-      'newPart': 'Новая часть',
-      'newChapter': 'Новая глава',
-      'newScene': 'Новая сцена',
-      'bookTitle': 'Название книги',
-      'author': 'Автор',
-      'subtitle': 'Подзаголовок',
-      'description': 'Аннотация',
-      'draftStatus': 'Статус текста',
-      'planned': 'Запланировано',
-      'draft': 'Черновик',
-      'revision': 'Редактура',
-      'complete': 'Готово',
-      'editor': 'Редактор',
-      'focusWriting': 'Скрыть панели',
-      'exitFocusWriting': 'Показать панели',
-      'a4Preview': 'Предпросмотр A4',
-      'comfortableWriting': 'Удобный набор',
-      'a4PreviewHint':
-          'Точная разметка A4: поля, переносы и страницы пересчитаны под печатный лист.',
-      'moreActions': 'Другие действия',
-      'moveUp': 'Переместить выше',
-      'moveDown': 'Переместить ниже',
-      'deleteSection': 'Удалить раздел',
-      'deleteBook': 'Удалить книгу',
-      'deleteSectionQuestion':
-          'Раздел и все его вложенные сцены будут удалены.',
-      'deleteBookQuestion': 'Книга и все её главы будут удалены.',
-      'pageLayout': 'Макет страницы',
-      'paperFormat': 'Формат бумаги',
-      'orientation': 'Ориентация',
-      'portrait': 'Книжная',
-      'landscape': 'Альбомная',
-      'words': 'Слов',
-      'characters': 'Знаков',
-      'paragraphs': 'Абзацев',
-      'writingGoal': 'Цель раздела, слов',
-      'writingGoalHint': 'Оставьте пустым, если цель не нужна',
-      'saved': 'Сохранено',
-      'saving': 'Сохранение…',
-      'saveError': 'Не сохранено',
-      'paragraphStyle': 'Стиль основного текста',
-      'stylePreset': 'Готовый стиль',
-      'modernStyle': 'Современный',
-      'classicStyle': 'Классическая книга',
-      'manuscriptStyle': 'Рукопись для редактора',
-      'customStyle': 'Пользовательский',
-      'defaultFont': 'Основной шрифт',
-      'fontSize': 'Размер',
-      'points': 'пт',
-      'paragraphIndent': 'Отступ абзаца',
-      'lineSpacing': 'Межстрочный интервал',
-      'spacingBefore': 'Перед абзацем',
-      'spacingAfter': 'После абзаца',
-      'viewMode': 'Режим просмотра',
-      'continuousPages': 'Лента страниц',
-      'singlePage': 'Одна страница',
-      'twoPageSpread': 'Разворот',
-      'previousPage': 'Предыдущая страница',
-      'nextPage': 'Следующая страница',
-      'paragraphType': 'Стиль абзаца',
-      'bodyText': 'Основной текст',
-      'heading1': 'Заголовок 1',
-      'heading2': 'Заголовок 2',
-      'heading3': 'Заголовок 3',
-      'quoteStyle': 'Цитата',
-      'epigraph': 'Эпиграф',
-      'sceneBreak': 'Разделитель сцены',
-      'insertImage': 'Вставить изображение',
-      'imageInserted': 'Изображение добавлено в рукопись',
-      'imageInsertFailed':
-          'Не удалось добавить изображение. Поддерживаются PNG, JPEG, GIF и WebP до 20 МБ.',
-      'insertPageBreak': 'Вставить разрыв страницы',
-      'pageBreak': 'Разрыв страницы',
-      'pageBreakInserted': 'Следующий текст начнётся с новой страницы',
-      'reader': 'Читать книгу',
-      'tableOfContents': 'Оглавление',
-      'readingSettings': 'Настройки чтения',
-      'focusReading': 'Скрыть панели',
-      'exitFocusReading': 'Показать панели',
-      'readerTheme': 'Тема',
-      'lightTheme': 'Светлая',
-      'sepiaTheme': 'Сепия',
-      'darkTheme': 'Тёмная',
-      'readerFont': 'Шрифт читалки',
-      'readerFontSize': 'Размер текста',
-      'textWidth': 'Ширина текста',
-      'previousSection': 'Предыдущий раздел',
-      'nextSection': 'Следующий раздел',
-      'previousShort': 'Назад',
-      'nextShort': 'Вперёд',
-      'readingProgress': 'Прогресс чтения',
-      'section': 'Раздел',
-      'contentsShort': 'Главы',
-      'bookmarks': 'Закладки',
-      'notes': 'Заметки',
-      'noBookmarks': 'Здесь появятся сохранённые места книги',
-      'noNotes': 'Добавьте заметку к текущему месту чтения',
-      'bookmark': 'Закладка',
-      'addBookmark': 'Добавить закладку',
-      'removeBookmark': 'Убрать закладку',
-      'deleteBookmark': 'Удалить закладку',
-      'addNoteHere': 'Заметка к этому месту',
-      'newNote': 'Новая заметка',
-      'editNote': 'Изменить заметку',
-      'deleteNote': 'Удалить заметку',
-      'noteText': 'Текст заметки',
-      'save': 'Сохранить',
-      'searchInBook': 'Поиск по книге',
-      'clearSearch': 'Очистить поиск',
-      'searchHint': 'Введите минимум два символа для поиска по всей книге',
-      'nothingFound': 'Совпадений не найдено',
-      'findAndReplace': 'Поиск и замена в рукописи',
-      'manuscriptSearchHint': 'Введите минимум два символа',
-      'replaceWith': 'Заменить на',
-      'replaceAll': 'Заменить всё',
-      'caseSensitive': 'Учитывать регистр',
-      'matchesFound': 'Найдено совпадений',
-      'replacementsMade': 'Выполнено замен',
-      'readerViewMode': 'Режим чтения',
-      'continuousReading': 'Лента',
-      'singlePageReading': 'Страница',
-      'spreadReading': 'Разворот',
-      'spreadPhoneHint':
-          'На узком экране разворот автоматически становится одной страницей.',
-      'horizontalMargins': 'Поля слева и справа',
-      'verticalMargins': 'Поля сверху и снизу',
-      'previousReaderPage': 'Предыдущая страница книги',
-      'nextReaderPage': 'Следующая страница книги',
-      'readerPage': 'Страница',
-      'highlights': 'Выделения',
-      'quotes': 'Цитаты',
-      'noHighlights':
-          'Выделите текст в книге, чтобы сохранить его цветом или как цитату',
-      'highlightActions': 'Действия с выделением',
-      'yellowHighlight': 'Жёлтое выделение',
-      'greenHighlight': 'Зелёное выделение',
-      'blueHighlight': 'Синее выделение',
-      'pinkHighlight': 'Розовое выделение',
-      'saveQuote': 'Цитата',
-      'addNoteToSelection': 'Заметка к выбранному тексту',
-      'copySelection': 'Копировать выбранный текст',
-      'closeSelectionActions': 'Закрыть действия с текстом',
-      'deleteHighlight': 'Удалить выделение',
-      'deleteQuote': 'Удалить цитату',
-      'exportAnnotations': 'Экспорт аннотаций',
-      'exportMarkdown': 'Markdown (.md)',
-      'exportMarkdownHint': 'Удобно читать и открывать в текстовых редакторах',
-      'exportJson': 'JSON (.json)',
-      'exportJsonHint': 'Структурированная резервная копия для переноса данных',
-      'annotationsExported': 'Аннотации сохранены',
-      'annotationsExportFailed': 'Не удалось сохранить аннотации',
-      'quoteSaved': 'Цитата сохранена',
-      'highlightSaved': 'Выделение сохранено',
-      'selectionCopied': 'Текст скопирован',
-      'exportBook': 'Экспорт книги',
-      'exportEpub': 'EPUB 3.3 (.epub)',
-      'exportEpubHint':
-          'Адаптивная электронная книга с оглавлением и оформлением текста',
-      'exportFb2': 'FictionBook (.fb2)',
-      'exportFb2Hint':
-          'Формат для популярных читалок с главами и оформлением текста',
-      'exportFb2Zip': 'FictionBook в архиве (.fb2.zip)',
-      'exportFb2ZipHint':
-          'Компактный FB2 для библиотек и устройств с поддержкой архивов',
-      'exportPdf': 'Печатный PDF (.pdf)',
-      'exportPdfHint':
-          'Фиксированные страницы A4 с полями, оглавлением и нумерацией',
-      'exportDocx': 'Документ Word (.docx)',
-      'exportDocxHint':
-          'Редактируемая рукопись со стилями, оглавлением и разметкой A4',
-      'exportHtml': 'Веб-страница (.html)',
-      'exportHtmlHint':
-          'Автономная адаптивная страница с оглавлением и оформлением',
-      'exportTxt': 'Обычный текст (.txt)',
-      'exportTxtHint': 'Максимально совместимый текст без оформления',
-      'readerExportFormats': 'Для электронных читалок',
-      'printExportFormats': 'Для печати и редактирования',
-      'textExportFormats': 'Открытые текстовые форматы',
-      'bookExported': 'Книга сохранена',
-      'bookExportFailed': 'Не удалось сохранить книгу',
-      'pdfPreview': 'Предварительный просмотр PDF',
-      'savePdf': 'Сохранить PDF',
-      'preparingPdf': 'Подготавливаем печатные страницы…',
-      'pdfPreviewFailed': 'Не удалось создать предварительный просмотр PDF',
-      'pdfSaved': 'PDF сохранён',
-      'retry': 'Повторить',
-      'projectData': 'Данные проекта',
-      'versionHistory': 'История версий',
-      'createVersion': 'Создать снимок',
-      'versionLabel': 'Название снимка',
-      'versionLabelHint': 'Например: перед редактурой главы',
-      'unnamedVersion': 'Снимок без названия',
-      'noVersions':
-          'Снимков пока нет. Создайте первый перед крупными правками.',
-      'restoreVersion': 'Восстановить',
-      'restoreVersionQuestion':
-          'Текущая версия будет сохранена защитным снимком, затем рукопись заменится выбранной версией.',
-      'versionCreated': 'Снимок версии создан',
-      'versionRestored': 'Версия восстановлена',
-      'versionOperationFailed': 'Не удалось выполнить операцию с версией',
-      'deleteVersion': 'Удалить снимок',
-      'deleteVersionQuestion':
-          'Удалить этот снимок без возможности восстановления?',
-      'safetyVersionLabel': 'Автоматически перед восстановлением',
-      'backupProject': 'Сохранить резервную копию',
-      'restoreProjectBackup': 'Восстановить проект из резервной копии',
-      'projectBackupSaved': 'Резервная копия проекта сохранена',
-      'projectBackupFailed': 'Не удалось сохранить резервную копию',
-      'projectRestored': 'Проект восстановлен из резервной копии',
-      'projectRestoreFailed': 'Не удалось прочитать резервную копию проекта',
-      'confirmProjectRestore':
-          'Текущая книга будет сохранена защитным снимком и заменена данными из выбранного файла.',
-      'webVersionLimit':
-          'В браузере хранятся пять последних снимков каждой книги. Для долговременного хранения сохраняйте резервные копии в файл.',
-    },
-    'en': {
-      'appTitle': 'Literia',
-      'quote': 'A journey of a thousand miles begins with a single step.',
-      'openBook': 'Open book',
-      'entries': 'Entries',
-      'newEntry': 'New entry',
-      'newEntryTitle': 'Entry title',
-      'deleteEntry': 'Delete',
-      'deleteQuestion': 'Delete this entry permanently?',
-      'cancel': 'Cancel',
-      'formatting': 'Formatting',
-      'margins': 'Page margins',
-      'startWriting': 'Start writing…',
-      'addPage': 'Add page',
-      'page': 'Page',
-      'a4Sheet': 'A4 sheet',
-      'ofPages': 'of',
-      'normal': 'Normal',
-      'narrow': 'Narrow',
-      'wide': 'Wide',
-      'top': 'Top',
-      'right': 'Right',
-      'bottom': 'Bottom',
-      'left': 'Left',
-      'apply': 'Apply',
-      'language': 'Language',
-      'data': 'Data',
-      'exportData': 'Export',
-      'importData': 'Import',
-      'exportSuccess': 'Backup file saved',
-      'importSuccess': 'Diary restored from file',
-      'importFailed': 'The diary file could not be read',
-      'confirmImport': 'Current entries will be replaced by the imported file.',
-      'millimeters': 'mm',
-      'studioTitle': 'Literia',
-      'homeTagline': 'Your books, from the first line to the last page',
-      'write': 'Write',
-      'writeSubtitle': 'Create and format your own books',
-      'read': 'Read',
-      'readSubtitle': 'Import and enjoy your books',
-      'settings': 'Settings',
-      'settingsSubtitle': 'Appearance, language, and data',
-      'continueWriting': 'Continue writing',
-      'continueReading': 'Continue reading',
-      'createFirstManuscript': 'Create your first manuscript',
-      'importFirstBook': 'Import your first book',
-      'manuscriptLibrary': 'My manuscripts',
-      'readingLibrary': 'My books',
-      'createBook': 'Create book',
-      'supportedBookFormats': 'DRM-free EPUB, FB2, and FB2.ZIP',
-      'emptyManuscripts': 'Books you write will appear here',
-      'emptyReadingLibrary': 'Imported books will appear here',
-      'appearance': 'App appearance',
-      'systemTheme': 'Use system setting',
-      'help': 'How to use Literia',
-      'about': 'About',
-      'bookStorage': 'Book storage',
-      'bookStorageSubtitle': 'Original books and occupied space',
-      'totalBookData': 'Total book data',
-      'storedOriginals': 'Stored originals',
-      'processedBooks': 'Text, images, and covers',
-      'freeSpace': 'Free device space',
-      'storedOriginal': 'Original stored',
-      'originalNotStored': 'Original not stored',
-      'deleteStoredOriginal': 'Delete stored original',
-      'deleteBooksCompletely': 'Delete books completely',
-      'clearTemporaryFiles': 'Clear temporary files',
-      'originalDeleteWarning':
-          'The exact EPUB, FB2, or ZIP source will be deleted. The book, progress, bookmarks, and notes will remain.',
-      'completeDeleteWarning':
-          'The books, chapters, images, progress, bookmarks, notes, and stored originals will be deleted.',
-      'temporaryFilesCleared': 'Temporary files cleared',
-      'originalFilesDeleted': 'Stored originals deleted',
-      'booksDeleted': 'Selected books deleted',
-      'bySize': 'By size',
-      'byLastRead': 'By last read',
-      'structure': 'Structure',
-      'undo': 'Undo',
-      'redo': 'Redo',
-      'writerSettings': 'Manuscript settings',
-      'writerFormatting': 'Formatting',
-      'onboarding': 'Tutorial',
-      'quickStart': 'Quick start',
-      'quickStartBody':
-          'Write opens your manuscripts, Read opens imported books. Settings for the current mode are always on the bottom bar.',
-      'understood': 'Got it',
-      'more': 'More',
-      'previewBook': 'Preview book',
-      'resetSettings': 'Reset settings',
-      'library': 'Library',
-      'librarySearchHint': 'Title, author, series, or collection',
-      'sortBy': 'Sort by',
-      'recentlyUpdated': 'Recently opened',
-      'byTitle': 'Title',
-      'byAuthor': 'Author',
-      'byProgress': 'Reading progress',
-      'allBooks': 'All',
-      'manuscripts': 'Manuscripts',
-      'importedBooks': 'Imported',
-      'unreadBooks': 'Not started',
-      'readingBooks': 'Reading',
-      'finishedBooks': 'Finished',
-      'allCollections': 'All collections',
-      'noCollection': 'No collection',
-      'moveToCollection': 'Add to collection',
-      'collectionName': 'Collection',
-      'collectionHint': 'For example: Science fiction',
-      'removeFromCollection': 'Remove from collection',
-      'noBooksFound': 'No books match these filters',
-      'emptyLibrary': 'Create a manuscript or import a book',
-      'manuscript': 'Manuscript',
-      'properties': 'Properties',
-      'newBook': 'New book',
-      'importEbook': 'Import book',
-      'importBooks': 'Import books',
-      'findOnDevice': 'Find on device',
-      'foundOnDevice': 'New books found',
-      'addBookFolder': 'Add folder',
-      'refresh': 'Refresh',
-      'addSelected': 'Add selected',
-      'removeFolder': 'Remove folder from search',
-      'noBookFolders':
-          'Add a book folder. Literia will remember it and check it automatically.',
-      'noDeviceBooks': 'No new books were found in the selected folders',
-      'alreadyInLibrary': 'Already in library',
-      'notAdded': 'Not added',
-      'noAccess': 'No access',
-      'savingBooks': 'Saving books in Literia…',
-      'duplicateBooksSkipped': 'Duplicate books were skipped',
-      'someBooksFailed': 'Some files could not be read',
-      'notEnoughStorage': 'Not enough free space',
-      'importEbookHint': 'Supports DRM-free EPUB, FB2, and FB2.ZIP files',
-      'importedBook': 'Imported book',
-      'importedBookHint':
-          'The text is protected from accidental editing. Progress, bookmarks, and notes are saved.',
-      'sourceFile': 'Source file',
-      'sectionsInBook': 'Sections',
-      'imagesInBook': 'Images',
-      'bookImported': 'Book added to the library',
-      'bookImportFailed': 'The book could not be read',
-      'unsupportedBookFormat': 'EPUB, FB2, and FB2.ZIP are supported',
-      'noReadableBookText':
-          'No readable content was found. The file may be damaged or use DRM.',
-      'newPart': 'New part',
-      'newChapter': 'New chapter',
-      'newScene': 'New scene',
-      'bookTitle': 'Book title',
-      'author': 'Author',
-      'subtitle': 'Subtitle',
-      'description': 'Description',
-      'draftStatus': 'Draft status',
-      'planned': 'Planned',
-      'draft': 'Draft',
-      'revision': 'Revision',
-      'complete': 'Complete',
-      'editor': 'Editor',
-      'focusWriting': 'Hide panels',
-      'exitFocusWriting': 'Show panels',
-      'a4Preview': 'A4 preview',
-      'comfortableWriting': 'Comfortable writing',
-      'a4PreviewHint':
-          'Exact A4 layout: margins, line wrapping, and pages use the print sheet.',
-      'moreActions': 'More actions',
-      'moveUp': 'Move up',
-      'moveDown': 'Move down',
-      'deleteSection': 'Delete section',
-      'deleteBook': 'Delete book',
-      'deleteSectionQuestion':
-          'The section and all of its nested scenes will be deleted.',
-      'deleteBookQuestion': 'The book and all of its chapters will be deleted.',
-      'pageLayout': 'Page layout',
-      'paperFormat': 'Paper size',
-      'orientation': 'Orientation',
-      'portrait': 'Portrait',
-      'landscape': 'Landscape',
-      'words': 'Words',
-      'characters': 'Characters',
-      'paragraphs': 'Paragraphs',
-      'writingGoal': 'Section goal, words',
-      'writingGoalHint': 'Leave empty if no goal is needed',
-      'saved': 'Saved',
-      'saving': 'Saving…',
-      'saveError': 'Not saved',
-      'paragraphStyle': 'Body text style',
-      'stylePreset': 'Style preset',
-      'modernStyle': 'Modern',
-      'classicStyle': 'Classic book',
-      'manuscriptStyle': 'Editor manuscript',
-      'customStyle': 'Custom',
-      'defaultFont': 'Default font',
-      'fontSize': 'Size',
-      'points': 'pt',
-      'paragraphIndent': 'Paragraph indent',
-      'lineSpacing': 'Line spacing',
-      'spacingBefore': 'Before paragraph',
-      'spacingAfter': 'After paragraph',
-      'viewMode': 'View mode',
-      'continuousPages': 'Continuous pages',
-      'singlePage': 'Single page',
-      'twoPageSpread': 'Two-page spread',
-      'previousPage': 'Previous page',
-      'nextPage': 'Next page',
-      'paragraphType': 'Paragraph style',
-      'bodyText': 'Body text',
-      'heading1': 'Heading 1',
-      'heading2': 'Heading 2',
-      'heading3': 'Heading 3',
-      'quoteStyle': 'Quote',
-      'epigraph': 'Epigraph',
-      'sceneBreak': 'Scene break',
-      'insertImage': 'Insert image',
-      'imageInserted': 'Image added to the manuscript',
-      'imageInsertFailed':
-          'Could not add the image. PNG, JPEG, GIF, and WebP up to 20 MB are supported.',
-      'insertPageBreak': 'Insert page break',
-      'pageBreak': 'Page break',
-      'pageBreakInserted': 'The following text will start on a new page',
-      'reader': 'Read book',
-      'tableOfContents': 'Table of contents',
-      'readingSettings': 'Reading settings',
-      'focusReading': 'Hide controls',
-      'exitFocusReading': 'Show controls',
-      'readerTheme': 'Theme',
-      'lightTheme': 'Light',
-      'sepiaTheme': 'Sepia',
-      'darkTheme': 'Dark',
-      'readerFont': 'Reader font',
-      'readerFontSize': 'Text size',
-      'textWidth': 'Text width',
-      'previousSection': 'Previous section',
-      'nextSection': 'Next section',
-      'previousShort': 'Back',
-      'nextShort': 'Next',
-      'readingProgress': 'Reading progress',
-      'section': 'Section',
-      'contentsShort': 'Contents',
-      'bookmarks': 'Bookmarks',
-      'notes': 'Notes',
-      'noBookmarks': 'Saved places will appear here',
-      'noNotes': 'Add a note to the current reading position',
-      'bookmark': 'Bookmark',
-      'addBookmark': 'Add bookmark',
-      'removeBookmark': 'Remove bookmark',
-      'deleteBookmark': 'Delete bookmark',
-      'addNoteHere': 'Note at this place',
-      'newNote': 'New note',
-      'editNote': 'Edit note',
-      'deleteNote': 'Delete note',
-      'noteText': 'Note text',
-      'save': 'Save',
-      'searchInBook': 'Search in book',
-      'clearSearch': 'Clear search',
-      'searchHint': 'Enter at least two characters to search the whole book',
-      'nothingFound': 'No matches found',
-      'findAndReplace': 'Find and replace in manuscript',
-      'manuscriptSearchHint': 'Enter at least two characters',
-      'replaceWith': 'Replace with',
-      'replaceAll': 'Replace all',
-      'caseSensitive': 'Match case',
-      'matchesFound': 'Matches found',
-      'replacementsMade': 'Replacements made',
-      'readerViewMode': 'Reading mode',
-      'continuousReading': 'Scroll',
-      'singlePageReading': 'Page',
-      'spreadReading': 'Spread',
-      'spreadPhoneHint':
-          'On a narrow screen, a spread automatically becomes one page.',
-      'horizontalMargins': 'Left and right margins',
-      'verticalMargins': 'Top and bottom margins',
-      'previousReaderPage': 'Previous book page',
-      'nextReaderPage': 'Next book page',
-      'readerPage': 'Page',
-      'highlights': 'Highlights',
-      'quotes': 'Quotes',
-      'noHighlights': 'Select book text to save a highlight or quote',
-      'highlightActions': 'Highlight actions',
-      'yellowHighlight': 'Yellow highlight',
-      'greenHighlight': 'Green highlight',
-      'blueHighlight': 'Blue highlight',
-      'pinkHighlight': 'Pink highlight',
-      'saveQuote': 'Quote',
-      'addNoteToSelection': 'Note on selected text',
-      'copySelection': 'Copy selected text',
-      'closeSelectionActions': 'Close text actions',
-      'deleteHighlight': 'Delete highlight',
-      'deleteQuote': 'Delete quote',
-      'exportAnnotations': 'Export annotations',
-      'exportMarkdown': 'Markdown (.md)',
-      'exportMarkdownHint': 'Easy to read and open in text editors',
-      'exportJson': 'JSON (.json)',
-      'exportJsonHint': 'Structured backup for transferring data',
-      'annotationsExported': 'Annotations saved',
-      'annotationsExportFailed': 'Annotations could not be saved',
-      'quoteSaved': 'Quote saved',
-      'highlightSaved': 'Highlight saved',
-      'selectionCopied': 'Text copied',
-      'exportBook': 'Export book',
-      'exportEpub': 'EPUB 3.3 (.epub)',
-      'exportEpubHint':
-          'Reflowable ebook with a table of contents and rich text styling',
-      'exportFb2': 'FictionBook (.fb2)',
-      'exportFb2Hint':
-          'Reader-friendly book with chapters and rich text styling',
-      'exportFb2Zip': 'Archived FictionBook (.fb2.zip)',
-      'exportFb2ZipHint':
-          'Compact FB2 for libraries and devices that support archives',
-      'exportPdf': 'Print PDF (.pdf)',
-      'exportPdfHint':
-          'Fixed A4 pages with margins, contents, and page numbering',
-      'exportDocx': 'Word document (.docx)',
-      'exportDocxHint':
-          'Editable manuscript with styles, contents, and A4 page layout',
-      'exportHtml': 'Web page (.html)',
-      'exportHtmlHint':
-          'Standalone responsive page with contents and rich text styling',
-      'exportTxt': 'Plain text (.txt)',
-      'exportTxtHint': 'Maximum compatibility without text styling',
-      'readerExportFormats': 'For ebook readers',
-      'printExportFormats': 'For print and editing',
-      'textExportFormats': 'Open text formats',
-      'bookExported': 'Book saved',
-      'bookExportFailed': 'Book could not be saved',
-      'pdfPreview': 'PDF preview',
-      'savePdf': 'Save PDF',
-      'preparingPdf': 'Preparing print pages…',
-      'pdfPreviewFailed': 'PDF preview could not be created',
-      'pdfSaved': 'PDF saved',
-      'retry': 'Retry',
-      'projectData': 'Project data',
-      'versionHistory': 'Version history',
-      'createVersion': 'Create snapshot',
-      'versionLabel': 'Snapshot name',
-      'versionLabelHint': 'For example: before revising the chapter',
-      'unnamedVersion': 'Unnamed snapshot',
-      'noVersions': 'No snapshots yet. Create one before major edits.',
-      'restoreVersion': 'Restore',
-      'restoreVersionQuestion':
-          'The current version will be saved as a safety snapshot before the manuscript is replaced.',
-      'versionCreated': 'Version snapshot created',
-      'versionRestored': 'Version restored',
-      'versionOperationFailed': 'The version operation could not be completed',
-      'deleteVersion': 'Delete snapshot',
-      'deleteVersionQuestion': 'Delete this snapshot permanently?',
-      'safetyVersionLabel': 'Automatic snapshot before restore',
-      'backupProject': 'Save backup copy',
-      'restoreProjectBackup': 'Restore project from backup',
-      'projectBackupSaved': 'Project backup saved',
-      'projectBackupFailed': 'The backup could not be saved',
-      'projectRestored': 'Project restored from backup',
-      'projectRestoreFailed': 'The project backup could not be read',
-      'confirmProjectRestore':
-          'The current book will be saved as a safety snapshot and replaced with data from the selected file.',
-      'webVersionLimit':
-          'The browser keeps the five newest snapshots for each book. Save a backup file for long-term storage.',
-    },
+    'ru': appStringValuesRu,
+    'en': appStringValuesEn,
   };
 }

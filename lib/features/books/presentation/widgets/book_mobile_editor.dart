@@ -14,8 +14,6 @@ class BookMobileEditor extends StatelessWidget {
     required this.controller,
     required this.focusNode,
     required this.scrollController,
-    required this.titleController,
-    required this.onTitleChanged,
     required this.pageNumber,
     required this.pageCount,
     required this.pageFormat,
@@ -24,14 +22,13 @@ class BookMobileEditor extends StatelessWidget {
     required this.onPreviousPage,
     required this.onNextPage,
     required this.showPageNavigation,
+    this.onImageTap,
     super.key,
   });
 
   final QuillController controller;
   final FocusNode focusNode;
   final ScrollController scrollController;
-  final TextEditingController titleController;
-  final ValueChanged<String> onTitleChanged;
   final int pageNumber;
   final int pageCount;
   final BookPageFormat pageFormat;
@@ -40,6 +37,7 @@ class BookMobileEditor extends StatelessWidget {
   final VoidCallback? onPreviousPage;
   final VoidCallback? onNextPage;
   final bool showPageNavigation;
+  final BookImageTapCallback? onImageTap;
 
   @override
   Widget build(BuildContext context) => ColoredBox(
@@ -47,28 +45,9 @@ class BookMobileEditor extends StatelessWidget {
     color: AppTheme.paper,
     child: Padding(
       key: const ValueKey('mobile-writing-content'),
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
       child: Column(
         children: [
-          TextField(
-            controller: titleController,
-            cursorColor: AppTheme.ink,
-            onChanged: onTitleChanged,
-            maxLines: 2,
-            style: TextStyle(
-              color: AppTheme.ink,
-              fontFamily: paragraphSettings.fontFamily,
-              fontSize: 28,
-              height: 1.2,
-              fontWeight: FontWeight.w600,
-            ),
-            decoration: InputDecoration(
-              hintText: AppStrings.of(context).newChapter,
-              hintStyle: const TextStyle(color: Colors.blueGrey),
-              isDense: true,
-            ),
-          ),
-          const Divider(color: Color(0xFFE2E8F0), height: 28),
           Expanded(
             child: QuillEditor(
               controller: controller,
@@ -80,7 +59,7 @@ class BookMobileEditor extends StatelessWidget {
                 customStyles: BookTypography.editorStyles(paragraphSettings),
                 textSelectionThemeData: BookTypography.selectionTheme,
                 embedBuilders: [
-                  BookImageEmbedBuilder(assets),
+                  BookImageEmbedBuilder(assets, onTap: onImageTap),
                   const BookPageBreakEmbedBuilder(),
                 ],
                 scrollable: true,

@@ -1,9 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math' as math;
 
-import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/book_page_paginator.dart';
+import 'package:dnevnik/features/books/application/book_pagination_measurement.dart';
 import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_page_format.dart';
 import 'package:dnevnik/features/books/domain/book_page_view_mode.dart';
@@ -12,7 +11,9 @@ import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/manuscript_statistics.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_editor_metrics.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_editor_page_stage.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_formatting_toolbar.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_image_embed_builder.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_mobile_editor.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_page_canvas.dart';
 import 'package:flutter/material.dart';
@@ -35,6 +36,8 @@ class BookSectionEditor extends StatefulWidget {
     required this.showPageNavigation,
     required this.viewMode,
     required this.onMetricsChanged,
+    required this.showChapterTitleOnPage,
+    this.onImageTap,
     this.onControllerReady,
     super.key,
   });
@@ -54,6 +57,8 @@ class BookSectionEditor extends StatefulWidget {
   final bool showPageNavigation;
   final BookPageViewMode viewMode;
   final ValueChanged<BookEditorMetrics> onMetricsChanged;
+  final bool showChapterTitleOnPage;
+  final BookImageTapCallback? onImageTap;
   final ValueChanged<QuillController>? onControllerReady;
 
   @override
@@ -75,9 +80,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
   bool _usesPagedLayout = false;
   Timer? _paginationTimer;
   int _paginationRequest = 0;
-  int _measurementRetries = 0;
-  int _measurementPageNumber = 1;
-  final _measuredPages = <RichDocument>[];
+  final _paginationMeasurement = BookPaginationMeasurement(maxRetries: 6);
   RichDocument? _measurementDocument;
   BookEditorMetrics? _lastReportedMetrics;
   QuillController? _measurementController;
@@ -88,6 +91,20 @@ class BookSectionEditorState extends State<BookSectionEditor> {
 
   QuillController get controller => _controllers[_activePage];
   int get pageCount => _controllers.length;
+
+  void suspendTextInputFocus() {
+    for (final focusNode in _focusNodes) {
+      focusNode
+        ..canRequestFocus = false
+        ..unfocus(disposition: UnfocusDisposition.scope);
+    }
+  }
+
+  void resumeTextInputFocus() {
+    for (final focusNode in _focusNodes) {
+      focusNode.canRequestFocus = true;
+    }
+  }
 
   @override
   void initState() {
@@ -227,9 +244,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
 
   void _beginPaginationMeasurement(int request) {
     final manuscript = BookPagePaginator.merge(_pageDocuments);
-    _measuredPages.clear();
-    _measurementPageNumber = 1;
-    _measurementRetries = 0;
+    _paginationMeasurement.begin();
     _installMeasurementDocument(manuscript, request);
   }
 
@@ -265,14 +280,14 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     final viewportContext = _measurementViewportKey?.currentContext;
     final viewport = viewportContext?.findRenderObject();
     if (editorState == null || viewport is! RenderBox || !viewport.hasSize) {
-      if (_measurementRetries++ < 6) {
+      if (_paginationMeasurement.scheduleRetry()) {
         WidgetsBinding.instance.addPostFrameCallback(
           (_) => _measureCurrentDocument(request),
         );
       }
       return;
     }
-    _measurementRetries = 0;
+    _paginationMeasurement.resetRetries();
 
     final lineHeight =
         BookPageFormat.pointsToLogicalPixels(
@@ -297,7 +312,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     if (controller == null || document == null) return;
     final lastContentOffset = controller.document.length - 1;
     if (splitOffset <= 0) {
-      if (_measurementRetries++ < 6) {
+      if (_paginationMeasurement.scheduleRetry()) {
         WidgetsBinding.instance.addPostFrameCallback(
           (_) => _measureCurrentDocument(request),
         );
@@ -305,25 +320,18 @@ class BookSectionEditorState extends State<BookSectionEditor> {
       return;
     }
 
-    final hardPageSplit = BookPagePaginator.splitAtFirstHardPageBreak(
-      document,
-      splitOffset,
+    final step = _paginationMeasurement.advance(
+      document: document,
+      splitOffset: splitOffset,
+      lastContentOffset: lastContentOffset,
     );
-    if (hardPageSplit != null) {
-      _measuredPages.add(hardPageSplit.visible);
-      _measurementPageNumber++;
-      _installMeasurementDocument(hardPageSplit.overflow, request);
+    if (step.nextDocument case final nextDocument?) {
+      _installMeasurementDocument(nextDocument, request);
       return;
     }
-    if (splitOffset >= lastContentOffset) {
-      _finishPaginationMeasurement([..._measuredPages, document], request);
-      return;
+    if (step.completedDocuments case final completedDocuments?) {
+      _finishPaginationMeasurement(completedDocuments, request);
     }
-
-    final split = BookPagePaginator.split(document, splitOffset);
-    _measuredPages.add(split.visible);
-    _measurementPageNumber++;
-    _installMeasurementDocument(split.overflow, request);
   }
 
   void _finishPaginationMeasurement(List<RichDocument> documents, int request) {
@@ -490,8 +498,6 @@ class BookSectionEditorState extends State<BookSectionEditor> {
                   controller: controller,
                   focusNode: _focusNodes[_activePage],
                   scrollController: _scrollControllers[_activePage],
-                  titleController: _titleController,
-                  onTitleChanged: widget.onTitleChanged,
                   pageNumber: _activePage + 1,
                   pageCount: _controllers.length,
                   pageFormat: widget.pageFormat,
@@ -504,6 +510,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
                       ? () => _selectPage(_activePage + 1)
                       : null,
                   showPageNavigation: widget.showPageNavigation,
+                  onImageTap: widget.onImageTap,
                 ),
         ),
       ],
@@ -538,7 +545,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
               child: Opacity(
                 opacity: 0,
                 child: BookPageCanvas(
-                  pageNumber: _measurementPageNumber,
+                  pageNumber: _paginationMeasurement.currentPageNumber,
                   scale: 1,
                   pageFormat: widget.pageFormat,
                   paragraphSettings: widget.paragraphSettings,
@@ -550,6 +557,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
                   viewportKey: _measurementViewportKey!,
                   titleController: _measurementTitleController,
                   onTitleChanged: (_) {},
+                  showChapterTitle: widget.showChapterTitleOnPage,
                   isMeasurement: true,
                 ),
               ),
@@ -595,148 +603,36 @@ class BookSectionEditorState extends State<BookSectionEditor> {
   }
 
   Widget _buildSinglePage(BoxConstraints constraints, {bool compact = false}) =>
-      _buildPageStage(
+      BookEditorPageStage(
         key: ValueKey(compact ? 'mobile-a4-page-preview' : 'single-page-view'),
         constraints: constraints,
+        pageFormat: widget.pageFormat,
         pageIndices: [_activePage],
         previousPage: _activePage > 0 ? _activePage - 1 : null,
         nextPage: _activePage < _controllers.length - 1
             ? _activePage + 1
             : null,
         compact: compact,
+        pageBuilder: _buildPage,
+        onSelectPage: _selectPage,
+        onExitCompactPreview: widget.onExitCompactPreview,
       );
 
   Widget _buildPageSpread(BoxConstraints constraints) {
     final firstPage = (_activePage ~/ 2) * 2;
-    return _buildPageStage(
+    return BookEditorPageStage(
       key: const ValueKey('two-page-spread-view'),
       constraints: constraints,
+      pageFormat: widget.pageFormat,
       pageIndices: [
         firstPage,
         if (firstPage + 1 < _controllers.length) firstPage + 1,
       ],
       previousPage: firstPage > 0 ? firstPage - 2 : null,
       nextPage: firstPage + 2 < _controllers.length ? firstPage + 2 : null,
-    );
-  }
-
-  Widget _buildPageStage({
-    required Key key,
-    required BoxConstraints constraints,
-    required List<int> pageIndices,
-    required int? previousPage,
-    required int? nextPage,
-    bool compact = false,
-  }) {
-    final horizontalPadding = compact ? 24.0 : 76.0;
-    final verticalPadding = compact ? 24.0 : 36.0;
-    final compactControlsHeight = compact ? 64.0 : 0.0;
-    const pageGap = 18.0;
-    final naturalWidth =
-        widget.pageFormat.width * pageIndices.length +
-        pageGap * (pageIndices.length - 1);
-    final widthScale =
-        (constraints.maxWidth - horizontalPadding) / naturalWidth;
-    final heightScale =
-        (constraints.maxHeight - verticalPadding - compactControlsHeight) /
-        widget.pageFormat.height;
-    final scale = math
-        .min(1, math.min(widthScale, heightScale))
-        .clamp(0.1, 1.0)
-        .toDouble();
-    final strings = AppStrings.of(context);
-
-    final pages = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (var index = 0; index < pageIndices.length; index++) ...[
-          if (index > 0) const SizedBox(width: pageGap),
-          IgnorePointer(
-            ignoring: compact,
-            child: _buildPage(pageIndices[index], scale),
-          ),
-        ],
-      ],
-    );
-
-    return Stack(
-      key: key,
-      children: [
-        if (compact)
-          Positioned.fill(
-            bottom: compactControlsHeight,
-            child: Center(child: pages),
-          )
-        else
-          Center(child: pages),
-        if (compact)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 8,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (previousPage != null)
-                  IconButton.filledTonal(
-                    key: const ValueKey('book-page-previous'),
-                    tooltip: strings.previousPage,
-                    visualDensity: VisualDensity.compact,
-                    onPressed: () => _selectPage(previousPage),
-                    icon: const Icon(Icons.chevron_left),
-                  ),
-                const SizedBox(width: 12),
-                FilledButton.tonalIcon(
-                  key: const ValueKey('mobile-a4-edit-button'),
-                  onPressed: widget.onExitCompactPreview,
-                  icon: const Icon(Icons.edit_outlined, size: 18),
-                  label: Text(strings.comfortableWriting),
-                ),
-                const SizedBox(width: 12),
-                if (nextPage != null)
-                  IconButton.filledTonal(
-                    key: const ValueKey('book-page-next'),
-                    tooltip: strings.nextPage,
-                    visualDensity: VisualDensity.compact,
-                    onPressed: () => _selectPage(nextPage),
-                    icon: const Icon(Icons.chevron_right),
-                  ),
-              ],
-            ),
-          )
-        else if (!compact) ...[
-          Positioned(
-            left: 12,
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: IconButton.filledTonal(
-                key: const ValueKey('book-page-previous'),
-                tooltip: strings.previousPage,
-                onPressed: previousPage == null
-                    ? null
-                    : () => _selectPage(previousPage),
-                icon: const Icon(Icons.chevron_left),
-              ),
-            ),
-          ),
-          Positioned(
-            right: 12,
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: IconButton.filledTonal(
-                key: const ValueKey('book-page-next'),
-                tooltip: strings.nextPage,
-                onPressed: nextPage == null
-                    ? null
-                    : () => _selectPage(nextPage),
-                icon: const Icon(Icons.chevron_right),
-              ),
-            ),
-          ),
-        ],
-      ],
+      pageBuilder: _buildPage,
+      onSelectPage: _selectPage,
+      onExitCompactPreview: widget.onExitCompactPreview,
     );
   }
 
@@ -753,6 +649,8 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     viewportKey: _viewportKeys[index],
     titleController: _titleController,
     onTitleChanged: widget.onTitleChanged,
+    showChapterTitle: widget.showChapterTitleOnPage,
+    onImageTap: widget.onImageTap,
   );
 
   @override

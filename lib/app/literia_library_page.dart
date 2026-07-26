@@ -1,9 +1,17 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/application/book_library_query.dart';
+import 'package:dnevnik/features/books/domain/book_library_state.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
+import 'package:dnevnik/features/books/domain/book_section.dart';
+import 'package:dnevnik/features/books/domain/manuscript_statistics.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_adaptive_control_shell.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_cover_view.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/material.dart';
+
+part 'literia_library_controls.dart';
+part 'literia_library_items.dart';
 
 enum LiteriaLibraryMode { manuscripts, reading }
 
@@ -14,8 +22,8 @@ class LiteriaLibraryPage extends StatefulWidget {
     required this.onPrimaryAction,
     required this.onOpen,
     required this.onDelete,
-    this.onFindOnDevice,
-    this.countDeviceBooks,
+    required this.onAbout,
+    this.onScanDeviceBooks,
     super.key,
   });
 
@@ -24,283 +32,288 @@ class LiteriaLibraryPage extends StatefulWidget {
   final Future<void> Function() onPrimaryAction;
   final Future<void> Function(BookProject project) onOpen;
   final Future<void> Function(BookProject project) onDelete;
-  final Future<void> Function()? onFindOnDevice;
-  final Future<int> Function()? countDeviceBooks;
+  final Future<void> Function(BookProject project) onAbout;
+  final Future<void> Function()? onScanDeviceBooks;
 
   @override
   State<LiteriaLibraryPage> createState() => _LiteriaLibraryPageState();
 }
 
 class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
-  int? _foundDeviceBooks;
+  bool _showGrid = true;
+  bool _scanningDeviceBooks = false;
+  String _search = '';
+  BookLibraryFilter _filter = BookLibraryFilter.all;
+  BookLibrarySort _sort = BookLibrarySort.recentlyUpdated;
+  String? _collectionName;
 
   bool get _writing => widget.mode == LiteriaLibraryMode.manuscripts;
-
-  @override
-  void initState() {
-    super.initState();
-    if (!_writing) {
-      WidgetsBinding.instance.addPostFrameCallback(
-        (_) => _refreshDeviceCount(),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: widget.controller,
       builder: (context, _) {
-        final projects =
-            widget.controller.projects
-                .where(
-                  (project) =>
-                      _writing ? !project.isReadOnly : project.isReadOnly,
-                )
+        final availableProjects = widget.controller.projects
+            .where(
+              (project) => _writing ? !project.isReadOnly : project.isReadOnly,
+            )
+            .toList();
+        final projects = BookLibraryQuery(
+          search: _search,
+          filter: _filter,
+          sort: _sort,
+          collectionName: _collectionName,
+        ).apply(availableProjects);
+        final collections =
+            availableProjects
+                .map((project) => project.collectionName.trim())
+                .where((name) => name.isNotEmpty)
+                .toSet()
                 .toList()
-              ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-        return _buildPage(context, projects);
+              ..sort();
+        return _buildPage(context, projects, collections);
       },
     );
   }
 
-  Widget _buildPage(BuildContext context, List<BookProject> projects) {
+  Widget _buildPage(
+    BuildContext context,
+    List<BookProject> projects,
+    List<String> collections,
+  ) {
     final strings = AppStrings.of(context);
     return Scaffold(
-      appBar: AppBar(
+      appBar: LiteriaLeatherAppBar(
         title: Text(
           _writing ? strings.manuscriptLibrary : strings.readingLibrary,
         ),
       ),
-      body: SafeArea(
-        top: false,
-        child: CustomScrollView(
-          key: ValueKey(_writing ? 'manuscript-library' : 'reading-library'),
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: FilledButton.icon(
-                  key: ValueKey(
-                    _writing
-                        ? 'create-manuscript-button'
-                        : 'import-book-button',
-                  ),
-                  onPressed: widget.onPrimaryAction,
-                  icon: Icon(
-                    _writing ? Icons.note_add_outlined : Icons.download,
-                  ),
-                  label: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+      body: LiteriaParchmentBackground(
+        child: SafeArea(
+          top: false,
+          child: CustomScrollView(
+            key: ValueKey(_writing ? 'manuscript-library' : 'reading-library'),
+            slivers: [
+              SliverToBoxAdapter(
+                child: BookLeatherPanel(
+                  key: const ValueKey('library-control-panel'),
+                  safeArea: const EdgeInsets.only(left: 1, right: 1),
+                  child: Theme(
+                    data: bookLeatherModalTheme(context),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          _writing ? strings.createBook : strings.importBooks,
+                        _LibraryControls(
+                          writing: _writing,
+                          filter: _filter,
+                          collectionName: _collectionName,
+                          collections: collections,
+                          showGrid: _showGrid,
+                          sort: _sort,
+                          onSearchChanged: (value) =>
+                              setState(() => _search = value),
+                          onLayoutChanged: () =>
+                              setState(() => _showGrid = !_showGrid),
+                          onSortChanged: (value) =>
+                              setState(() => _sort = value),
+                          onFilterChanged: (value) =>
+                              setState(() => _filter = value),
+                          onCollectionChanged: (value) =>
+                              setState(() => _collectionName = value),
                         ),
-                        if (!_writing)
-                          Text(
-                            strings.supportedBookFormats,
-                            style: Theme.of(context).textTheme.labelSmall,
-                          ),
+                        _LibraryPrimaryActions(
+                          writing: _writing,
+                          scanning: _scanningDeviceBooks,
+                          showScanAction: widget.onScanDeviceBooks != null,
+                          onPrimaryAction: _scanningDeviceBooks
+                              ? null
+                              : widget.onPrimaryAction,
+                          onScan: _scanningDeviceBooks
+                              ? null
+                              : _scanDeviceBooks,
+                        ),
                       ],
                     ),
                   ),
                 ),
               ),
-            ),
-            if (!_writing && widget.onFindOnDevice != null)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                  child: OutlinedButton.icon(
-                    key: const ValueKey('find-device-books-button'),
-                    onPressed: _openDeviceBooks,
-                    icon: const Icon(Icons.folder_open_outlined),
-                    label: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(strings.findOnDevice),
-                          if (_foundDeviceBooks != null)
-                            Text(
-                              '${strings.foundOnDevice}: $_foundDeviceBooks',
-                              style: Theme.of(context).textTheme.labelSmall,
-                            ),
-                        ],
+              if (projects.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _EmptyLibrary(
+                    writing: _writing,
+                    filtered:
+                        _search.trim().isNotEmpty ||
+                        _filter != BookLibraryFilter.all ||
+                        _collectionName != null,
+                  ),
+                )
+              else if (_showGrid && projects.length == 1)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints.tightFor(
+                          width: _writing ? 230 : 220,
+                          height: _writing ? 196 : 320,
+                        ),
+                        child: _LibraryCard(
+                          project: projects.single,
+                          writing: _writing,
+                          onOpen: () => widget.onOpen(projects.single),
+                          onDelete: () => widget.onDelete(projects.single),
+                          onMoveToCollection: () =>
+                              _showCollectionDialog(projects.single),
+                          onToggleFavorite: () =>
+                              _toggleFavorite(projects.single),
+                          onChangeReadingStatus: () =>
+                              _showReadingStatusDialog(projects.single),
+                          onAbout: () => widget.onAbout(projects.single),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
-            if (projects.isEmpty)
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: _EmptyLibrary(writing: _writing),
-              )
-            else
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-                sliver: SliverGrid.builder(
-                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: 230,
-                    mainAxisExtent: 320,
-                    crossAxisSpacing: 14,
-                    mainAxisSpacing: 14,
+                )
+              else if (_showGrid)
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                  sliver: SliverGrid.builder(
+                    gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 230,
+                      mainAxisExtent: _writing ? 196 : 320,
+                      crossAxisSpacing: 14,
+                      mainAxisSpacing: 14,
+                    ),
+                    itemCount: projects.length,
+                    itemBuilder: (context, index) {
+                      final project = projects[index];
+                      return _LibraryCard(
+                        project: project,
+                        writing: _writing,
+                        onOpen: () => widget.onOpen(project),
+                        onDelete: () => widget.onDelete(project),
+                        onMoveToCollection: () =>
+                            _showCollectionDialog(project),
+                        onToggleFavorite: () => _toggleFavorite(project),
+                        onChangeReadingStatus: () =>
+                            _showReadingStatusDialog(project),
+                        onAbout: () => widget.onAbout(project),
+                      );
+                    },
                   ),
-                  itemCount: projects.length,
-                  itemBuilder: (context, index) {
-                    final project = projects[index];
-                    return _LibraryCard(
-                      project: project,
-                      writing: _writing,
-                      onOpen: () => widget.onOpen(project),
-                      onDelete: () => widget.onDelete(project),
-                    );
-                  },
                 ),
-              ),
-          ],
+              if (projects.isNotEmpty && !_showGrid)
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 28),
+                  sliver: SliverList.separated(
+                    itemCount: projects.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final project = projects[index];
+                      return _LibraryListTile(
+                        project: project,
+                        writing: _writing,
+                        onOpen: () => widget.onOpen(project),
+                        onDelete: () => widget.onDelete(project),
+                        onMoveToCollection: () =>
+                            _showCollectionDialog(project),
+                        onToggleFavorite: () => _toggleFavorite(project),
+                        onChangeReadingStatus: () =>
+                            _showReadingStatusDialog(project),
+                        onAbout: () => widget.onAbout(project),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Future<void> _openDeviceBooks() async {
-    await widget.onFindOnDevice?.call();
-    await _refreshDeviceCount();
-  }
-
-  Future<void> _refreshDeviceCount() async {
+  Future<void> _scanDeviceBooks() async {
+    if (_scanningDeviceBooks) return;
+    setState(() => _scanningDeviceBooks = true);
     try {
-      final count = await widget.countDeviceBooks?.call();
-      if (mounted && count != null) setState(() => _foundDeviceBooks = count);
-    } on Exception {
-      if (mounted) setState(() => _foundDeviceBooks = null);
+      await widget.onScanDeviceBooks?.call();
+    } finally {
+      if (mounted) setState(() => _scanningDeviceBooks = false);
     }
   }
-}
 
-class _EmptyLibrary extends StatelessWidget {
-  const _EmptyLibrary({required this.writing});
-
-  final bool writing;
-
-  @override
-  Widget build(BuildContext context) {
+  Future<void> _showCollectionDialog(BookProject project) async {
     final strings = AppStrings.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
+    final controller = TextEditingController(text: project.collectionName);
+    final value = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => BookLeatherDialog(
+        title: Text(strings.moveToCollection),
+        content: TextField(
+          key: const ValueKey('library-collection-field'),
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(
+            labelText: strings.collectionName,
+            hintText: strings.collectionHint,
+          ),
+          onSubmitted: (text) => Navigator.pop(dialogContext, text),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(strings.cancel),
+          ),
+          if (project.collectionName.isNotEmpty)
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, ''),
+              child: Text(strings.removeFromCollection),
+            ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            child: Text(strings.save),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (value == null) return;
+    widget.controller.updateProjectCollection(project.id, value);
+    await widget.controller.flush();
+  }
+
+  void _toggleFavorite(BookProject project) {
+    widget.controller.updateProjectFavorite(
+      project.id,
+      !project.libraryState.isFavorite,
+    );
+  }
+
+  Future<void> _showReadingStatusDialog(BookProject project) async {
+    final strings = AppStrings.of(context);
+    final status = await showDialog<BookReadingStatus>(
+      context: context,
+      builder: (dialogContext) => BookLeatherDialog(
+        title: Text(strings.readingStatus),
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              writing ? Icons.edit_note_outlined : Icons.auto_stories_outlined,
-              size: 64,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              writing ? strings.emptyManuscripts : strings.emptyReadingLibrary,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LibraryCard extends StatelessWidget {
-  const _LibraryCard({
-    required this.project,
-    required this.writing,
-    required this.onOpen,
-    required this.onDelete,
-  });
-
-  final BookProject project;
-  final bool writing;
-  final VoidCallback onOpen;
-  final VoidCallback onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    final strings = AppStrings.of(context);
-    return Card(
-      key: ValueKey('literia-project-${project.id}'),
-      clipBehavior: Clip.antiAlias,
-      margin: EdgeInsets.zero,
-      child: InkWell(
-        onTap: onOpen,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  BookCoverView(
-                    project: project,
-                    width: double.infinity,
-                    height: double.infinity,
-                    borderRadius: 0,
-                  ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: PopupMenuButton<_LibraryCardAction>(
-                      tooltip: strings.more,
-                      onSelected: (action) {
-                        if (action == _LibraryCardAction.delete) onDelete();
-                      },
-                      itemBuilder: (_) => [
-                        PopupMenuItem(
-                          value: _LibraryCardAction.delete,
-                          child: ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: const Icon(Icons.delete_outline),
-                            title: Text(strings.deleteBook),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(12),
+            RadioGroup<BookReadingStatus>(
+              groupValue: project.libraryState.readingStatus,
+              onChanged: (selected) {
+                if (selected != null) Navigator.pop(dialogContext, selected);
+              },
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    project.metadata.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    project.metadata.author.trim().isEmpty
-                        ? (writing ? strings.manuscript : strings.importedBook)
-                        : project.metadata.author,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  if (!writing) ...[
-                    const SizedBox(height: 10),
-                    LinearProgressIndicator(value: readingProgress(project)),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${(readingProgress(project) * 100).round()}%',
-                      style: Theme.of(context).textTheme.labelSmall,
+                  for (final value in BookReadingStatus.values)
+                    RadioListTile<BookReadingStatus>(
+                      value: value,
+                      title: Text(_readingStatusLabel(strings, value)),
                     ),
-                  ],
                 ],
               ),
             ),
@@ -308,7 +321,8 @@ class _LibraryCard extends StatelessWidget {
         ),
       ),
     );
+    if (status == null) return;
+    widget.controller.updateProjectReadingStatus(project.id, status);
+    await widget.controller.flush();
   }
 }
-
-enum _LibraryCardAction { delete }

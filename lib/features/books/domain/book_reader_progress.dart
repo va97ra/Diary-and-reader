@@ -37,5 +37,6 @@ class BookReaderProgress {
 
 double _normalized(Object? value) {
   final parsed = value is num ? value.toDouble() : double.tryParse('$value');
-  return (parsed ?? 0).clamp(0, 1).toDouble();
+  if (parsed == null || !parsed.isFinite) return 0;
+  return parsed.clamp(0, 1).toDouble();
 }

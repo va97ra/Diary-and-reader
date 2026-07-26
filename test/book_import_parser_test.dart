@@ -127,6 +127,18 @@ void main() {
       );
     });
 
+    test('uses EPUB navigation labels when page titles are repeated', () {
+      final imported = BookImportParser.parse(
+        BookImportFile(name: 'navigation.epub', bytes: _navigationEpub()),
+        now: _importTime,
+      );
+
+      expect(imported.sections.map((section) => section.title), [
+        'Вниз по кроличьей норе',
+        'Море слёз',
+      ]);
+    });
+
     test('imports an EPUB cover and relative inline images', () {
       final imported = BookImportParser.parse(
         BookImportFile(name: 'illustrated.epub', bytes: _illustratedEpub()),
@@ -235,6 +247,21 @@ void main() {
         isFalse,
       );
     });
+
+    test('keeps imported verse lines compact inside one paragraph', () {
+      final body = XmlDocument.parse(
+        '<body><div class="poem">Первая строка<br/><span>Вторая строка</span><br/>Третья строка</div></body>',
+      ).rootElement;
+
+      final content = XmlBookContentConverter.convert(body.children);
+      final text = richDocumentPlainText(content);
+
+      expect(text, 'Первая строка\u2028Вторая строка\u2028Третья строка\n');
+      expect(
+        content.where((operation) => operation['insert'] == '\n'),
+        hasLength(1),
+      );
+    });
   });
 }
 
@@ -259,6 +286,41 @@ Uint8List _illustratedEpub() {
       ),
     )
     ..add(ArchiveFile('EPUB/images/cover.png', _tinyPng.length, _tinyPng));
+  return Uint8List.fromList(ZipEncoder().encodeBytes(archive));
+}
+
+Uint8List _navigationEpub() {
+  final archive = Archive()
+    ..add(
+      ArchiveFile.string(
+        'META-INF/container.xml',
+        '''<?xml version="1.0"?><container xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="EPUB/package.opf"/></rootfiles></container>''',
+      ),
+    )
+    ..add(
+      ArchiveFile.string(
+        'EPUB/package.opf',
+        '''<?xml version="1.0"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>Алиса</dc:title></metadata><manifest><item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/><item id="one" href="text/one.xhtml" media-type="application/xhtml+xml"/><item id="two" href="text/two.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="one"/><itemref idref="two"/></spine></package>''',
+      ),
+    )
+    ..add(
+      ArchiveFile.string(
+        'EPUB/nav.xhtml',
+        '''<?xml version="1.0"?><html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><head><title>Алиса</title></head><body><nav epub:type="toc"><ol><li><a href="text/one.xhtml">Вниз по кроличьей норе</a></li><li><a href="text/two.xhtml">Море слёз</a></li></ol></nav></body></html>''',
+      ),
+    )
+    ..add(
+      ArchiveFile.string(
+        'EPUB/text/one.xhtml',
+        '''<?xml version="1.0"?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>Алиса</title></head><body><p>Первый текст.</p></body></html>''',
+      ),
+    )
+    ..add(
+      ArchiveFile.string(
+        'EPUB/text/two.xhtml',
+        '''<?xml version="1.0"?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>Алиса</title></head><body><p>Второй текст.</p></body></html>''',
+      ),
+    );
   return Uint8List.fromList(ZipEncoder().encodeBytes(archive));
 }
 

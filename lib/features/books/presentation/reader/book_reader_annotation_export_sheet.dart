@@ -1,5 +1,6 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/book_reader_annotation_exporter.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/material.dart';
 
 class BookReaderAnnotationExportSheet extends StatelessWidget {
@@ -12,17 +13,16 @@ class BookReaderAnnotationExportSheet extends StatelessWidget {
     final strings = AppStrings.of(context);
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
-              child: Text(
-                strings.exportAnnotations,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+            BookLeatherModalHeader(
+              title: strings.exportAnnotations,
+              onClose: () => Navigator.maybePop(context),
+              closeKey: const ValueKey('reader-export-close'),
+              padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
             ),
             ListTile(
               key: const ValueKey('reader-export-markdown'),

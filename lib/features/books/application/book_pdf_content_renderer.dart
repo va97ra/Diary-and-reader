@@ -1,5 +1,6 @@
 import 'package:dnevnik/features/books/application/book_export_content.dart';
 import 'package:dnevnik/features/books/domain/book_asset.dart';
+import 'package:dnevnik/features/books/domain/book_image_placement.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -9,6 +10,7 @@ abstract final class BookPdfContentRenderer {
     required List<BookExportBlock> blocks,
     required BookParagraphSettings settings,
     required Iterable<BookAsset> assets,
+    double maxImageWidth = 450,
   }) {
     final output = <pw.Widget>[];
     var orderedIndex = 0;
@@ -31,7 +33,7 @@ abstract final class BookPdfContentRenderer {
         _spacing(
           block,
           settings,
-          _blockWidget(block, settings, orderedIndex, assets),
+          _blockWidget(block, settings, orderedIndex, assets, maxImageWidth),
         ),
       );
       previousType = block.type;
@@ -68,17 +70,43 @@ abstract final class BookPdfContentRenderer {
     BookParagraphSettings settings,
     int orderedIndex,
     Iterable<BookAsset> assets,
+    double maxImageWidth,
   ) {
     if (block.type == BookExportBlockType.image) {
       final asset = assets
           .where((candidate) => candidate.id == block.assetId)
           .firstOrNull;
       if (asset == null) return pw.SizedBox();
-      return pw.Center(
-        child: pw.Image(
-          pw.MemoryImage(asset.bytes),
-          height: 320,
-          fit: pw.BoxFit.contain,
+      return pw.Align(
+        alignment: switch (block.imageAlignment) {
+          BookImageAlignment.left => pw.Alignment.centerLeft,
+          BookImageAlignment.center => pw.Alignment.center,
+          BookImageAlignment.right => pw.Alignment.centerRight,
+        },
+        child: pw.SizedBox(
+          width: maxImageWidth * block.imageWidthPercent / 100,
+          child: pw.Column(
+            mainAxisSize: pw.MainAxisSize.min,
+            children: [
+              pw.Image(
+                pw.MemoryImage(asset.bytes),
+                height: 320,
+                fit: pw.BoxFit.contain,
+              ),
+              if (block.imageCaption.isNotEmpty) ...[
+                pw.SizedBox(height: 4),
+                pw.Text(
+                  block.imageCaption,
+                  textAlign: pw.TextAlign.center,
+                  style: const pw.TextStyle(
+                    fontSize: 9,
+                    fontStyle: pw.FontStyle.italic,
+                    color: PdfColors.grey700,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       );
     }

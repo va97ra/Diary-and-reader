@@ -28,8 +28,11 @@ abstract final class BookHtmlExporter {
     final sections = outline
         .map((entry) {
           final level = (entry.depth + 2).clamp(2, 6);
+          final heading = project.layoutSettings.showChapterTitlesInBody
+              ? '<h$level>${escapeXml(entry.section.title)}</h$level>'
+              : '';
           return '''<section id="section-${entry.index + 1}" data-type="${entry.section.type.name}">
-  <h$level>${escapeXml(entry.section.title)}</h$level>
+  $heading
 ${EpubRichTextRenderer.render(entry.section.content, imageSource: (assetId) {
             final asset = project.assetById(assetId);
             return asset == null ? null : 'data:${asset.mediaType};base64,${base64Encode(asset.bytes)}';
@@ -38,6 +41,10 @@ ${EpubRichTextRenderer.render(entry.section.content, imageSource: (assetId) {
         .join('\n\n');
     final font = project.paragraphSettings.fontFamily.replaceAll('"', '');
     final settings = project.paragraphSettings;
+    final cover = project.coverAsset;
+    final coverImage = cover == null
+        ? ''
+        : '<img class="book-cover" src="data:${cover.mediaType};base64,${base64Encode(cover.bytes)}" alt="${escapeXml(metadata.title)}">';
     return '''<!doctype html>
 <html lang="${escapeXml(metadata.languageCode)}">
 <head>
@@ -64,6 +71,8 @@ ${EpubRichTextRenderer.render(entry.section.content, imageSource: (assetId) {
     .align-justify { text-align: justify; }
     .book-image { margin: 1.2rem 0; text-align: center; }
     .book-image img { max-width: 100%; height: auto; }
+    .book-image figcaption { margin-top: .4rem; font-size: .85em; font-style: italic; }
+    .book-cover { display: block; max-width: min(72%, 24rem); max-height: 70vh; margin: 0 auto 1.5rem; }
     .page-break { break-after: page; page-break-after: always; }
     ${[for (var index = 1; index <= 8; index++) '.indent-$index { margin-left: ${index * 1.5}em; }'].join('\n    ')}
     @media (max-width: 600px) { body { padding: 1.5rem 1rem; } }
@@ -71,6 +80,7 @@ ${EpubRichTextRenderer.render(entry.section.content, imageSource: (assetId) {
 </head>
 <body>
   <header>
+    $coverImage
     <h1>${escapeXml(metadata.title)}</h1>
     ${_element('p', metadata.subtitle, 'subtitle')}
     ${_element('p', metadata.author, 'author')}

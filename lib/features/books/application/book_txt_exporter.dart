@@ -30,10 +30,14 @@ abstract final class BookTxtExporter {
         entry.section.title.length.clamp(3, 72),
         '-',
       ).join();
-      text
-        ..writeln('\n$prefix${entry.section.title}')
-        ..writeln('$prefix$sectionUnderline')
-        ..writeln(PlainTextRichRenderer.render(entry.section.content));
+      if (project.layoutSettings.showChapterTitlesInBody) {
+        text
+          ..writeln('\n$prefix${entry.section.title}')
+          ..writeln('$prefix$sectionUnderline');
+      } else {
+        text.writeln();
+      }
+      text.writeln(PlainTextRichRenderer.render(entry.section.content));
     }
     return BookExportArtifact(
       bytes: Uint8List.fromList(

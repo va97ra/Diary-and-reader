@@ -1,3 +1,4 @@
+import 'package:dnevnik/features/books/domain/book_library_state.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_reading_progress.dart';
 
@@ -8,9 +9,10 @@ enum BookLibraryFilter {
   unread,
   inProgress,
   finished,
+  favorites,
 }
 
-enum BookLibrarySort { recentlyUpdated, title, author, progress }
+enum BookLibrarySort { recentlyUpdated, lastRead, title, author, progress }
 
 class BookLibraryQuery {
   const BookLibraryQuery({
@@ -54,16 +56,21 @@ class BookLibraryQuery {
     BookLibraryFilter.all => true,
     BookLibraryFilter.manuscripts => !project.isReadOnly,
     BookLibraryFilter.imported => project.isReadOnly,
-    BookLibraryFilter.unread => readingProgress(project) <= 0.001,
+    BookLibraryFilter.unread =>
+      effectiveReadingStatus(project) == BookReadingStatus.wantToRead,
     BookLibraryFilter.inProgress =>
-      readingProgress(project) > 0.001 && readingProgress(project) < 0.999,
-    BookLibraryFilter.finished => readingProgress(project) >= 0.999,
+      effectiveReadingStatus(project) == BookReadingStatus.reading ||
+          effectiveReadingStatus(project) == BookReadingStatus.paused,
+    BookLibraryFilter.finished =>
+      effectiveReadingStatus(project) == BookReadingStatus.finished,
+    BookLibraryFilter.favorites => project.libraryState.isFavorite,
   };
 
   int _compare(BookProject left, BookProject right) => switch (sort) {
     BookLibrarySort.recentlyUpdated => right.updatedAt.compareTo(
       left.updatedAt,
     ),
+    BookLibrarySort.lastRead => _lastRead(right).compareTo(_lastRead(left)),
     BookLibrarySort.title => _text(
       left.metadata.title,
     ).compareTo(_text(right.metadata.title)),
@@ -76,8 +83,21 @@ class BookLibraryQuery {
   };
 }
 
+BookReadingStatus effectiveReadingStatus(BookProject project) {
+  final explicit = project.libraryState.readingStatus;
+  if (explicit != BookReadingStatus.automatic) return explicit;
+  final progress = readingProgress(project);
+  if (progress >= 0.999) return BookReadingStatus.finished;
+  if (progress > 0.001) return BookReadingStatus.reading;
+  return BookReadingStatus.wantToRead;
+}
+
 double readingProgress(BookProject project) {
+  if (project.isCatalogOnly) return project.catalogReadingProgress;
   return bookReadingProgress(project.sections, project.readerProgress);
 }
 
 String _text(String value) => value.trim().toLowerCase();
+
+DateTime _lastRead(BookProject project) =>
+    project.libraryState.lastReadAt ?? DateTime.fromMillisecondsSinceEpoch(0);

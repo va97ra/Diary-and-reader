@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:dnevnik/features/books/application/book_import_file.dart';
 import 'package:dnevnik/features/books/application/book_source_storage.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 
-class FileBookSourceStorage implements BookSourceStorage {
+class FileBookSourceStorage
+    implements BookSourceStorage, BookReadingCacheStorage {
   FileBookSourceStorage({required this.supportDirectory});
 
   final Directory supportDirectory;
@@ -71,13 +73,74 @@ class FileBookSourceStorage implements BookSourceStorage {
   }
 
   @override
+  Future<bool> hasOriginal(BookProject project) async {
+    final source = _resolveRelative(project.sourceStoredPath);
+    return source != null && await source.exists();
+  }
+
+  @override
+  Future<BookImportFile?> loadOriginal(BookProject project) async {
+    final source = _resolveRelative(project.sourceStoredPath);
+    if (source == null || !await source.exists()) return null;
+    return BookImportFile(
+      name: project.sourceFileName,
+      bytes: await source.readAsBytes(),
+      sourceUri: project.sourceExternalUri,
+      sourceSizeBytes: project.sourceFileSize,
+      sourceModifiedMillis: project.sourceModifiedMillis,
+    );
+  }
+
+  @override
+  Future<BookProject?> loadProcessed(BookProject project) async {
+    final cache = _processedFile(project.id);
+    if (!await cache.exists()) return null;
+    try {
+      final encoded = await cache.readAsString(encoding: utf8);
+      return Isolate.run(
+        () => _decodeProcessed(
+          encoded,
+          expectedFingerprint: project.sourceFingerprint,
+        ),
+      );
+    } on Object {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> storeProcessed(
+    BookProject project,
+    BookProject processed,
+  ) async {
+    final directory = _projectDirectory(project.id);
+    await directory.create(recursive: true);
+    final cache = _processedFile(project.id);
+    final pending = File('${cache.path}.pending');
+    await _deleteFileIfExists(pending);
+    final encoded = await Isolate.run(
+      () => jsonEncode({
+        'cacheVersion': 1,
+        'sourceFingerprint': project.sourceFingerprint,
+        'project': processed.toJson(),
+      }),
+    );
+    await pending.writeAsString(encoded, encoding: utf8, flush: true);
+    await _deleteFileIfExists(cache);
+    await pending.rename(cache.path);
+  }
+
+  @override
   Future<BookStorageOverview> inspect(
     Iterable<BookProject> projects, {
     int? availableBytes,
   }) async {
     final entries = <BookStorageEntry>[];
     for (final project in projects.where((item) => item.isReadOnly)) {
-      final processed = utf8.encode(jsonEncode(project.toJson())).length;
+      final cache = _processedFile(project.id);
+      final processed =
+          utf8.encode(jsonEncode(project.toJson())).length +
+          (await cache.exists() ? (await cache.stat()).size : 0);
       final original = _resolveRelative(project.sourceStoredPath);
       final exists = original != null && await original.exists();
       final originalBytes = exists ? (await original.stat()).size : 0;
@@ -105,10 +168,8 @@ class FileBookSourceStorage implements BookSourceStorage {
     }
     if (!await _libraryDirectory.exists()) return;
     final retained = projects
-        .where((project) => project.sourceStoredPath.isNotEmpty)
-        .map((project) => project.sourceStoredPath.split('/'))
-        .where((segments) => segments.length >= 3)
-        .map((segments) => segments[1])
+        .where((project) => project.isReadOnly)
+        .map((project) => _safeSegment(project.id))
         .toSet();
     await for (final entity in _libraryDirectory.list()) {
       if (entity is! Directory || entity.path == _temporaryDirectory.path) {
@@ -127,6 +188,10 @@ class FileBookSourceStorage implements BookSourceStorage {
     '${_libraryDirectory.path}${Platform.pathSeparator}${_safeSegment(projectId)}',
   );
 
+  File _processedFile(String projectId) => File(
+    '${_projectDirectory(projectId).path}${Platform.pathSeparator}processed-v1.json',
+  );
+
   File? _resolveRelative(String relativePath) {
     if (relativePath.isEmpty || relativePath.contains('..')) return null;
     final normalized = relativePath.replaceAll('/', Platform.pathSeparator);
@@ -142,6 +207,12 @@ class FileBookSourceStorage implements BookSourceStorage {
     if (lower.endsWith('.fb2.zip')) return '.fb2.zip';
     if (lower.endsWith('.epub')) return '.epub';
     if (lower.endsWith('.fb2')) return '.fb2';
+    if (lower.endsWith('.txt')) return '.txt';
+    if (lower.endsWith('.rtf')) return '.rtf';
+    if (lower.endsWith('.docx')) return '.docx';
+    if (lower.endsWith('.mobi')) return '.mobi';
+    if (lower.endsWith('.doc')) return '.doc';
+    if (lower.endsWith('.chm')) return '.chm';
     if (lower.endsWith('.zip')) return '.zip';
     return '.book';
   }
@@ -154,4 +225,21 @@ class FileBookSourceStorage implements BookSourceStorage {
     if (!await directory.exists()) return;
     if (await directory.list().isEmpty) await directory.delete();
   }
+}
+
+BookProject? _decodeProcessed(
+  String encoded, {
+  required String expectedFingerprint,
+}) {
+  final decoded = jsonDecode(encoded);
+  if (decoded is! Map) return null;
+  final envelope = Map<String, dynamic>.from(decoded);
+  if (envelope['cacheVersion'] != 1 ||
+      envelope['sourceFingerprint']?.toString() != expectedFingerprint ||
+      envelope['project'] is! Map) {
+    return null;
+  }
+  return BookProject.fromJson(
+    Map<String, dynamic>.from(envelope['project'] as Map),
+  );
 }

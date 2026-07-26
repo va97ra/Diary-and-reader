@@ -10,6 +10,7 @@ import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
 import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
+import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,6 +18,44 @@ import 'package:flutter_test/flutter_test.dart';
 import 'support/memory_author_workspace_repository.dart';
 
 void main() {
+  test(
+    'reader session updates persist without rebuilding the whole app',
+    () async {
+      final repository = MemoryAuthorWorkspaceRepository();
+      final controller = AuthorWorkspaceController(
+        repository,
+        saveDebounce: Duration.zero,
+      );
+      await controller.load(preferredLanguage: 'ru');
+      var notifications = 0;
+      controller.addListener(() => notifications++);
+      final sectionId = controller.activeSection!.id;
+      controller.beginReaderSession();
+
+      controller.updateReaderSettingsDuringReading(
+        const BookReaderSettings(fontSize: 24),
+      );
+      controller.updateReaderProgressDuringReading(
+        BookReaderProgress(sectionId: sectionId, sectionProgress: 0.35),
+      );
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(notifications, 0);
+      expect(controller.readerSettings.fontSize, 24);
+      expect(controller.activeProject!.readerProgress.sectionProgress, 0.35);
+
+      controller.finishReaderSession();
+      expect(notifications, 1);
+      await controller.flush();
+      expect(repository.snapshot!.appPreferences.readerSettings.fontSize, 24);
+      expect(
+        repository.snapshot!.activeProject!.readerProgress.sectionProgress,
+        0.35,
+      );
+    },
+  );
+
   test('creates a book and persists chapter and scene hierarchy', () async {
     final repository = MemoryAuthorWorkspaceRepository();
     final controller = AuthorWorkspaceController(repository);
@@ -67,6 +106,57 @@ void main() {
       2500,
     );
     expect(controller.saveState, WorkspaceSaveState.saved);
+  });
+
+  test('saves during uninterrupted typing before the idle delay', () async {
+    final repository = MemoryAuthorWorkspaceRepository();
+    final controller = AuthorWorkspaceController(
+      repository,
+      saveDebounce: const Duration(milliseconds: 90),
+      maxSaveDelay: const Duration(milliseconds: 30),
+    );
+    await controller.load(preferredLanguage: 'ru');
+
+    for (var index = 0; index < 5; index++) {
+      controller.updateSectionContent([
+        {'insert': 'Непрерывный набор $index\n'},
+      ]);
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
+
+    expect(repository.saveCount, greaterThanOrEqualTo(1));
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    expect(
+      richDocumentPlainText(
+        repository.snapshot!.activeProject!.activeSection!.content,
+      ),
+      'Непрерывный набор 4\n',
+    );
+    expect(controller.saveState, WorkspaceSaveState.saved);
+    controller.dispose();
+  });
+
+  test('reports a save error and succeeds when retried', () async {
+    final repository = _RecoveringAuthorWorkspaceRepository();
+    final controller = AuthorWorkspaceController(repository);
+    await controller.load(preferredLanguage: 'ru');
+    controller.updateSectionContent(const [
+      {'insert': 'Текст для повторного сохранения\n'},
+    ]);
+
+    expect(await controller.flushWithResult(), isFalse);
+    expect(controller.saveState, WorkspaceSaveState.error);
+
+    repository.failWrites = false;
+    expect(await controller.flushWithResult(), isTrue);
+    expect(controller.saveState, WorkspaceSaveState.saved);
+    expect(
+      richDocumentPlainText(
+        repository.snapshot!.activeProject!.activeSection!.content,
+      ),
+      'Текст для повторного сохранения\n',
+    );
+    controller.dispose();
   });
 
   test('replaces text across the manuscript and persists the result', () async {
@@ -194,6 +284,22 @@ void main() {
     );
   });
 
+  test('creates an automatic checkpoint before deleting a section', () async {
+    final repository = MemoryAuthorWorkspaceRepository();
+    final controller = AuthorWorkspaceController(repository);
+    await controller.load(preferredLanguage: 'ru');
+    controller.addSection(BookSectionType.chapter);
+    final deletedId = controller.activeSection!.id;
+
+    await controller.deleteSectionSafely(
+      deletedId,
+      safetyLabel: 'Перед удалением',
+    );
+
+    expect(controller.activeProject!.sectionTrash, hasLength(1));
+    expect((await controller.listVersions()).single.label, 'Перед удалением');
+  });
+
   test('imports a backup under the current project identity', () async {
     final controller = AuthorWorkspaceController(
       MemoryAuthorWorkspaceRepository(),
@@ -281,4 +387,22 @@ class _ControlledAuthorWorkspaceRepository
   }
 
   void completeNextWrite() => pendingWrites.removeAt(0).complete();
+}
+
+class _RecoveringAuthorWorkspaceRepository
+    implements AuthorWorkspaceRepository {
+  _RecoveringAuthorWorkspaceRepository()
+    : snapshot = MemoryAuthorWorkspaceRepository().snapshot;
+
+  AuthorWorkspaceSnapshot? snapshot;
+  bool failWrites = true;
+
+  @override
+  Future<AuthorWorkspaceSnapshot?> load() async => snapshot;
+
+  @override
+  Future<void> save(AuthorWorkspaceSnapshot nextSnapshot) async {
+    if (failWrites) throw Exception('Storage unavailable');
+    snapshot = AuthorWorkspaceSnapshot.fromJson(nextSnapshot.toJson());
+  }
 }

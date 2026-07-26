@@ -8,6 +8,7 @@ import 'package:dnevnik/features/books/application/book_fb2_exporter.dart';
 import 'package:dnevnik/features/books/application/book_html_exporter.dart';
 import 'package:dnevnik/features/books/application/book_image_file.dart';
 import 'package:dnevnik/features/books/domain/book_asset.dart';
+import 'package:dnevnik/features/books/domain/book_image_placement.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
@@ -31,9 +32,17 @@ void main() {
   });
 
   test('parses both authored and imported image embeds', () {
+    const placement = BookImagePlacement(
+      assetId: 'authored',
+      alignment: BookImageAlignment.right,
+      widthPercent: 50,
+      caption: 'Подпись',
+    );
     final blocks = BookExportContentParser.parse([
       {
-        'insert': {'custom': '{"bookImage":"authored"}'},
+        'insert': {
+          'custom': jsonEncode({'bookImage': placement.encode()}),
+        },
       },
       {'insert': '\n'},
       {
@@ -48,6 +57,20 @@ void main() {
           .map((block) => block.assetId),
       ['authored', 'imported'],
     );
+    final authored = blocks.first;
+    expect(authored.imageAlignment, BookImageAlignment.right);
+    expect(authored.imageWidthPercent, 50);
+    expect(authored.imageCaption, 'Подпись');
+  });
+
+  test('keeps smooth illustration widths within a usable range', () {
+    final placement = BookImagePlacement.decode(
+      '{"assetId":"image-1","widthPercent":63}',
+    );
+
+    expect(placement.widthPercent, 63);
+    expect(placement.copyWith(widthPercent: 7).widthPercent, 20);
+    expect(placement.copyWith(widthPercent: 140).widthPercent, 100);
   });
 
   test('embeds manuscript images in EPUB, FB2, and HTML exports', () {
@@ -60,15 +83,26 @@ void main() {
     expect(epubFiles, contains('EPUB/images/image-1.png'));
     expect(
       utf8.decode(epubFiles['EPUB/text/section-001.xhtml']!.content),
-      contains('../images/image-1.png'),
+      allOf(
+        contains('../images/image-1.png'),
+        contains('width:50%'),
+        contains('Подпись'),
+      ),
+    );
+    expect(
+      utf8.decode(epubFiles['EPUB/package.opf']!.content),
+      contains('properties="cover-image"'),
     );
 
     final fb2 = utf8.decode(BookFb2Exporter.create(project).bytes);
     expect(fb2, contains('<image l:href="#image-1"/>'));
+    expect(fb2, contains('<coverpage><image l:href="#image-1"/></coverpage>'));
+    expect(fb2, contains('<emphasis>Подпись</emphasis>'));
     expect(fb2, contains('<binary id="image-1" content-type="image/png">'));
 
     final html = utf8.decode(BookHtmlExporter.create(project).bytes);
     expect(html, contains('data:image/png;base64,'));
+    expect(html, contains('class="book-cover"'));
   });
 }
 
@@ -91,7 +125,10 @@ BookProject _project() {
         status: DraftStatus.draft,
         content: const [
           {
-            'insert': {'bookImage': 'image-1'},
+            'insert': {
+              'bookImage':
+                  '{"assetId":"image-1","alignment":"right","widthPercent":50,"caption":"Подпись"}',
+            },
           },
           {'insert': '\n'},
         ],
@@ -103,6 +140,7 @@ BookProject _project() {
     createdAt: now,
     updatedAt: now,
     assets: [asset],
+    coverAssetId: asset.id,
   );
 }
 

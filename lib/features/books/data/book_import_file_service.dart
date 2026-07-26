@@ -17,31 +17,61 @@ abstract interface class BookBatchImportFileGateway
 class BookImportFileService implements BookBatchImportFileGateway {
   const BookImportFileService();
 
+  static const _bookExtensions = [
+    'epub',
+    'fb2',
+    'zip',
+    'txt',
+    'rtf',
+    'docx',
+    'mobi',
+    'doc',
+    'chm',
+  ];
+  static const _bookMimeTypes = [
+    'application/epub+zip',
+    'application/x-fictionbook+xml',
+    'application/xml',
+    'text/xml',
+    'application/zip',
+    'application/x-zip-compressed',
+    'text/plain',
+    'application/rtf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/x-mobipocket-ebook',
+    'application/msword',
+    'application/vnd.ms-htmlhelp',
+    // Android's Downloads provider often assigns this generic MIME type to
+    // sideloaded FB2 files. The parser still validates the file contents.
+    'application/octet-stream',
+  ];
   static const _bookTypes = XTypeGroup(
     label: 'Electronic books',
-    extensions: ['epub', 'fb2', 'zip'],
-    mimeTypes: [
-      'application/epub+zip',
-      'application/x-fictionbook+xml',
-      'application/xml',
-      'text/xml',
-      'application/zip',
-      'application/x-zip-compressed',
-      // Android's Downloads provider often assigns this generic MIME type to
-      // sideloaded FB2 files. The parser still validates the extension and
-      // binary signature before accepting the book.
-      'application/octet-stream',
-    ],
+    extensions: _bookExtensions,
+    mimeTypes: _bookMimeTypes,
     uniformTypeIdentifiers: [
       'org.idpf.epub-container',
       'public.xml',
       'public.zip-archive',
     ],
   );
+  static const _androidBookTypes = XTypeGroup(
+    label: 'Electronic books',
+    // Android's Storage Access Framework filters by MIME type and warns for
+    // custom extensions such as FB2. The generic MIME fallback keeps those
+    // files visible while the importer validates their names and signatures.
+    mimeTypes: _bookMimeTypes,
+  );
+
+  List<XTypeGroup> get _acceptedTypes => [
+    defaultTargetPlatform == TargetPlatform.android
+        ? _androidBookTypes
+        : _bookTypes,
+  ];
 
   @override
   Future<BookImportFile?> open() async {
-    final file = await openFile(acceptedTypeGroups: const [_bookTypes]);
+    final file = await openFile(acceptedTypeGroups: _acceptedTypes);
     if (file == null) return null;
     final bytes = await file.readAsBytes();
     return BookImportFile(
@@ -53,7 +83,7 @@ class BookImportFileService implements BookBatchImportFileGateway {
   @override
   Future<List<BookImportFile>> openMany() async {
     final files = await openFiles(
-      acceptedTypeGroups: const [_bookTypes],
+      acceptedTypeGroups: _acceptedTypes,
       initialDirectory: defaultTargetPlatform == TargetPlatform.android
           ? 'content://com.android.externalstorage.documents/document/primary%3ADownload'
           : null,
@@ -72,7 +102,13 @@ class BookImportFileService implements BookBatchImportFileGateway {
     final lower = name.toLowerCase();
     if (lower.endsWith('.epub') ||
         lower.endsWith('.fb2') ||
-        lower.endsWith('.zip')) {
+        lower.endsWith('.zip') ||
+        lower.endsWith('.txt') ||
+        lower.endsWith('.rtf') ||
+        lower.endsWith('.docx') ||
+        lower.endsWith('.mobi') ||
+        lower.endsWith('.doc') ||
+        lower.endsWith('.chm')) {
       return name;
     }
     final base = name.contains('.')
@@ -94,6 +130,7 @@ class BookImportFileService implements BookBatchImportFileGateway {
           return '$base.fb2.zip';
         }
         if (names.contains('meta-inf/container.xml')) return '$base.epub';
+        if (names.contains('word/document.xml')) return '$base.docx';
       } on Object {
         return '$base.zip';
       }

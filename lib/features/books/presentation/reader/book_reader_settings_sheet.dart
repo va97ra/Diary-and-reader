@@ -1,5 +1,6 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/material.dart';
 
 class BookReaderSettingsSheet extends StatefulWidget {
@@ -31,21 +32,37 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
     widget.onChanged(settings);
   }
 
+  void _preview(BookReaderSettings settings) {
+    if (settings == _settings) return;
+    setState(() => _settings = settings);
+  }
+
+  void _applyPreview(BookReaderSettings settings) {
+    if (settings != _settings) setState(() => _settings = settings);
+    widget.onChanged(settings);
+  }
+
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
+    final mediaQuery = MediaQuery.of(context);
+    final hideSpread =
+        mediaQuery.orientation == Orientation.portrait &&
+        mediaQuery.size.shortestSide < 600;
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              strings.readingSettings,
-              style: Theme.of(context).textTheme.titleLarge,
+            BookLeatherModalHeader(
+              title: strings.readingSettings,
+              onClose: () => Navigator.maybePop(context),
+              closeKey: const ValueKey('reader-settings-close'),
+              padding: const EdgeInsets.fromLTRB(0, 12, 0, 8),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 8),
             Text(strings.readerViewMode),
             const SizedBox(height: 8),
             _ReaderChoiceWrap<BookReaderViewMode>(
@@ -53,19 +70,21 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
               choices: [
                 (BookReaderViewMode.continuous, strings.continuousReading),
                 (BookReaderViewMode.singlePage, strings.singlePageReading),
-                (BookReaderViewMode.spread, strings.spreadReading),
+                if (!hideSpread)
+                  (BookReaderViewMode.spread, strings.spreadReading),
               ],
               onChanged: (value) =>
                   _change(_settings.copyWith(viewMode: value)),
             ),
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                strings.spreadPhoneHint,
-                style: Theme.of(context).textTheme.bodySmall,
+            if (!hideSpread)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  strings.spreadPhoneHint,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ),
-            ),
-            const SizedBox(height: 22),
+            const SizedBox(height: 12),
             Text(strings.readerTheme),
             const SizedBox(height: 8),
             _ReaderChoiceWrap<BookReaderTheme>(
@@ -77,7 +96,7 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
               ],
               onChanged: (value) => _change(_settings.copyWith(theme: value)),
             ),
-            const SizedBox(height: 22),
+            const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _settings.fontFamily,
               decoration: InputDecoration(labelText: strings.readerFont),
@@ -94,7 +113,7 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
                 }
               },
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 12),
             _ReaderSlider(
               label: strings.readerFontSize,
               value: _settings.fontSize,
@@ -103,7 +122,21 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
               divisions: 20,
               displayValue: '${_settings.fontSize.round()}',
               onChanged: (value) =>
-                  _change(_settings.copyWith(fontSize: value)),
+                  _preview(_settings.copyWith(fontSize: value)),
+              onChangeEnd: (value) =>
+                  _applyPreview(_settings.copyWith(fontSize: value)),
+            ),
+            _ReaderSlider(
+              label: strings.fontWeight,
+              value: _settings.fontWeight,
+              min: 300,
+              max: 700,
+              divisions: 4,
+              displayValue: '${_settings.fontWeight.round()}',
+              onChanged: (value) =>
+                  _preview(_settings.copyWith(fontWeight: value)),
+              onChangeEnd: (value) =>
+                  _applyPreview(_settings.copyWith(fontWeight: value)),
             ),
             _ReaderSlider(
               label: strings.lineSpacing,
@@ -113,7 +146,9 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
               divisions: 10,
               displayValue: _settings.lineHeight.toStringAsFixed(1),
               onChanged: (value) =>
-                  _change(_settings.copyWith(lineHeight: value)),
+                  _preview(_settings.copyWith(lineHeight: value)),
+              onChangeEnd: (value) =>
+                  _applyPreview(_settings.copyWith(lineHeight: value)),
             ),
             _ReaderSlider(
               label: strings.textWidth,
@@ -121,9 +156,11 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
               min: 480,
               max: 1000,
               divisions: 13,
-              displayValue: '${_settings.contentWidth.round()} px',
+              displayValue: '≤ ${_settings.contentWidth.round()} px',
               onChanged: (value) =>
-                  _change(_settings.copyWith(contentWidth: value)),
+                  _preview(_settings.copyWith(contentWidth: value)),
+              onChangeEnd: (value) =>
+                  _applyPreview(_settings.copyWith(contentWidth: value)),
             ),
             _ReaderSlider(
               label: strings.horizontalMargins,
@@ -133,7 +170,9 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
               divisions: 10,
               displayValue: '${_settings.horizontalPadding.round()} px',
               onChanged: (value) =>
-                  _change(_settings.copyWith(horizontalPadding: value)),
+                  _preview(_settings.copyWith(horizontalPadding: value)),
+              onChangeEnd: (value) =>
+                  _applyPreview(_settings.copyWith(horizontalPadding: value)),
             ),
             _ReaderSlider(
               label: strings.verticalMargins,
@@ -143,7 +182,45 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
               divisions: 17,
               displayValue: '${_settings.verticalPadding.round()} px',
               onChanged: (value) =>
-                  _change(_settings.copyWith(verticalPadding: value)),
+                  _preview(_settings.copyWith(verticalPadding: value)),
+              onChangeEnd: (value) =>
+                  _applyPreview(_settings.copyWith(verticalPadding: value)),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              visualDensity: VisualDensity.compact,
+              title: Text(strings.justifyText),
+              value: _settings.justifyText,
+              onChanged: (value) =>
+                  _change(_settings.copyWith(justifyText: value)),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              visualDensity: VisualDensity.compact,
+              title: Text(strings.hyphenateWords),
+              value: _settings.hyphenateWords,
+              onChanged: (value) =>
+                  _change(_settings.copyWith(hyphenateWords: value)),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              visualDensity: VisualDensity.compact,
+              title: Text(strings.centerTapControls),
+              value: _settings.centerTapControls,
+              onChanged: (value) =>
+                  _change(_settings.copyWith(centerTapControls: value)),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              visualDensity: VisualDensity.compact,
+              title: Text(strings.swipeChapterNavigation),
+              value: _settings.swipeChapterNavigation,
+              onChanged: (value) =>
+                  _change(_settings.copyWith(swipeChapterNavigation: value)),
             ),
             const SizedBox(height: 10),
             SizedBox(
@@ -153,6 +230,33 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
                 icon: const Icon(Icons.restart_alt),
                 label: Text(strings.resetSettings),
               ),
+            ),
+            const SizedBox(height: 12),
+            Text(strings.textToSpeech),
+            const SizedBox(height: 8),
+            _ReaderSlider(
+              label: strings.speechRate,
+              value: _settings.speechRate,
+              min: 0.25,
+              max: 0.75,
+              divisions: 10,
+              displayValue: _settings.speechRate.toStringAsFixed(2),
+              onChanged: (value) =>
+                  _preview(_settings.copyWith(speechRate: value)),
+              onChangeEnd: (value) =>
+                  _applyPreview(_settings.copyWith(speechRate: value)),
+            ),
+            _ReaderSlider(
+              label: strings.speechPitch,
+              value: _settings.speechPitch,
+              min: 0.5,
+              max: 1.5,
+              divisions: 10,
+              displayValue: _settings.speechPitch.toStringAsFixed(1),
+              onChanged: (value) =>
+                  _preview(_settings.copyWith(speechPitch: value)),
+              onChangeEnd: (value) =>
+                  _applyPreview(_settings.copyWith(speechPitch: value)),
             ),
           ],
         ),
@@ -196,6 +300,7 @@ class _ReaderSlider extends StatelessWidget {
     required this.divisions,
     required this.displayValue,
     required this.onChanged,
+    required this.onChangeEnd,
   });
 
   final String label;
@@ -205,25 +310,48 @@ class _ReaderSlider extends StatelessWidget {
   final int divisions;
   final String displayValue;
   final ValueChanged<double> onChanged;
+  final ValueChanged<double> onChangeEnd;
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Row(
-        children: [
-          Expanded(child: Text(label)),
-          Text(displayValue, style: Theme.of(context).textTheme.labelLarge),
-        ],
-      ),
-      Slider(
-        value: value,
-        min: min,
-        max: max,
-        divisions: divisions,
-        label: displayValue,
-        onChanged: onChanged,
-      ),
-    ],
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 3),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(displayValue, style: Theme.of(context).textTheme.labelMedium),
+          ],
+        ),
+        SizedBox(
+          height: 32,
+          child: SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: 3,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+            ),
+            child: Slider(
+              value: value,
+              min: min,
+              max: max,
+              divisions: divisions,
+              label: displayValue,
+              onChanged: onChanged,
+              onChangeEnd: onChangeEnd,
+            ),
+          ),
+        ),
+      ],
+    ),
   );
 }

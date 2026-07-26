@@ -3,6 +3,7 @@ import 'package:dnevnik/core/theme/app_theme.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/application/section_tree_editor.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/material.dart';
 
 class BookNavigator extends StatelessWidget {
@@ -20,34 +21,30 @@ class BookNavigator extends StatelessWidget {
     final strings = AppStrings.of(context);
     final project = controller.activeProject!;
     return Material(
-      color: Theme.of(context).colorScheme.surface,
+      color: Colors.transparent,
       child: SafeArea(
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-              child: Row(
+            BookLeatherModalHeader(
+              title: strings.structure,
+              subtitle: project.metadata.title,
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          strings.structure,
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        Text(
-                          project.metadata.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
+                  FilledButton.tonalIcon(
+                    key: const ValueKey('navigator-new-chapter'),
+                    onPressed: () {
+                      controller.addSection(BookSectionType.chapter);
+                      if (closeAfterSelection) Navigator.of(context).pop();
+                    },
+                    icon: const Icon(Icons.add, size: 18),
+                    label: Text(strings.newChapter),
                   ),
+                  const SizedBox(width: 4),
                   PopupMenuButton<BookSectionType>(
-                    tooltip: strings.addPage,
+                    tooltip: strings.more,
                     onSelected: controller.addSection,
                     itemBuilder: (_) => [
                       PopupMenuItem(
@@ -59,14 +56,6 @@ class BookNavigator extends StatelessWidget {
                         ),
                       ),
                       PopupMenuItem(
-                        value: BookSectionType.chapter,
-                        child: ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.article_outlined),
-                          title: Text(strings.newChapter),
-                        ),
-                      ),
-                      PopupMenuItem(
                         value: BookSectionType.scene,
                         child: ListTile(
                           contentPadding: EdgeInsets.zero,
@@ -75,14 +64,23 @@ class BookNavigator extends StatelessWidget {
                         ),
                       ),
                     ],
-                    icon: const Icon(Icons.add_circle_outline),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        minWidth: 48,
+                        minHeight: 48,
+                      ),
+                      child: Center(child: Text(strings.more)),
+                    ),
                   ),
                 ],
               ),
+              onClose: () => Navigator.maybePop(context),
+              closeKey: const ValueKey('navigator-close'),
             ),
             const Divider(height: 1),
-            Expanded(
+            Flexible(
               child: ListView.builder(
+                shrinkWrap: true,
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 itemCount: project.sections.length,
                 itemBuilder: (context, index) {
@@ -97,6 +95,14 @@ class BookNavigator extends StatelessWidget {
                     },
                     onAction: (action) =>
                         _handleSectionAction(context, section, action),
+                    canAcceptDrop: (movingId) =>
+                        SectionTreeEditor.canMoveToTarget(
+                          project.sections,
+                          movingId,
+                          section.id,
+                        ),
+                    onAcceptDrop: (movingId) =>
+                        controller.moveSectionToTarget(movingId, section.id),
                   );
                 },
               ),
@@ -112,6 +118,7 @@ class BookNavigator extends StatelessWidget {
     BookSection section,
     _SectionAction action,
   ) async {
+    final strings = AppStrings.of(context);
     if (action == _SectionAction.up) {
       controller.moveSection(section.id, TreeMoveDirection.up);
       return;
@@ -122,7 +129,7 @@ class BookNavigator extends StatelessWidget {
     }
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => BookLeatherDialog(
         title: Text(AppStrings.of(context).deleteSection),
         content: Text(AppStrings.of(context).deleteSectionQuestion),
         actions: [
@@ -137,7 +144,12 @@ class BookNavigator extends StatelessWidget {
         ],
       ),
     );
-    if (confirmed ?? false) controller.deleteSection(section.id);
+    if (confirmed ?? false) {
+      await controller.deleteSectionSafely(
+        section.id,
+        safetyLabel: strings.automaticBeforeDelete,
+      );
+    }
   }
 
   int _depthOf(List<BookSection> sections, BookSection section) {
@@ -162,6 +174,8 @@ class _SectionTile extends StatelessWidget {
     required this.depth,
     required this.onTap,
     required this.onAction,
+    required this.canAcceptDrop,
+    required this.onAcceptDrop,
   });
 
   final BookSection section;
@@ -169,34 +183,74 @@ class _SectionTile extends StatelessWidget {
   final int depth;
   final VoidCallback onTap;
   final ValueChanged<_SectionAction> onAction;
+  final bool Function(String movingId) canAcceptDrop;
+  final ValueChanged<String> onAcceptDrop;
 
   @override
-  Widget build(BuildContext context) => Padding(
+  Widget build(BuildContext context) => DragTarget<String>(
+    onWillAcceptWithDetails: (details) => canAcceptDrop(details.data),
+    onAcceptWithDetails: (details) => onAcceptDrop(details.data),
+    builder: (context, candidates, rejected) {
+      final accepting = candidates.whereType<String>().any(canAcceptDrop);
+      return LongPressDraggable<String>(
+        data: section.id,
+        feedback: Material(
+          elevation: 8,
+          borderRadius: BorderRadius.circular(10),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 280),
+            child: ListTile(
+              leading: Icon(_sectionIcon(section.type)),
+              title: Text(section.title, maxLines: 1),
+            ),
+          ),
+        ),
+        childWhenDragging: Opacity(opacity: 0.35, child: _tile(context, false)),
+        child: _tile(context, accepting),
+      );
+    },
+  );
+
+  Widget _tile(BuildContext context, bool accepting) => Padding(
     padding: EdgeInsets.only(left: depth * 18.0),
     child: ListTile(
+      key: ValueKey('structure-section-${section.id}'),
       selected: isActive,
-      selectedTileColor: AppTheme.accent.withValues(alpha: 0.12),
-      leading: Icon(switch (section.type) {
-        BookSectionType.part => Icons.folder_outlined,
-        BookSectionType.chapter => Icons.article_outlined,
-        BookSectionType.scene => Icons.short_text,
-      }, color: isActive ? AppTheme.accent : Colors.blueGrey),
+      tileColor: accepting
+          ? Theme.of(context).colorScheme.primaryContainer
+          : null,
+      selectedTileColor: accepting
+          ? Theme.of(context).colorScheme.primaryContainer
+          : AppTheme.accent.withValues(alpha: 0.12),
+      leading: Icon(
+        _sectionIcon(section.type),
+        color: isActive ? AppTheme.accent : Colors.blueGrey,
+      ),
       title: Text(section.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-      trailing: PopupMenuButton<_SectionAction>(
-        tooltip: AppStrings.of(context).more,
-        onSelected: onAction,
-        itemBuilder: (context) => [
-          PopupMenuItem(
-            value: _SectionAction.up,
-            child: Text(AppStrings.of(context).moveUp),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Tooltip(
+            message: AppStrings.of(context).dragSectionHint,
+            child: const Icon(Icons.drag_indicator, color: Colors.blueGrey),
           ),
-          PopupMenuItem(
-            value: _SectionAction.down,
-            child: Text(AppStrings.of(context).moveDown),
-          ),
-          PopupMenuItem(
-            value: _SectionAction.delete,
-            child: Text(AppStrings.of(context).deleteSection),
+          PopupMenuButton<_SectionAction>(
+            tooltip: AppStrings.of(context).more,
+            onSelected: onAction,
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: _SectionAction.up,
+                child: Text(AppStrings.of(context).moveUp),
+              ),
+              PopupMenuItem(
+                value: _SectionAction.down,
+                child: Text(AppStrings.of(context).moveDown),
+              ),
+              PopupMenuItem(
+                value: _SectionAction.delete,
+                child: Text(AppStrings.of(context).deleteSection),
+              ),
+            ],
           ),
         ],
       ),
@@ -204,5 +258,11 @@ class _SectionTile extends StatelessWidget {
     ),
   );
 }
+
+IconData _sectionIcon(BookSectionType type) => switch (type) {
+  BookSectionType.part => Icons.folder_outlined,
+  BookSectionType.chapter => Icons.article_outlined,
+  BookSectionType.scene => Icons.short_text,
+};
 
 enum _SectionAction { up, down, delete }

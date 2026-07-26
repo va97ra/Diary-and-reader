@@ -1,4 +1,5 @@
 import 'package:dnevnik/features/books/application/book_library_query.dart';
+import 'package:dnevnik/features/books/domain/book_library_state.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
@@ -35,6 +36,10 @@ void main() {
         sectionId: draft.sections.single.id,
         sectionProgress: 1,
       ),
+      libraryState: BookLibraryState(
+        isFavorite: true,
+        lastReadAt: now.add(const Duration(hours: 3)),
+      ),
     );
 
     expect(const BookLibraryQuery(search: 'анна').apply([draft, imported]), [
@@ -53,6 +58,18 @@ void main() {
     expect(
       const BookLibraryQuery(
         sort: BookLibrarySort.progress,
+      ).apply([draft, imported]),
+      [imported, draft],
+    );
+    expect(
+      const BookLibraryQuery(
+        filter: BookLibraryFilter.favorites,
+      ).apply([draft, imported]),
+      [imported],
+    );
+    expect(
+      const BookLibraryQuery(
+        sort: BookLibrarySort.lastRead,
       ).apply([draft, imported]),
       [imported, draft],
     );

@@ -2,7 +2,9 @@ import 'package:dnevnik/app/author_studio_app.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/literia_test_navigation.dart';
@@ -31,12 +33,14 @@ void main() {
     );
     expect(find.text('Глава 1'), findsOneWidget);
     expect(find.textContaining('Страница 1 из'), findsOneWidget);
-    final nextButton = tester.widget<IconButton>(
-      find.byKey(const ValueKey('reader-next-page')),
-    );
-    expect(nextButton.onPressed, isNotNull);
+    expect(find.byKey(const ValueKey('reader-previous-page')), findsNothing);
+    expect(find.byKey(const ValueKey('reader-next-page')), findsNothing);
 
-    await tester.tap(find.byKey(const ValueKey('reader-next-page')));
+    await tester.fling(
+      find.byKey(const ValueKey('reader-page-swipe-area')),
+      const Offset(-360, 0),
+      1200,
+    );
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('reader-page-2')), findsOneWidget);
@@ -84,9 +88,9 @@ void main() {
 
     await tester.binding.setSurfaceSize(const Size(1024, 700));
     await tester.pump();
-    expect(find.byKey(const ValueKey('reader-page-loading')), findsOneWidget);
-    expect(find.byKey(const ValueKey('reader-page-1')), findsNothing);
-    await _pumpUntil(tester, find.byKey(const ValueKey('reader-page-2')));
+    expect(find.byKey(const ValueKey('reader-page-loading')), findsNothing);
+    expect(find.byKey(const ValueKey('reader-page-1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('reader-page-2')), findsOneWidget);
 
     await tester.binding.setSurfaceSize(null);
   });
@@ -110,6 +114,81 @@ void main() {
     );
     expect(find.byKey(const ValueKey('reader-spread-view')), findsNothing);
     expect(find.byKey(const ValueKey('reader-page-2')), findsNothing);
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('paged reader stays usable in compact landscape constraints', (
+    tester,
+  ) async {
+    final controller = await _controllerWithLongChapter(
+      const BookReaderSettings(
+        viewMode: BookReaderViewMode.singlePage,
+        fontSize: 32,
+        verticalPadding: 80,
+      ),
+    );
+
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pumpWidget(AuthorStudioApp(controller: controller));
+    await tester.pumpAndSettle();
+    await openReaderPreview(tester, controller);
+    await _pumpUntil(tester, find.byKey(const ValueKey('reader-page-1')));
+    // Cross the adaptive-control breakpoint to exercise stateful reparenting
+    // between the compact top/bottom bars and the wide side panels.
+    await tester.binding.setSurfaceSize(const Size(900, 420));
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(tester.takeException(), isNull);
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('next chapter appears without a pagination placeholder', (
+    tester,
+  ) async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(),
+    );
+    await controller.load(preferredLanguage: 'ru');
+    controller.updateSectionContent([
+      {'insert': 'Короткая первая глава.\n'},
+    ]);
+    final firstChapterId = controller.activeSection!.id;
+    controller.addSection(BookSectionType.chapter);
+    controller.updateSectionTitle('Большая следующая глава');
+    controller.updateSectionContent([
+      for (var index = 0; index < 180; index++)
+        {
+          'insert':
+              'Абзац $index следующей главы для продолжительного фонового расчёта страниц и проверки быстрого перехода.\n',
+        },
+    ]);
+    final nextChapterId = controller.activeSection!.id;
+    controller.selectSection(firstChapterId);
+    controller.updateReaderSettings(
+      const BookReaderSettings(viewMode: BookReaderViewMode.singlePage),
+    );
+
+    await tester.binding.setSurfaceSize(const Size(1280, 820));
+    await tester.pumpWidget(AuthorStudioApp(controller: controller));
+    await tester.pumpAndSettle();
+    await openReaderPreview(tester, controller);
+    await _pumpUntil(tester, find.byKey(const ValueKey('reader-page-1')));
+
+    await tester.fling(
+      find.byKey(const ValueKey('reader-page-swipe-area')),
+      const Offset(-360, 0),
+      1200,
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+
+    expect(controller.activeProject!.readerProgress.sectionId, nextChapterId);
+    expect(find.byKey(const ValueKey('reader-page-1')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('reader-page-background-loading')),
+      findsNothing,
+    );
+    expect(find.byKey(const ValueKey('reader-page-loading')), findsNothing);
     await tester.binding.setSurfaceSize(null);
   });
 
@@ -141,7 +220,11 @@ void main() {
           firstChapterId) {
         break;
       }
-      await tester.tap(find.byKey(const ValueKey('reader-next-page')));
+      await tester.fling(
+        find.byKey(const ValueKey('reader-page-swipe-area')),
+        const Offset(-360, 0),
+        1200,
+      );
       await tester.pumpAndSettle();
     }
 
@@ -188,6 +271,100 @@ void main() {
       controller.activeProject!.readerProgress.sectionId,
       controller.activeProject!.sections.last.id,
     );
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('continuous reader swipes between short chapters', (
+    tester,
+  ) async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(),
+    );
+    await controller.load(preferredLanguage: 'ru');
+    controller.updateSectionContent([
+      {'insert': 'Короткая первая глава.\n'},
+    ]);
+    final firstChapterId = controller.activeSection!.id;
+    controller.addSection(BookSectionType.chapter);
+    controller.updateSectionTitle('Короткая вторая глава');
+    controller.updateSectionContent([
+      {'insert': 'Короткая вторая глава.\n'},
+    ]);
+    final secondChapterId = controller.activeSection!.id;
+    controller.selectSection(firstChapterId);
+    controller.updateReaderSettings(
+      const BookReaderSettings(viewMode: BookReaderViewMode.continuous),
+    );
+
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pumpWidget(AuthorStudioApp(controller: controller));
+    await tester.pumpAndSettle();
+    await openReaderPreview(tester, controller);
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(ValueKey('reader-document-$firstChapterId')),
+      const Offset(0, -240),
+    );
+    await tester.pumpAndSettle();
+    expect(controller.activeProject!.readerProgress.sectionId, secondChapterId);
+
+    await tester.drag(
+      find.byKey(ValueKey('reader-document-$secondChapterId')),
+      const Offset(0, 240),
+    );
+    await tester.pumpAndSettle();
+    expect(controller.activeProject!.readerProgress.sectionId, firstChapterId);
+
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('desktop keyboard crosses chapter boundaries', (tester) async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(),
+    );
+    await controller.load(preferredLanguage: 'ru');
+    controller.updateSectionContent([
+      {'insert': 'Первая короткая глава.\n'},
+    ]);
+    final firstChapterId = controller.activeSection!.id;
+    controller.addSection(BookSectionType.chapter);
+    controller.updateSectionTitle('Вторая глава');
+    controller.updateSectionContent([
+      {'insert': 'Вторая короткая глава.\n'},
+    ]);
+    final secondChapterId = controller.activeSection!.id;
+    controller.selectSection(firstChapterId);
+    controller.updateReaderSettings(
+      const BookReaderSettings(viewMode: BookReaderViewMode.singlePage),
+    );
+
+    await tester.binding.setSurfaceSize(const Size(1280, 820));
+    await tester.pumpWidget(AuthorStudioApp(controller: controller));
+    await tester.pumpAndSettle();
+    await openReaderPreview(tester, controller);
+    await _pumpUntil(tester, find.byKey(const ValueKey('reader-page-1')));
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
+    await tester.pumpAndSettle();
+    expect(controller.activeProject!.readerProgress.sectionId, secondChapterId);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.pageUp);
+    await tester.pumpAndSettle();
+    expect(controller.activeProject!.readerProgress.sectionId, firstChapterId);
+    expect(controller.activeProject!.readerProgress.sectionProgress, 1);
+
+    tester.binding.handlePointerEvent(
+      PointerScrollEvent(
+        device: 41,
+        position: tester.getCenter(find.byKey(const ValueKey('reader-page-1'))),
+        scrollDelta: const Offset(0, 120),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(controller.activeProject!.readerProgress.sectionId, secondChapterId);
+
     await tester.binding.setSurfaceSize(null);
   });
 }

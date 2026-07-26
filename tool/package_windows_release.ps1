@@ -1,18 +1,50 @@
 param(
     [string]$Flutter = "flutter",
-    [string]$Version = "1.0.0"
+    [string]$Version,
+    [string]$NuGetUrl = "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe"
 )
 
 $ErrorActionPreference = "Stop"
 $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$pubspecPath = Join-Path $projectRoot "pubspec.yaml"
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    $versionMatch = Select-String -LiteralPath $pubspecPath `
+        -Pattern '^\s*version:\s*([0-9]+\.[0-9]+\.[0-9]+)(?:\+\S+)?\s*$' |
+        Select-Object -First 1
+    if (-not $versionMatch) {
+        throw "Could not read the application version from pubspec.yaml."
+    }
+    $Version = $versionMatch.Matches[0].Groups[1].Value
+}
+$buildToolsDirectory = Join-Path $projectRoot "build\tools"
 $releaseDirectory = Join-Path $projectRoot "build\windows\x64\runner\Release"
 $distributionDirectory = Join-Path $projectRoot "dist"
 $packageName = "Literia-$Version-windows-x64"
 $stagingDirectory = Join-Path $distributionDirectory $packageName
 $archivePath = Join-Path $distributionDirectory "$packageName.zip"
 
+function Initialize-NuGet {
+    if (Get-Command "nuget" -ErrorAction SilentlyContinue) {
+        return
+    }
+
+    New-Item -ItemType Directory -Force -Path $buildToolsDirectory | Out-Null
+    $nugetPath = Join-Path $buildToolsDirectory "nuget.exe"
+    if (-not (Test-Path -LiteralPath $nugetPath)) {
+        Write-Output "Downloading the Microsoft NuGet CLI required by flutter_tts..."
+        Invoke-WebRequest -Uri $NuGetUrl -OutFile $nugetPath
+    }
+
+    $signature = Get-AuthenticodeSignature -LiteralPath $nugetPath
+    if ($signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid) {
+        throw "The downloaded NuGet CLI does not have a valid Authenticode signature."
+    }
+    $env:Path = "$buildToolsDirectory;$env:Path"
+}
+
 Push-Location $projectRoot
 try {
+    Initialize-NuGet
     & $Flutter build windows --release
     if ($LASTEXITCODE -ne 0) {
         throw "Flutter failed to build the Windows release."

@@ -12,6 +12,13 @@ class BookReaderSettings {
     this.contentWidth = 720,
     this.horizontalPadding = 32,
     this.verticalPadding = 24,
+    this.fontWeight = 400,
+    this.justifyText = false,
+    this.hyphenateWords = false,
+    this.centerTapControls = true,
+    this.swipeChapterNavigation = true,
+    this.speechRate = 0.5,
+    this.speechPitch = 1,
   });
 
   factory BookReaderSettings.fromJson(Map<String, dynamic> json) =>
@@ -32,6 +39,13 @@ class BookReaderSettings {
         contentWidth: _bounded(json['contentWidth'], 480, 1000, 720),
         horizontalPadding: _bounded(json['horizontalPadding'], 16, 96, 32),
         verticalPadding: _bounded(json['verticalPadding'], 12, 80, 24),
+        fontWeight: _bounded(json['fontWeight'], 300, 700, 400),
+        justifyText: json['justifyText'] == true,
+        hyphenateWords: json['hyphenateWords'] == true,
+        centerTapControls: json['centerTapControls'] != false,
+        swipeChapterNavigation: json['swipeChapterNavigation'] != false,
+        speechRate: _bounded(json['speechRate'], 0.25, 0.75, 0.5),
+        speechPitch: _bounded(json['speechPitch'], 0.5, 1.5, 1),
       );
 
   final BookReaderTheme theme;
@@ -42,6 +56,13 @@ class BookReaderSettings {
   final double contentWidth;
   final double horizontalPadding;
   final double verticalPadding;
+  final double fontWeight;
+  final bool justifyText;
+  final bool hyphenateWords;
+  final bool centerTapControls;
+  final bool swipeChapterNavigation;
+  final double speechRate;
+  final double speechPitch;
 
   BookReaderSettings copyWith({
     BookReaderTheme? theme,
@@ -52,18 +73,40 @@ class BookReaderSettings {
     double? contentWidth,
     double? horizontalPadding,
     double? verticalPadding,
+    double? fontWeight,
+    bool? justifyText,
+    bool? hyphenateWords,
+    bool? centerTapControls,
+    bool? swipeChapterNavigation,
+    double? speechRate,
+    double? speechPitch,
   }) => BookReaderSettings(
     theme: theme ?? this.theme,
     viewMode: viewMode ?? this.viewMode,
     fontFamily: _readerFontFamily(fontFamily ?? this.fontFamily),
-    fontSize: (fontSize ?? this.fontSize).clamp(12, 32),
-    lineHeight: (lineHeight ?? this.lineHeight).clamp(1.2, 2.2),
-    contentWidth: (contentWidth ?? this.contentWidth).clamp(480, 1000),
-    horizontalPadding: (horizontalPadding ?? this.horizontalPadding).clamp(
+    fontSize: _bounded(fontSize ?? this.fontSize, 12, 32, 18),
+    lineHeight: _bounded(lineHeight ?? this.lineHeight, 1.2, 2.2, 1.6),
+    contentWidth: _bounded(contentWidth ?? this.contentWidth, 480, 1000, 720),
+    horizontalPadding: _bounded(
+      horizontalPadding ?? this.horizontalPadding,
       16,
       96,
+      32,
     ),
-    verticalPadding: (verticalPadding ?? this.verticalPadding).clamp(12, 80),
+    verticalPadding: _bounded(
+      verticalPadding ?? this.verticalPadding,
+      12,
+      80,
+      24,
+    ),
+    fontWeight: _bounded(fontWeight ?? this.fontWeight, 300, 700, 400),
+    justifyText: justifyText ?? this.justifyText,
+    hyphenateWords: hyphenateWords ?? this.hyphenateWords,
+    centerTapControls: centerTapControls ?? this.centerTapControls,
+    swipeChapterNavigation:
+        swipeChapterNavigation ?? this.swipeChapterNavigation,
+    speechRate: _bounded(speechRate ?? this.speechRate, 0.25, 0.75, 0.5),
+    speechPitch: _bounded(speechPitch ?? this.speechPitch, 0.5, 1.5, 1),
   );
 
   Map<String, Object> toJson() => {
@@ -75,6 +118,13 @@ class BookReaderSettings {
     'contentWidth': contentWidth,
     'horizontalPadding': horizontalPadding,
     'verticalPadding': verticalPadding,
+    'fontWeight': fontWeight,
+    'justifyText': justifyText,
+    'hyphenateWords': hyphenateWords,
+    'centerTapControls': centerTapControls,
+    'swipeChapterNavigation': swipeChapterNavigation,
+    'speechRate': speechRate,
+    'speechPitch': speechPitch,
   };
 
   @override
@@ -88,7 +138,14 @@ class BookReaderSettings {
           lineHeight == other.lineHeight &&
           contentWidth == other.contentWidth &&
           horizontalPadding == other.horizontalPadding &&
-          verticalPadding == other.verticalPadding;
+          verticalPadding == other.verticalPadding &&
+          fontWeight == other.fontWeight &&
+          justifyText == other.justifyText &&
+          hyphenateWords == other.hyphenateWords &&
+          centerTapControls == other.centerTapControls &&
+          swipeChapterNavigation == other.swipeChapterNavigation &&
+          speechRate == other.speechRate &&
+          speechPitch == other.speechPitch;
 
   @override
   int get hashCode => Object.hash(
@@ -100,6 +157,13 @@ class BookReaderSettings {
     contentWidth,
     horizontalPadding,
     verticalPadding,
+    fontWeight,
+    justifyText,
+    hyphenateWords,
+    centerTapControls,
+    swipeChapterNavigation,
+    speechRate,
+    speechPitch,
   );
 }
 
@@ -117,7 +181,8 @@ double _bounded(
   double fallback,
 ) {
   final parsed = value is num ? value.toDouble() : double.tryParse('$value');
-  return (parsed ?? fallback).clamp(minimum, maximum).toDouble();
+  if (parsed == null || !parsed.isFinite) return fallback;
+  return parsed.clamp(minimum, maximum).toDouble();
 }
 
 String _readerFontFamily(Object? value) {

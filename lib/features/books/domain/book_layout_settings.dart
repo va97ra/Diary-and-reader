@@ -14,6 +14,7 @@ class BookLayoutSettings {
     this.marginBottomMm = 20,
     this.marginLeftMm = 20,
     this.viewMode = BookPageViewMode.continuous,
+    this.showChapterTitlesInBody = true,
   });
 
   factory BookLayoutSettings.fromJson(Map<String, dynamic> json) =>
@@ -37,6 +38,7 @@ class BookLayoutSettings {
           json['viewMode']?.toString(),
           BookPageViewMode.continuous,
         ),
+        showChapterTitlesInBody: json['showChapterTitlesInBody'] != false,
       );
 
   final BookPaperSize paperSize;
@@ -46,6 +48,7 @@ class BookLayoutSettings {
   final double marginBottomMm;
   final double marginLeftMm;
   final BookPageViewMode viewMode;
+  final bool showChapterTitlesInBody;
 
   BookPageFormat get pageFormat {
     final (widthMm, heightMm) = switch ((paperSize, orientation)) {
@@ -70,6 +73,7 @@ class BookLayoutSettings {
     double? marginBottomMm,
     double? marginLeftMm,
     BookPageViewMode? viewMode,
+    bool? showChapterTitlesInBody,
   }) => BookLayoutSettings(
     paperSize: paperSize ?? this.paperSize,
     orientation: orientation ?? this.orientation,
@@ -78,6 +82,8 @@ class BookLayoutSettings {
     marginBottomMm: marginBottomMm ?? this.marginBottomMm,
     marginLeftMm: marginLeftMm ?? this.marginLeftMm,
     viewMode: viewMode ?? this.viewMode,
+    showChapterTitlesInBody:
+        showChapterTitlesInBody ?? this.showChapterTitlesInBody,
   );
 
   BookLayoutSettings withUniformMargins(double millimeters) => copyWith(
@@ -95,6 +101,7 @@ class BookLayoutSettings {
     'marginBottomMm': marginBottomMm,
     'marginLeftMm': marginLeftMm,
     'viewMode': viewMode.name,
+    'showChapterTitlesInBody': showChapterTitlesInBody,
   };
 
   static double _margin(Object? value) {

@@ -1,9 +1,21 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
+import 'package:dnevnik/features/books/application/workspace_save_state.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_adaptive_control_shell.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_editor_metrics.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_save_status.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-enum BookWorkspaceAction { search, export, preview, history, backup, restore }
+enum BookWorkspaceAction {
+  search,
+  statistics,
+  export,
+  preview,
+  history,
+  trash,
+  backup,
+  restore,
+}
 
 class BookWorkspaceAppBar extends StatelessWidget
     implements PreferredSizeWidget {
@@ -11,6 +23,10 @@ class BookWorkspaceAppBar extends StatelessWidget
     required this.bookTitle,
     required this.sectionTitle,
     required this.metrics,
+    required this.saveState,
+    required this.onRenameBook,
+    required this.onRenameSection,
+    required this.onRetrySave,
     required this.onFocusMode,
     required this.onAction,
     super.key,
@@ -19,6 +35,10 @@ class BookWorkspaceAppBar extends StatelessWidget
   final String bookTitle;
   final String sectionTitle;
   final BookEditorMetrics metrics;
+  final WorkspaceSaveState saveState;
+  final VoidCallback onRenameBook;
+  final VoidCallback onRenameSection;
+  final VoidCallback onRetrySave;
   final VoidCallback onFocusMode;
   final ValueChanged<BookWorkspaceAction> onAction;
 
@@ -32,7 +52,15 @@ class BookWorkspaceAppBar extends StatelessWidget
       Localizations.localeOf(context).toLanguageTag(),
     );
     return AppBar(
-      titleSpacing: 12,
+      key: const ValueKey('writer-app-bar'),
+      backgroundColor: Colors.transparent,
+      foregroundColor: BookLeatherColors.foreground,
+      surfaceTintColor: Colors.transparent,
+      flexibleSpace: const BookLeatherPanel(
+        safeArea: EdgeInsets.only(top: 1, left: 1, right: 1),
+        child: SizedBox.expand(),
+      ),
+      titleSpacing: 8,
       title: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 320;
@@ -42,23 +70,46 @@ class BookWorkspaceAppBar extends StatelessWidget
                     '${metrics.activePage}/${metrics.pageCount}'
               : '${strings.words}: ${number.format(metrics.words)} · '
                     '${strings.page} ${metrics.activePage}/${metrics.pageCount}';
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          return Row(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    flex: compact ? 3 : 5,
-                    child: Text(
-                      bookTitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+              Expanded(
+                flex: compact ? 3 : 5,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _HeaderTitleAction(
+                      key: const ValueKey('writer-book-title-action'),
+                      label: strings.bookTitle,
+                      title: bookTitle,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: BookLeatherColors.foreground,
+                      ),
+                      onTap: onRenameBook,
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    flex: compact ? 2 : 3,
-                    child: Semantics(
+                    _HeaderTitleAction(
+                      key: const ValueKey('writer-section-title-action'),
+                      label: strings.chapterTitle,
+                      title: sectionTitle,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: BookLeatherColors.mutedForeground,
+                      ),
+                      onTap: onRenameSection,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                flex: compact ? 2 : 3,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Semantics(
                       label:
                           '${strings.words}: '
                           '${number.format(metrics.words)}, '
@@ -74,6 +125,7 @@ class BookWorkspaceAppBar extends StatelessWidget
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
                                 fontSize: compact ? 9.5 : 11,
+                                color: BookLeatherColors.mutedForeground,
                                 fontFeatures: const [
                                   FontFeature.tabularFigures(),
                                 ],
@@ -81,14 +133,14 @@ class BookWorkspaceAppBar extends StatelessWidget
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              Text(
-                sectionTitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall,
+                    const SizedBox(height: 1),
+                    BookSaveStatus(
+                      state: saveState,
+                      compact: compact,
+                      onRetry: onRetrySave,
+                    ),
+                  ],
+                ),
               ),
             ],
           );
@@ -112,6 +164,11 @@ class BookWorkspaceAppBar extends StatelessWidget
               strings.findAndReplace,
             ),
             _item(
+              BookWorkspaceAction.statistics,
+              Icons.insights_outlined,
+              strings.writingStatistics,
+            ),
+            _item(
               BookWorkspaceAction.export,
               Icons.ios_share_outlined,
               strings.exportBook,
@@ -127,6 +184,11 @@ class BookWorkspaceAppBar extends StatelessWidget
               strings.versionHistory,
             ),
             _item(
+              BookWorkspaceAction.trash,
+              Icons.delete_outline,
+              strings.sectionTrash,
+            ),
+            _item(
               BookWorkspaceAction.backup,
               Icons.download_outlined,
               strings.backupProject,
@@ -137,15 +199,71 @@ class BookWorkspaceAppBar extends StatelessWidget
               strings.restoreProjectBackup,
             ),
           ],
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-            child: Center(child: Text(strings.more)),
+          child: const SizedBox.square(
+            dimension: 40,
+            child: Icon(Icons.more_horiz),
           ),
         ),
-        const SizedBox(width: 4),
+        const SizedBox(width: 2),
       ],
     );
   }
+}
+
+class _HeaderTitleAction extends StatelessWidget {
+  const _HeaderTitleAction({
+    required this.label,
+    required this.title,
+    required this.onTap,
+    this.style,
+    super.key,
+  });
+
+  final String label;
+  final String title;
+  final VoidCallback onTap;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: label,
+    child: Semantics(
+      button: true,
+      label: '$label: $title',
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(6),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(6),
+          onTap: onTap,
+          child: SizedBox(
+            height: 24,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: style,
+                    ),
+                  ),
+                  const SizedBox(width: 3),
+                  Icon(
+                    Icons.edit_outlined,
+                    size: 12,
+                    color: style?.color ?? BookLeatherColors.mutedForeground,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 PopupMenuItem<BookWorkspaceAction> _item(

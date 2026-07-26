@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:archive/archive.dart';
 import 'package:dnevnik/features/books/application/book_epub_exporter.dart';
+import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
@@ -57,6 +58,22 @@ void main() {
     expect(chapter, contains('<ul>'));
     expect(chapter, contains('<li>Пункт</li>'));
     expect(chapter, contains('<a href="https://example.com">ссылка</a>'));
+  });
+
+  test('keeps a chapter in navigation when its body title is hidden', () {
+    final project = _project().copyWith(
+      layoutSettings: const BookLayoutSettings(showChapterTitlesInBody: false),
+    );
+    final archive = ZipDecoder().decodeBytes(
+      BookEpubExporter.create(project).bytes,
+    );
+    final files = {for (final file in archive.files) file.name: file};
+
+    expect(_text(files['EPUB/nav.xhtml']!), contains('Глава &amp; первая'));
+    expect(
+      _text(files['EPUB/text/section-002.xhtml']!),
+      isNot(contains('<h1>Глава &amp; первая</h1>')),
+    );
   });
 }
 

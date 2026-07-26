@@ -1,6 +1,12 @@
+import 'dart:async';
+
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/book_reader_annotation_exporter.dart';
+import 'package:dnevnik/features/books/application/book_reader_external_lookup.dart';
 import 'package:dnevnik/features/books/application/book_reader_search.dart';
+import 'package:dnevnik/features/books/application/book_reader_text_anchor.dart';
+import 'package:dnevnik/features/books/application/book_speech_engine.dart';
+import 'package:dnevnik/features/books/application/book_speech_segmenter.dart';
 import 'package:dnevnik/features/books/data/book_reader_annotation_file_service.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
@@ -9,6 +15,7 @@ import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_reading_progress.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_annotation_actions.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_annotation_export_sheet.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_navigation_panel.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_note_dialog.dart';
@@ -18,7 +25,11 @@ import 'package:dnevnik/features/books/presentation/reader/book_reader_search_sh
 import 'package:dnevnik/features/books/presentation/reader/book_reader_section_view.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_selection_bar.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_settings_sheet.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_speech_controls.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_text_selection.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_adaptive_control_shell.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_sheet_keyboard_dismiss.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -29,6 +40,9 @@ class BookReaderPage extends StatefulWidget {
     required this.onSettingsChanged,
     required this.onProgressChanged,
     required this.onAnnotationsChanged,
+    this.onReadingTimeChanged,
+    this.uriLauncher = launchBookReaderUri,
+    this.speechEngine,
     this.annotationFileSaver = const BookReaderAnnotationFileService(),
     super.key,
   });
@@ -38,6 +52,9 @@ class BookReaderPage extends StatefulWidget {
   final ValueChanged<BookReaderSettings> onSettingsChanged;
   final ValueChanged<BookReaderProgress> onProgressChanged;
   final ValueChanged<BookReaderAnnotations> onAnnotationsChanged;
+  final ValueChanged<Duration>? onReadingTimeChanged;
+  final BookReaderUriLauncher uriLauncher;
+  final BookSpeechEngine? speechEngine;
   final BookReaderAnnotationFileSaver annotationFileSaver;
 
   @override
@@ -45,6 +62,13 @@ class BookReaderPage extends StatefulWidget {
 }
 
 class _BookReaderPageState extends State<BookReaderPage> {
+  final Stopwatch _readingStopwatch = Stopwatch();
+  final BookReaderSectionController _sectionNavigationController =
+      BookReaderSectionController();
+  final GlobalKey _readingContentKey = GlobalKey(
+    debugLabel: 'reader-reading-content',
+  );
+  late final BookSpeechEngine _speechEngine;
   late BookReaderSettings _settings;
   late BookReaderAnnotations _annotations;
   late int _activeIndex;
@@ -52,6 +76,18 @@ class _BookReaderPageState extends State<BookReaderPage> {
   BookReaderTextSelection? _textSelection;
   int _clearSelectionVersion = 0;
   bool _isFocusMode = false;
+  bool _isSpeaking = false;
+  bool _isSpeechPaused = false;
+  bool _isChoosingSpeechStart = false;
+  List<BookSpeechSegment> _speechSegments = const [];
+  int _speechSegmentIndex = 0;
+  int _speechSettingsRequest = 0;
+  bool _isRefreshingSpeech = false;
+  BookSpeechSegment? _currentSpeechBlock;
+  BookSpeechSegment? _activeSpeechSegment;
+  int? _surfaceTapPointer;
+  Offset? _surfaceTapStart;
+  bool _surfaceTapMoved = false;
 
   List<BookSection> get _sections => widget.project.sections;
   BookSection get _section => _sections[_activeIndex];
@@ -60,6 +96,18 @@ class _BookReaderPageState extends State<BookReaderPage> {
   void initState() {
     super.initState();
     _settings = widget.readerSettings;
+    _speechEngine = widget.speechEngine ?? FlutterBookSpeechEngine();
+    _speechEngine.setCompletionHandler(
+      () => unawaited(_handleSpeechCompleted()),
+    );
+    _speechEngine.setErrorHandler(_handleSpeechError);
+    final speechEngine = _speechEngine;
+    if (speechEngine is BookSpeechProgressEngine) {
+      (speechEngine as BookSpeechProgressEngine).setProgressHandler(
+        _handleSpeechProgress,
+      );
+    }
+    _readingStopwatch.start();
     _annotations = widget.project.readerAnnotations;
     final savedId = widget.project.readerProgress.sectionId;
     final savedIndex = _sections.indexWhere((section) => section.id == savedId);
@@ -69,7 +117,21 @@ class _BookReaderPageState extends State<BookReaderPage> {
         : widget.project.readerProgress.sectionProgress;
   }
 
-  void _goToLocation(String sectionId, double sectionProgress) {
+  @override
+  void dispose() {
+    _readingStopwatch.stop();
+    unawaited(_speechEngine.stop());
+    super.dispose();
+  }
+
+  void _goToLocation(
+    String sectionId,
+    double sectionProgress, {
+    bool fromSpeech = false,
+  }) {
+    if (!fromSpeech && (_isSpeaking || _isChoosingSpeechStart)) {
+      unawaited(_stopSpeech());
+    }
     _clearTextSelection();
     final index = _sections.indexWhere((section) => section.id == sectionId);
     if (index < 0) return;
@@ -85,6 +147,7 @@ class _BookReaderPageState extends State<BookReaderPage> {
       _sectionProgress = normalizedProgress;
     });
     _saveProgress();
+    if (!fromSpeech) _showChapterTransition();
   }
 
   void _saveProgress() => widget.onProgressChanged(
@@ -93,6 +156,17 @@ class _BookReaderPageState extends State<BookReaderPage> {
       sectionProgress: _sectionProgress,
     ),
   );
+
+  void _saveSessionAfterPop() {
+    _readingStopwatch.stop();
+    widget.onProgressChanged(
+      BookReaderProgress(
+        sectionId: _section.id,
+        sectionProgress: _sectionProgress,
+      ),
+    );
+    widget.onReadingTimeChanged?.call(_readingStopwatch.elapsed);
+  }
 
   void _handleSectionProgress(double progress) {
     final normalized = progress.clamp(0, 1).toDouble();
@@ -120,55 +194,102 @@ class _BookReaderPageState extends State<BookReaderPage> {
         builder: (context) => LayoutBuilder(
           builder: (context, _) {
             return PopScope(
-              canPop: !_isFocusMode,
+              canPop: !_isFocusMode && !_isChoosingSpeechStart,
               onPopInvokedWithResult: (didPop, _) {
+                if (didPop) {
+                  _saveSessionAfterPop();
+                  return;
+                }
                 _saveProgress();
-                if (!didPop && _isFocusMode) {
+                if (_isChoosingSpeechStart) {
+                  _cancelSpeechTargetSelection();
+                } else if (_isFocusMode) {
                   setState(() => _isFocusMode = false);
                 }
               },
-              child: Scaffold(
-                appBar: _isFocusMode ? null : _buildAppBar(context),
-                body: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: _buildReadingSurface(context, palette),
-                    ),
-                    Positioned(
-                      left: 0,
-                      top: 0,
-                      bottom: 0,
-                      child: BookReaderProgressRail(
-                        value: _overallProgress,
-                        trackColor: palette.mutedInk.withValues(alpha: 0.22),
-                        progressColor: Theme.of(context).colorScheme.primary,
-                        semanticLabel: AppStrings.of(context).readingProgress,
-                      ),
-                    ),
-                    if (_isFocusMode)
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: SafeArea(
-                          child: Material(
-                            color: palette.surface.withValues(alpha: 0.84),
-                            elevation: 2,
-                            shape: const CircleBorder(),
-                            child: IconButton(
-                              key: const ValueKey('reader-exit-focus-mode'),
-                              tooltip: AppStrings.of(context).exitFocusReading,
-                              visualDensity: VisualDensity.compact,
-                              onPressed: _toggleFocusMode,
-                              icon: const Icon(Icons.fullscreen_exit),
+              child: CallbackShortcuts(
+                bindings: {
+                  const SingleActivator(LogicalKeyboardKey.arrowRight):
+                      _moveReaderForward,
+                  const SingleActivator(LogicalKeyboardKey.arrowDown):
+                      _moveReaderForward,
+                  const SingleActivator(LogicalKeyboardKey.pageDown):
+                      _moveReaderForward,
+                  const SingleActivator(LogicalKeyboardKey.space):
+                      _moveReaderForward,
+                  const SingleActivator(LogicalKeyboardKey.arrowLeft):
+                      _moveReaderBackward,
+                  const SingleActivator(LogicalKeyboardKey.arrowUp):
+                      _moveReaderBackward,
+                  const SingleActivator(LogicalKeyboardKey.pageUp):
+                      _moveReaderBackward,
+                  const SingleActivator(LogicalKeyboardKey.space, shift: true):
+                      _moveReaderBackward,
+                  const SingleActivator(LogicalKeyboardKey.escape):
+                      _handleReaderEscape,
+                },
+                child: Focus(
+                  autofocus: true,
+                  child: BookAdaptiveControlShell(
+                    panelsVisible: !_isFocusMode,
+                    compactTopPanel: _buildCompactReaderTop(context),
+                    compactBottomPanel: _buildCompactReaderBottom(context),
+                    wideStartPanel: _buildWideReaderStart(context),
+                    wideEndPanel: _buildWideReaderEnd(context),
+                    content: KeyedSubtree(
+                      key: _readingContentKey,
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: _buildReadingSurface(context, palette),
+                          ),
+                          Positioned(
+                            left: 0,
+                            top: 0,
+                            bottom: 0,
+                            child: BookReaderProgressRail(
+                              value: _overallProgress,
+                              trackColor: palette.mutedInk.withValues(
+                                alpha: 0.22,
+                              ),
+                              progressColor: Theme.of(
+                                context,
+                              ).colorScheme.primary,
+                              semanticLabel: AppStrings.of(
+                                context,
+                              ).readingProgress,
                             ),
                           ),
-                        ),
+                          if (_isFocusMode)
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: SafeArea(
+                                child: Material(
+                                  color: palette.surface.withValues(
+                                    alpha: 0.84,
+                                  ),
+                                  elevation: 2,
+                                  shape: const CircleBorder(),
+                                  child: IconButton(
+                                    key: const ValueKey(
+                                      'reader-exit-focus-mode',
+                                    ),
+                                    tooltip: AppStrings.of(
+                                      context,
+                                    ).exitFocusReading,
+                                    visualDensity: VisualDensity.compact,
+                                    onPressed: _toggleFocusMode,
+                                    icon: const Icon(Icons.fullscreen_exit),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
-                  ],
+                    ),
+                  ),
                 ),
-                bottomNavigationBar: _isFocusMode
-                    ? null
-                    : _buildNavigationBar(context, palette),
               ),
             );
           },
@@ -177,62 +298,555 @@ class _BookReaderPageState extends State<BookReaderPage> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
-    final strings = AppStrings.of(context);
-    return AppBar(
-      titleSpacing: 12,
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            widget.project.metadata.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+  void _moveReaderForward() =>
+      unawaited(_sectionNavigationController.moveForward());
+
+  void _moveReaderBackward() =>
+      unawaited(_sectionNavigationController.moveBackward());
+
+  void _handleReaderEscape() {
+    if (_isChoosingSpeechStart) {
+      _cancelSpeechTargetSelection();
+    } else if (_isFocusMode) {
+      _toggleFocusMode();
+    }
+  }
+
+  void _showChapterTransition() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(_section.title),
+            duration: const Duration(milliseconds: 850),
+            behavior: SnackBarBehavior.floating,
           ),
-          Text(
-            _section.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ],
-      ),
-      actions: [
-        IconButton(
-          key: const ValueKey('reader-hide-panels-button'),
-          tooltip: strings.focusReading,
-          onPressed: _toggleFocusMode,
-          icon: const Icon(Icons.fullscreen),
-        ),
-        PopupMenuButton<_ReaderMoreAction>(
-          key: const ValueKey('reader-more-menu'),
-          tooltip: strings.more,
-          onSelected: (action) {
-            if (action == _ReaderMoreAction.search) _showSearch(context);
-          },
-          itemBuilder: (_) => [
-            PopupMenuItem(
-              value: _ReaderMoreAction.search,
-              child: ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.search),
-                title: Text(strings.searchInBook),
+        );
+    });
+  }
+
+  Widget _buildCompactReaderTop(BuildContext themedContext) {
+    final strings = AppStrings.of(themedContext);
+    return SizedBox(
+      key: const ValueKey('reader-top-panel'),
+      height: 72,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(6, 5, 6, 5),
+        child: Row(
+          children: [
+            BookPanelIconAction(
+              key: const ValueKey('reader-back-action'),
+              icon: Icons.arrow_back,
+              tooltip: MaterialLocalizations.of(
+                themedContext,
+              ).backButtonTooltip,
+              onPressed: () => Navigator.of(themedContext).maybePop(),
+            ),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  BookPanelTitleAction(
+                    title: widget.project.metadata.title,
+                    label: strings.bookTitle,
+                    primary: true,
+                  ),
+                  BookPanelTitleAction(
+                    title: _section.title,
+                    label: strings.chapterTitle,
+                  ),
+                  Text(
+                    '${strings.readingProgress}: '
+                    '${(_overallProgress * 100).round()}%',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: BookLeatherColors.mutedForeground,
+                      fontSize: 9.5,
+                    ),
+                  ),
+                ],
               ),
             ),
+            BookPanelIconAction(
+              key: const ValueKey('reader-hide-panels-button'),
+              icon: Icons.fullscreen,
+              tooltip: strings.focusReading,
+              onPressed: _toggleFocusMode,
+            ),
           ],
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-            child: Center(child: Text(strings.more)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactReaderBottom(BuildContext themedContext) {
+    final strings = AppStrings.of(themedContext);
+    return SizedBox(
+      key: const ValueKey('reader-context-bar'),
+      height: 64,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(6, 5, 6, 5),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _compactReaderAction(
+              key: const ValueKey('reader-contents-action'),
+              icon: const Icon(Icons.toc),
+              label: strings.contentsShort,
+              onPressed: () => _showContents(themedContext),
+            ),
+            _compactReaderAction(
+              key: const ValueKey('reader-search-action'),
+              icon: const Icon(Icons.search),
+              label: strings.searchShort,
+              semanticLabel: strings.searchInBook,
+              onPressed: () => _showSearch(themedContext),
+            ),
+            _compactReaderAction(
+              key: const ValueKey('reader-settings-action'),
+              icon: const Text(
+                'Aa',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+              ),
+              label: strings.settings,
+              onPressed: () => _showSettings(themedContext),
+              selected: true,
+            ),
+            _compactReaderAction(
+              key: const ValueKey('reader-tts-action'),
+              icon: Icon(_speechIcon),
+              label: _isSpeaking || _isChoosingSpeechStart
+                  ? _speechLabel(strings)
+                  : strings.speechShort,
+              semanticLabel: _speechLabel(strings),
+              onPressed: _toggleSpeech,
+              selected: _isSpeaking || _isChoosingSpeechStart,
+            ),
+            _compactReaderAction(
+              key: const ValueKey('reader-bookmark-action'),
+              icon: Icon(
+                _currentBookmark == null
+                    ? Icons.bookmark_border
+                    : Icons.bookmark,
+              ),
+              label: strings.bookmark,
+              onPressed: _toggleBookmark,
+              selected: _currentBookmark != null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _compactReaderAction({
+    required Key key,
+    required Widget icon,
+    required String label,
+    required VoidCallback onPressed,
+    String? semanticLabel,
+    bool selected = false,
+  }) => Expanded(
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: BookPanelAction(
+        key: key,
+        icon: icon,
+        label: label,
+        semanticLabel: semanticLabel,
+        onPressed: onPressed,
+        selected: selected,
+        compact: true,
+      ),
+    ),
+  );
+
+  Widget _buildWideReaderStart(BuildContext themedContext) {
+    final strings = AppStrings.of(themedContext);
+    return Column(
+      key: const ValueKey('reader-left-panel'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 9, 8, 4),
+          child: Row(
+            children: [
+              BookPanelIconAction(
+                key: const ValueKey('reader-back-action'),
+                icon: Icons.arrow_back,
+                tooltip: MaterialLocalizations.of(
+                  themedContext,
+                ).backButtonTooltip,
+                onPressed: () => Navigator.of(themedContext).maybePop(),
+              ),
+              const Spacer(),
+              BookPanelIconAction(
+                key: const ValueKey('reader-hide-panels-button'),
+                icon: Icons.fullscreen,
+                tooltip: strings.focusReading,
+                onPressed: _toggleFocusMode,
+              ),
+            ],
           ),
         ),
-        const SizedBox(width: 4),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              BookPanelTitleAction(
+                title: widget.project.metadata.title,
+                label: strings.bookTitle,
+                primary: true,
+              ),
+              BookPanelTitleAction(
+                title: _section.title,
+                label: strings.chapterTitle,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${strings.readingProgress}: '
+                '${(_overallProgress * 100).round()}%',
+                style: const TextStyle(
+                  color: BookLeatherColors.mutedForeground,
+                  fontSize: 10,
+                ),
+              ),
+            ],
+          ),
+        ),
+        BookPanelSectionLabel(strings.chapters),
+        _wideReaderAction(
+          key: const ValueKey('reader-contents-action'),
+          icon: const Icon(Icons.toc),
+          label: strings.contentsShort,
+          onPressed: () => _showContents(themedContext),
+        ),
+        _wideReaderAction(
+          key: const ValueKey('reader-bookmark-action'),
+          icon: Icon(
+            _currentBookmark == null ? Icons.bookmark_border : Icons.bookmark,
+          ),
+          label: strings.bookmark,
+          onPressed: _toggleBookmark,
+          selected: _currentBookmark != null,
+        ),
       ],
     );
   }
 
+  Widget _buildWideReaderEnd(BuildContext themedContext) {
+    final strings = AppStrings.of(themedContext);
+    return ListView(
+      key: const ValueKey('reader-right-panel'),
+      padding: const EdgeInsets.fromLTRB(8, 9, 8, 9),
+      children: [
+        BookPanelSectionLabel(strings.moreActions),
+        _wideReaderAction(
+          key: const ValueKey('reader-search-action'),
+          icon: const Icon(Icons.search),
+          label: strings.searchInBook,
+          onPressed: () => _showSearch(themedContext),
+        ),
+        _wideReaderAction(
+          key: const ValueKey('reader-settings-action'),
+          icon: const Text(
+            'Aa',
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+          ),
+          label: strings.settings,
+          onPressed: () => _showSettings(themedContext),
+          selected: true,
+        ),
+        _wideReaderAction(
+          key: const ValueKey('reader-tts-action'),
+          icon: Icon(_speechIcon),
+          label: _speechLabel(strings),
+          onPressed: _toggleSpeech,
+          selected: _isSpeaking || _isChoosingSpeechStart,
+        ),
+      ],
+    );
+  }
+
+  Widget _wideReaderAction({
+    required Key key,
+    required Widget icon,
+    required String label,
+    required VoidCallback onPressed,
+    bool selected = false,
+  }) => Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: BookPanelAction(
+      key: key,
+      icon: icon,
+      label: label,
+      onPressed: onPressed,
+      selected: selected,
+    ),
+  );
+
+  IconData get _speechIcon => _isChoosingSpeechStart
+      ? Icons.close
+      : _isSpeaking
+      ? _isSpeechPaused
+            ? Icons.play_arrow
+            : Icons.pause
+      : Icons.volume_up;
+
+  String _speechLabel(AppStrings strings) => _isChoosingSpeechStart
+      ? strings.cancelSpeechStart
+      : _isSpeaking
+      ? _isSpeechPaused
+            ? strings.resumeReadingAloud
+            : strings.pauseReadingAloud
+      : strings.startReadingAloud;
+
   void _toggleFocusMode() {
     _clearTextSelection();
     setState(() => _isFocusMode = !_isFocusMode);
+  }
+
+  Future<void> _toggleSpeech() async {
+    if (_isChoosingSpeechStart) {
+      _cancelSpeechTargetSelection();
+      return;
+    }
+    if (_isSpeaking) {
+      await _pauseOrResumeSpeech();
+      return;
+    }
+    _clearTextSelection();
+    setState(() => _isChoosingSpeechStart = true);
+  }
+
+  Future<void> _configureSpeechForSection() => _speechEngine.configure(
+    languageCode: widget.project.metadata.languageCode,
+    rate: _settings.speechRate,
+    pitch: _settings.speechPitch,
+    bookTitle: widget.project.metadata.title,
+    chapterTitle: _section.title,
+  );
+
+  void _prepareSpeechSegments({required int startOffset}) {
+    final text = richDocumentPlainText(_section.content);
+    _speechSegments = BookSpeechSegmenter.split(text, startOffset: startOffset);
+    _speechSegmentIndex = 0;
+    _currentSpeechBlock = null;
+  }
+
+  Future<void> _handleSpeechTargetSelected(int requestedOffset) async {
+    if (!_isChoosingSpeechStart) return;
+    final text = richDocumentPlainText(_section.content);
+    final offset = BookSpeechSegmenter.wordStart(text, requestedOffset);
+    setState(() => _isChoosingSpeechStart = false);
+    await _startSpeechAt(offset);
+  }
+
+  Future<void> _startSpeechAt(int offset) async {
+    try {
+      await _configureSpeechForSection();
+    } catch (error) {
+      _handleSpeechError(error.toString());
+      return;
+    }
+    _prepareSpeechSegments(startOffset: offset);
+    if (_speechSegments.isEmpty) {
+      await _continueSpeechInNextReadableSection();
+      return;
+    }
+    setState(() {
+      _isSpeaking = true;
+      _isSpeechPaused = false;
+    });
+    await _speakNextSegment();
+  }
+
+  Future<void> _speakNextSegment() async {
+    if (!_isSpeaking || _speechSegmentIndex >= _speechSegments.length) return;
+    final segment = _speechSegments[_speechSegmentIndex++];
+    final textLength = richDocumentPlainText(_section.content).length;
+    setState(() {
+      _currentSpeechBlock = segment;
+      _activeSpeechSegment = segment;
+      _sectionProgress = textLength <= 0
+          ? 0
+          : (segment.startOffset / textLength).clamp(0, 1);
+    });
+    _saveProgress();
+    try {
+      await _speechEngine.speak(segment.text);
+    } catch (error) {
+      _handleSpeechError(error.toString());
+    }
+  }
+
+  void _handleSpeechProgress(int localStart, int localEnd) {
+    final block = _currentSpeechBlock;
+    if (!mounted || !_isSpeaking || block == null || block.text.isEmpty) {
+      return;
+    }
+    final normalizedStart = localStart.clamp(0, block.text.length);
+    final normalizedEnd = localEnd.clamp(normalizedStart, block.text.length);
+    final start = block.startOffset + normalizedStart;
+    final end = block.startOffset + normalizedEnd;
+    final textLength = richDocumentPlainText(_section.content).length;
+    setState(() {
+      _activeSpeechSegment = BookSpeechSegment(
+        startOffset: start,
+        endOffset: end,
+        text: block.text.substring(normalizedStart, normalizedEnd),
+      );
+      _sectionProgress = textLength <= 0 ? 0 : (start / textLength).clamp(0, 1);
+    });
+    _saveProgress();
+  }
+
+  Future<void> _handleSpeechCompleted() async {
+    if (!_isSpeaking || !mounted || _isRefreshingSpeech) return;
+    if (_isSpeechPaused) return;
+    if (_speechSegmentIndex < _speechSegments.length) {
+      await _speakNextSegment();
+      return;
+    }
+    await _continueSpeechInNextReadableSection();
+  }
+
+  Future<void> _continueSpeechInNextReadableSection() async {
+    _sectionProgress = 1;
+    _saveProgress();
+    for (var index = _activeIndex + 1; index < _sections.length; index++) {
+      final text = richDocumentPlainText(_sections[index].content).trim();
+      if (text.isEmpty) continue;
+      _goToLocation(_sections[index].id, 0, fromSpeech: true);
+      try {
+        await _configureSpeechForSection();
+      } catch (error) {
+        _handleSpeechError(error.toString());
+        return;
+      }
+      _prepareSpeechSegments(startOffset: 0);
+      await _speakNextSegment();
+      return;
+    }
+    if (!mounted) return;
+    setState(() {
+      _isSpeaking = false;
+      _isSpeechPaused = false;
+      _activeSpeechSegment = null;
+      _currentSpeechBlock = null;
+      _speechSegments = const [];
+      _speechSegmentIndex = 0;
+    });
+  }
+
+  Future<void> _pauseOrResumeSpeech() async {
+    if (!_isSpeaking) return;
+    if (_isSpeechPaused) {
+      await _speechEngine.resume();
+      if (mounted) setState(() => _isSpeechPaused = false);
+    } else {
+      await _speechEngine.pause();
+      if (mounted) setState(() => _isSpeechPaused = true);
+    }
+  }
+
+  Future<void> _stopSpeech() async {
+    _speechSettingsRequest++;
+    _isRefreshingSpeech = false;
+    if (mounted) {
+      setState(() {
+        _isSpeaking = false;
+        _isSpeechPaused = false;
+        _isChoosingSpeechStart = false;
+        _activeSpeechSegment = null;
+        _currentSpeechBlock = null;
+        _speechSegments = const [];
+        _speechSegmentIndex = 0;
+      });
+    }
+    await _speechEngine.stop();
+  }
+
+  void _cancelSpeechTargetSelection() {
+    _clearTextSelection();
+    setState(() => _isChoosingSpeechStart = false);
+  }
+
+  void _handleSpeechError(String _) {
+    if (!mounted) return;
+    setState(() {
+      _isSpeaking = false;
+      _isSpeechPaused = false;
+      _isChoosingSpeechStart = false;
+      _activeSpeechSegment = null;
+      _currentSpeechBlock = null;
+    });
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(AppStrings.of(context).speechError)));
+  }
+
+  void _changeSpeechRate(double delta) {
+    final rate = (_settings.speechRate + delta).clamp(0.25, 0.75);
+    if ((rate - _settings.speechRate).abs() < 0.001) return;
+    _applyReaderSettings(_settings.copyWith(speechRate: rate));
+  }
+
+  void _applyReaderSettings(BookReaderSettings settings) {
+    final speechChanged =
+        settings.speechRate != _settings.speechRate ||
+        settings.speechPitch != _settings.speechPitch;
+    setState(() => _settings = settings);
+    widget.onSettingsChanged(settings);
+    if (_isSpeaking && speechChanged) {
+      unawaited(_refreshSpeechAfterSettingsChange());
+    }
+  }
+
+  Future<void> _refreshSpeechAfterSettingsChange() async {
+    final block = _currentSpeechBlock;
+    if (!_isSpeaking || block == null || block.text.isEmpty) return;
+    final request = ++_speechSettingsRequest;
+    final wasPaused = _isSpeechPaused;
+    final active = _activeSpeechSegment;
+    final restartOffset =
+        ((active?.startOffset ?? block.startOffset) - block.startOffset)
+            .clamp(0, block.text.length - 1)
+            .toInt();
+    _isRefreshingSpeech = true;
+    try {
+      if (!wasPaused) await _speechEngine.stop();
+      if (!mounted || request != _speechSettingsRequest || !_isSpeaking) {
+        return;
+      }
+      await _configureSpeechForSection();
+      if (!mounted || request != _speechSettingsRequest || !_isSpeaking) {
+        return;
+      }
+      if (wasPaused) return;
+      final resumed = BookSpeechSegment(
+        startOffset: block.startOffset + restartOffset,
+        endOffset: block.endOffset,
+        text: block.text.substring(restartOffset),
+      );
+      setState(() {
+        _currentSpeechBlock = resumed;
+        _activeSpeechSegment = resumed;
+      });
+      await _speechEngine.speak(resumed.text);
+    } catch (error) {
+      if (request == _speechSettingsRequest) {
+        _handleSpeechError(error.toString());
+      }
+    } finally {
+      if (request == _speechSettingsRequest) _isRefreshingSpeech = false;
+    }
   }
 
   Widget _buildReadingSurface(
@@ -241,24 +855,76 @@ class _BookReaderPageState extends State<BookReaderPage> {
   ) => Stack(
     children: [
       Positioned.fill(
-        child: BookReaderSectionView(
-          section: _section,
-          assets: widget.project.assets,
-          settings: _settings,
-          palette: palette,
-          initialProgress: _sectionProgress,
-          onProgressChanged: _handleSectionProgress,
-          highlights: _annotations.highlights
-              .where((highlight) => highlight.sectionId == _section.id)
-              .toList(),
-          onTextSelection: _handleTextSelection,
-          clearSelectionVersion: _clearSelectionVersion,
-          onNextSectionRequested: _activeIndex < _sections.length - 1
-              ? _goToNextSection
+        child: Listener(
+          key: const ValueKey('reader-reading-surface-listener'),
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: _settings.centerTapControls
+              ? (event) {
+                  _surfaceTapPointer = event.pointer;
+                  _surfaceTapStart = event.localPosition;
+                  _surfaceTapMoved = false;
+                }
               : null,
-          onPreviousSectionRequested: _activeIndex > 0
-              ? _goToPreviousSectionEnd
+          onPointerMove: _settings.centerTapControls
+              ? (event) {
+                  if (event.pointer != _surfaceTapPointer ||
+                      _surfaceTapStart == null) {
+                    return;
+                  }
+                  if ((event.localPosition - _surfaceTapStart!).distance > 12) {
+                    _surfaceTapMoved = true;
+                  }
+                }
               : null,
+          onPointerCancel: _settings.centerTapControls
+              ? (_) => _resetSurfaceTap()
+              : null,
+          onPointerUp: _settings.centerTapControls
+              ? (event) {
+                  final isTap =
+                      event.pointer == _surfaceTapPointer &&
+                      !_surfaceTapMoved &&
+                      _surfaceTapStart != null;
+                  final position = event.localPosition;
+                  _resetSurfaceTap();
+                  if (!isTap) return;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      _handleReadingSurfaceTap(context, position);
+                    }
+                  });
+                }
+              : null,
+          child: BookReaderSectionView(
+            section: _section,
+            languageCode: widget.project.metadata.languageCode,
+            assets: widget.project.assets,
+            settings: _settings,
+            palette: palette,
+            initialProgress: _sectionProgress,
+            onProgressChanged: _handleSectionProgress,
+            highlights: _annotations.highlights
+                .where((highlight) => highlight.sectionId == _section.id)
+                .toList(),
+            onTextSelection: _handleTextSelection,
+            clearSelectionVersion: _clearSelectionVersion,
+            navigationController: _sectionNavigationController,
+            speechTargetMode: _isChoosingSpeechStart,
+            onSpeechTargetSelected: (offset) =>
+                unawaited(_handleSpeechTargetSelected(offset)),
+            speechRange: _activeSpeechSegment == null
+                ? null
+                : BookReaderTextRange(
+                    _activeSpeechSegment!.startOffset,
+                    _activeSpeechSegment!.endOffset,
+                  ),
+            onNextSectionRequested: _activeIndex < _sections.length - 1
+                ? _goToNextSection
+                : null,
+            onPreviousSectionRequested: _activeIndex > 0
+                ? _goToPreviousSectionEnd
+                : null,
+          ),
         ),
       ),
       if (_textSelection case final selection?)
@@ -273,83 +939,66 @@ class _BookReaderPageState extends State<BookReaderPage> {
               onSaveQuote: _saveQuote,
               onAddNote: () => _addNoteForSelection(context),
               onCopy: _copySelection,
+              onDictionary: () =>
+                  _openSelectionLookup(BookReaderLookupAction.dictionary),
+              onTranslate: () =>
+                  _openSelectionLookup(BookReaderLookupAction.translate),
+              onWebSearch: () =>
+                  _openSelectionLookup(BookReaderLookupAction.webSearch),
               onClose: _clearTextSelection,
+            ),
+          ),
+        ),
+      if (_isChoosingSpeechStart || _isSpeaking)
+        Positioned(
+          left: 12,
+          right: 12,
+          top: 12,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: BookReaderSpeechControls(
+                isChoosingStart: _isChoosingSpeechStart,
+                isPaused: _isSpeechPaused,
+                rate: _settings.speechRate,
+                onCancelChoosing: _cancelSpeechTargetSelection,
+                onPauseOrResume: () => unawaited(_pauseOrResumeSpeech()),
+                onStop: () => unawaited(_stopSpeech()),
+                onSlower: _settings.speechRate > 0.25
+                    ? () => _changeSpeechRate(-0.05)
+                    : null,
+                onFaster: _settings.speechRate < 0.75
+                    ? () => _changeSpeechRate(0.05)
+                    : null,
+                onSettings: () => _showSettings(context),
+                backgroundColor: palette.surface,
+                foregroundColor: palette.ink,
+              ),
             ),
           ),
         ),
     ],
   );
 
-  Widget _buildNavigationBar(BuildContext context, BookReaderPalette palette) {
-    final strings = AppStrings.of(context);
-    return Material(
-      key: const ValueKey('reader-context-bar'),
-      color: palette.surface,
-      elevation: 10,
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 68,
-          child: Row(
-            children: [
-              _ReaderAction(
-                key: const ValueKey('reader-previous-section'),
-                label: strings.previousShort,
-                semanticLabel: strings.previousSection,
-                onPressed: _activeIndex > 0
-                    ? () => _goToIndex(_activeIndex - 1)
-                    : null,
-                icon: const Icon(Icons.chevron_left),
-              ),
-              _ReaderAction(
-                key: const ValueKey('reader-contents-action'),
-                label: strings.contentsShort,
-                onPressed: () => _showContents(context),
-                icon: const Icon(Icons.toc),
-              ),
-              _ReaderAction(
-                key: const ValueKey('reader-settings-action'),
-                label: strings.settings,
-                onPressed: () => _showSettings(context),
-                icon: const Text(
-                  'Aa',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-                ),
-                accent: true,
-              ),
-              _ReaderAction(
-                key: const ValueKey('reader-bookmark-action'),
-                label: strings.bookmark,
-                onPressed: _toggleBookmark,
-                icon: Icon(
-                  _currentBookmark == null
-                      ? Icons.bookmark_border
-                      : Icons.bookmark,
-                ),
-              ),
-              _ReaderAction(
-                key: const ValueKey('reader-next-section'),
-                label: strings.nextShort,
-                semanticLabel: strings.nextSection,
-                onPressed: _activeIndex < _sections.length - 1
-                    ? () => _goToIndex(_activeIndex + 1)
-                    : null,
-                icon: const Icon(Icons.chevron_right),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  void _resetSurfaceTap() {
+    _surfaceTapPointer = null;
+    _surfaceTapStart = null;
+    _surfaceTapMoved = false;
   }
 
-  BookReaderBookmark? get _currentBookmark => _annotations.bookmarks
-      .where(
-        (bookmark) =>
-            bookmark.sectionId == _section.id &&
-            (bookmark.sectionProgress - _sectionProgress).abs() < 0.02,
-      )
-      .firstOrNull;
+  void _handleReadingSurfaceTap(BuildContext context, Offset localPosition) {
+    if (_textSelection != null || _isChoosingSpeechStart) return;
+    final width = context.size?.width ?? MediaQuery.sizeOf(context).width;
+    final position = localPosition.dx / width;
+    if (position >= 0.32 && position <= 0.68) _toggleFocusMode();
+  }
+
+  BookReaderBookmark? get _currentBookmark =>
+      BookReaderAnnotationActions.bookmarkAt(
+        annotations: _annotations,
+        sectionId: _section.id,
+        sectionProgress: _sectionProgress,
+      );
 
   Widget _navigationPanel(
     BuildContext panelContext, {
@@ -378,8 +1027,6 @@ class _BookReaderPageState extends State<BookReaderPage> {
     onExport: () => _showAnnotationExport(panelContext),
   );
 
-  void _goToIndex(int index) => _goToLocation(_sections[index].id, 0);
-
   void _goToNextSection() {
     if (_activeIndex >= _sections.length - 1) return;
     _sectionProgress = 1;
@@ -393,43 +1040,41 @@ class _BookReaderPageState extends State<BookReaderPage> {
   }
 
   Future<void> _showContents(BuildContext themedContext) =>
-      showModalBottomSheet<void>(
+      showBookLeatherBottomSheet<void>(
         context: themedContext,
-        isScrollControlled: true,
-        builder: (sheetContext) => FractionallySizedBox(
-          heightFactor: 0.82,
-          child: _navigationPanel(sheetContext, closeAfterSelection: true),
+        builder: (sheetContext) => BookSheetKeyboardDismiss(
+          child: FractionallySizedBox(
+            heightFactor: 0.82,
+            child: _navigationPanel(sheetContext, closeAfterSelection: true),
+          ),
         ),
       );
 
   Future<void> _showSearch(BuildContext themedContext) =>
-      showModalBottomSheet<void>(
+      showBookLeatherBottomSheet<void>(
         context: themedContext,
-        isScrollControlled: true,
-        showDragHandle: true,
-        builder: (sheetContext) => FractionallySizedBox(
-          heightFactor: 0.88,
-          child: BookReaderSearchSheet(
-            sections: _sections,
-            onSelected: (result) {
-              Navigator.of(sheetContext).pop();
-              _goToSearchResult(result);
-            },
+        builder: (sheetContext) => BookSheetKeyboardDismiss(
+          child: FractionallySizedBox(
+            heightFactor: 0.88,
+            child: BookReaderSearchSheet(
+              sections: _sections,
+              onSelected: (result) {
+                Navigator.of(sheetContext).pop();
+                _goToSearchResult(result);
+              },
+            ),
           ),
         ),
       );
 
   Future<void> _showSettings(BuildContext themedContext) =>
-      showModalBottomSheet<void>(
+      showBookLeatherBottomSheet<void>(
         context: themedContext,
-        isScrollControlled: true,
-        showDragHandle: true,
-        builder: (_) => BookReaderSettingsSheet(
-          settings: _settings,
-          onChanged: (settings) {
-            setState(() => _settings = settings);
-            widget.onSettingsChanged(settings);
-          },
+        builder: (_) => BookSheetKeyboardDismiss(
+          child: BookReaderSettingsSheet(
+            settings: _settings,
+            onChanged: _applyReaderSettings,
+          ),
         ),
       );
 
@@ -437,18 +1082,11 @@ class _BookReaderPageState extends State<BookReaderPage> {
       _goToLocation(result.sectionId, result.sectionProgress);
 
   void _toggleBookmark() {
-    final current = _currentBookmark;
-    if (current != null) {
-      _updateAnnotations(_annotations.removeBookmark(current.id));
-      return;
-    }
     _updateAnnotations(
-      _annotations.addBookmark(
-        BookReaderBookmark.create(
-          sectionId: _section.id,
-          sectionProgress: _sectionProgress,
-          excerpt: _currentExcerpt(),
-        ),
+      BookReaderAnnotationActions.toggleBookmark(
+        annotations: _annotations,
+        section: _section,
+        sectionProgress: _sectionProgress,
       ),
     );
   }
@@ -475,15 +1113,11 @@ class _BookReaderPageState extends State<BookReaderPage> {
     final selection = _textSelection;
     if (selection == null) return;
     _updateAnnotations(
-      _annotations.addHighlight(
-        BookReaderHighlight.create(
-          sectionId: _section.id,
-          sectionProgress: selection.sectionProgress,
-          startOffset: selection.startOffset,
-          endOffset: selection.endOffset,
-          excerpt: selection.text,
-          color: color,
-        ),
+      BookReaderAnnotationActions.addHighlight(
+        annotations: _annotations,
+        sectionId: _section.id,
+        selection: selection,
+        color: color,
       ),
     );
     _showMessage(AppStrings.of(context).highlightSaved);
@@ -494,14 +1128,10 @@ class _BookReaderPageState extends State<BookReaderPage> {
     final selection = _textSelection;
     if (selection == null) return;
     _updateAnnotations(
-      _annotations.addQuote(
-        BookReaderQuote.create(
-          sectionId: _section.id,
-          sectionProgress: selection.sectionProgress,
-          startOffset: selection.startOffset,
-          endOffset: selection.endOffset,
-          text: selection.text,
-        ),
+      BookReaderAnnotationActions.addQuote(
+        annotations: _annotations,
+        sectionId: _section.id,
+        selection: selection,
       ),
     );
     _showMessage(AppStrings.of(context).quoteSaved);
@@ -515,6 +1145,24 @@ class _BookReaderPageState extends State<BookReaderPage> {
     if (!mounted) return;
     _showMessage(AppStrings.of(context).selectionCopied);
     _clearTextSelection();
+  }
+
+  Future<void> _openSelectionLookup(BookReaderLookupAction action) async {
+    final selection = _textSelection;
+    if (selection == null) return;
+    final uri = BookReaderExternalLookup.uri(
+      action: action,
+      text: selection.text,
+      languageCode: widget.project.metadata.languageCode,
+    );
+    try {
+      final opened = await widget.uriLauncher(uri);
+      if (!opened && mounted) {
+        _showMessage(AppStrings.of(context).externalActionFailed);
+      }
+    } on Exception {
+      if (mounted) _showMessage(AppStrings.of(context).externalActionFailed);
+    }
   }
 
   Future<void> _addNoteForSelection(BuildContext themedContext) async {
@@ -536,14 +1184,15 @@ class _BookReaderPageState extends State<BookReaderPage> {
   }
 
   Future<void> _showAnnotationExport(BuildContext themedContext) =>
-      showModalBottomSheet<void>(
+      showBookLeatherBottomSheet<void>(
         context: themedContext,
-        showDragHandle: true,
-        builder: (sheetContext) => BookReaderAnnotationExportSheet(
-          onSelected: (format) {
-            Navigator.of(sheetContext).pop();
-            _exportAnnotations(themedContext, format);
-          },
+        builder: (sheetContext) => BookSheetKeyboardDismiss(
+          child: BookReaderAnnotationExportSheet(
+            onSelected: (format) {
+              Navigator.of(sheetContext).pop();
+              _exportAnnotations(themedContext, format);
+            },
+          ),
         ),
       );
 
@@ -582,17 +1231,10 @@ class _BookReaderPageState extends State<BookReaderPage> {
       );
   }
 
-  String _currentExcerpt() {
-    final text = richDocumentPlainText(
-      _section.content,
-    ).replaceAll(RegExp(r'\s+'), ' ').trim();
-    if (text.isEmpty) return _section.title;
-    const length = 72;
-    final center = (text.length * _sectionProgress).round();
-    final start = (center - length ~/ 2).clamp(0, text.length);
-    final end = (start + length).clamp(0, text.length);
-    return '${start > 0 ? '…' : ''}${text.substring(start, end)}${end < text.length ? '…' : ''}';
-  }
+  String _currentExcerpt() => BookReaderAnnotationActions.excerpt(
+    section: _section,
+    sectionProgress: _sectionProgress,
+  );
 
   Future<void> _addNote(BuildContext themedContext) async {
     final text = await _showNoteEditor(themedContext);
@@ -629,63 +1271,4 @@ class _BookReaderPageState extends State<BookReaderPage> {
     context: themedContext,
     builder: (_) => BookReaderNoteDialog(initialText: note?.text ?? ''),
   );
-}
-
-enum _ReaderMoreAction { search }
-
-class _ReaderAction extends StatelessWidget {
-  const _ReaderAction({
-    required this.label,
-    required this.onPressed,
-    required this.icon,
-    this.accent = false,
-    this.semanticLabel,
-    super.key,
-  });
-
-  final String label;
-  final VoidCallback? onPressed;
-  final Widget icon;
-  final bool accent;
-  final String? semanticLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onPressed != null;
-    final scheme = Theme.of(context).colorScheme;
-    final color = !enabled
-        ? Theme.of(context).disabledColor
-        : accent
-        ? scheme.primary
-        : scheme.onSurfaceVariant;
-    return Expanded(
-      child: Semantics(
-        button: true,
-        enabled: enabled,
-        label: semanticLabel ?? label,
-        child: InkWell(
-          onTap: onPressed,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconTheme(
-                  data: IconThemeData(size: 22, color: color),
-                  child: icon,
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 10.5, color: color),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }

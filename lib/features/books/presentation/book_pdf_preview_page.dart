@@ -5,6 +5,7 @@ import 'package:dnevnik/features/books/application/book_pdf_font_assets.dart';
 import 'package:dnevnik/features/books/data/book_export_file_service.dart';
 import 'package:dnevnik/features/books/data/book_pdf_asset_font_loader.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_adaptive_control_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
 
@@ -38,7 +39,7 @@ class _BookPdfPreviewPageState extends State<BookPdfPreviewPage> {
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
     return Scaffold(
-      appBar: AppBar(
+      appBar: LiteriaLeatherAppBar(
         title: Text(strings.pdfPreview),
         actions: [
           IconButton(

@@ -78,8 +78,11 @@ abstract final class BookEpubExporter {
     for (var index = 0; index < project.assets.length; index++) {
       final asset = project.assets[index];
       if (!asset.isRenderableImage) continue;
+      final coverProperty = asset.id == project.coverAssetId
+          ? ' properties="cover-image"'
+          : '';
       manifest.writeln(
-        '    <item id="image-$index" href="images/${_imageFileName(project, asset.id)}" media-type="${escapeXml(asset.mediaType)}"/>',
+        '    <item id="image-$index" href="images/${_imageFileName(project, asset.id)}" media-type="${escapeXml(asset.mediaType)}"$coverProperty/>',
       );
     }
 
@@ -167,12 +170,17 @@ ${items.join('\n')}
 
   static String _titlePage(BookProject project) {
     final metadata = project.metadata;
+    final cover = project.coverAsset;
+    final coverImage = cover == null
+        ? ''
+        : '<img class="book-cover" src="../images/${_imageFileName(project, cover.id)}" alt="${escapeXml(metadata.title)}"/>';
     return _xhtml(
       languageCode: metadata.languageCode,
       title: metadata.title,
       body:
           '''
   <section class="title-page" epub:type="titlepage">
+    $coverImage
     <h1>${escapeXml(metadata.title)}</h1>
     ${_htmlElement('p', metadata.subtitle, className: 'subtitle')}
     ${_htmlElement('p', metadata.author, className: 'author')}
@@ -192,7 +200,7 @@ ${items.join('\n')}
     body:
         '''
   <section id="section-${index + 1}" epub:type="${_epubType(section.type)}">
-    <h1>${escapeXml(section.title)}</h1>
+    ${project.layoutSettings.showChapterTitlesInBody ? '<h1>${escapeXml(section.title)}</h1>' : ''}
 ${EpubRichTextRenderer.render(section.content, imageSource: (assetId) {
           final file = _imageFileName(project, assetId);
           return file.isEmpty ? null : '../images/$file';
@@ -251,6 +259,8 @@ a { color: inherit; }
 .check { font-family: sans-serif; }
 .book-image { margin: 1.2em 0; text-align: center; }
 .book-image img { max-width: 100%; height: auto; }
+.book-image figcaption { margin-top: .4em; font-size: .85em; font-style: italic; }
+.book-cover { display: block; max-width: 72%; max-height: 70vh; margin: 0 auto 1.5em; }
 .page-break { break-after: page; page-break-after: always; }
 ${[for (var index = 1; index <= 8; index++) '.indent-$index { margin-left: ${index * 1.5}em; }'].join('\n')}
 ''';

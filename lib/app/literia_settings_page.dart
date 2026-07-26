@@ -1,5 +1,7 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/domain/literia_app_preferences.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_adaptive_control_shell.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/material.dart';
 
 class LiteriaSettingsPage extends StatelessWidget {
@@ -12,7 +14,6 @@ class LiteriaSettingsPage extends StatelessWidget {
     required this.onBackup,
     required this.onRestore,
     required this.onOpenBookStorage,
-    required this.onShowOnboarding,
     super.key,
   });
 
@@ -24,115 +25,124 @@ class LiteriaSettingsPage extends StatelessWidget {
   final Future<void> Function() onBackup;
   final Future<void> Function() onRestore;
   final VoidCallback onOpenBookStorage;
-  final VoidCallback onShowOnboarding;
 
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(strings.settings)),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-        children: [
-          _SettingsCard(
-            title: strings.appearance,
-            icon: Icons.palette_outlined,
-            child: DropdownButtonFormField<LiteriaThemePreference>(
-              initialValue: themePreference,
-              isExpanded: true,
-              decoration: const InputDecoration(border: OutlineInputBorder()),
-              items: [
-                DropdownMenuItem(
-                  value: LiteriaThemePreference.system,
-                  child: Text(strings.systemTheme),
+      backgroundColor: BookLeatherColors.backgroundDark,
+      appBar: LiteriaLeatherAppBar(title: Text(strings.settings)),
+      body: BookLeatherPanel(
+        safeArea: const EdgeInsets.only(left: 1, right: 1, bottom: 1),
+        child: Theme(
+          data: bookLeatherModalTheme(context),
+          child: ListView(
+            key: const ValueKey('literia-settings-list'),
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 24),
+            children: [
+              _SettingsCard(
+                title: strings.appearance,
+                icon: Icons.palette_outlined,
+                child: DropdownButtonFormField<LiteriaThemePreference>(
+                  initialValue: themePreference,
+                  isExpanded: true,
+                  decoration: const InputDecoration(),
+                  items: [
+                    DropdownMenuItem(
+                      value: LiteriaThemePreference.system,
+                      child: Text(strings.systemTheme),
+                    ),
+                    DropdownMenuItem(
+                      value: LiteriaThemePreference.light,
+                      child: Text(strings.lightTheme),
+                    ),
+                    DropdownMenuItem(
+                      value: LiteriaThemePreference.dark,
+                      child: Text(strings.darkTheme),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) onThemeChanged(value);
+                  },
                 ),
-                DropdownMenuItem(
-                  value: LiteriaThemePreference.light,
-                  child: Text(strings.lightTheme),
-                ),
-                DropdownMenuItem(
-                  value: LiteriaThemePreference.dark,
-                  child: Text(strings.darkTheme),
-                ),
-              ],
-              onChanged: (value) {
-                if (value != null) onThemeChanged(value);
-              },
-            ),
-          ),
-          _SettingsCard(
-            title: strings.language,
-            icon: Icons.language,
-            child: SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'ru', label: Text('Русский')),
-                ButtonSegment(value: 'en', label: Text('English')),
-              ],
-              selected: {languageCode},
-              onSelectionChanged: (selection) =>
-                  onLanguageChanged(selection.first),
-            ),
-          ),
-          _SettingsCard(
-            title: strings.data,
-            icon: Icons.inventory_2_outlined,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: canBackup ? onBackup : null,
-                  icon: const Icon(Icons.download_outlined),
-                  label: Text(strings.backupProject),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: onRestore,
-                  icon: const Icon(Icons.upload_file_outlined),
-                  label: Text(strings.restoreProjectBackup),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  key: const ValueKey('open-book-storage'),
-                  onPressed: onOpenBookStorage,
-                  icon: const Icon(Icons.storage_outlined),
-                  label: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(strings.bookStorage),
-                      Text(
-                        strings.bookStorageSubtitle,
-                        style: Theme.of(context).textTheme.labelSmall,
-                      ),
+              ),
+              _SettingsCard(
+                title: strings.language,
+                icon: Icons.language,
+                child: SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: 'ru', label: Text('Русский')),
+                      ButtonSegment(value: 'en', label: Text('English')),
                     ],
+                    selected: {languageCode},
+                    showSelectedIcon: false,
+                    onSelectionChanged: (selection) =>
+                        onLanguageChanged(selection.first),
                   ),
                 ),
-              ],
-            ),
-          ),
-          _SettingsCard(
-            title: strings.help,
-            icon: Icons.help_outline,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  '${strings.writeSubtitle}\n${strings.readSubtitle}\n${strings.supportedBookFormats}',
+              ),
+              _SettingsCard(
+                title: strings.data,
+                icon: Icons.inventory_2_outlined,
+                child: Column(
+                  children: [
+                    LiteriaCompactActionTile(
+                      icon: Icons.download_outlined,
+                      title: strings.backupProject,
+                      enabled: canBackup,
+                      onTap: () {
+                        onBackup();
+                      },
+                    ),
+                    const SizedBox(height: 6),
+                    LiteriaCompactActionTile(
+                      icon: Icons.upload_file_outlined,
+                      title: strings.restoreProjectBackup,
+                      onTap: () {
+                        onRestore();
+                      },
+                    ),
+                    const SizedBox(height: 6),
+                    LiteriaCompactActionTile(
+                      key: const ValueKey('open-book-storage'),
+                      icon: Icons.storage_outlined,
+                      title: strings.bookStorage,
+                      subtitle: strings.bookStorageSubtitle,
+                      onTap: onOpenBookStorage,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: onShowOnboarding,
-                  icon: const Icon(Icons.school_outlined),
-                  label: Text(strings.onboarding),
+              ),
+              _SettingsCard(
+                title: strings.help,
+                icon: Icons.help_outline,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      '${strings.quickStartBody}\n'
+                      '${strings.supportedBookFormats}',
+                      style: const TextStyle(
+                        color: BookLeatherColors.mutedForeground,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              _SettingsCard(
+                title: strings.about,
+                icon: Icons.info_outline,
+                child: const Text(
+                  'Литерия 1.0.2',
+                  style: TextStyle(color: BookLeatherColors.mutedForeground),
+                ),
+              ),
+            ],
           ),
-          _SettingsCard(
-            title: strings.about,
-            icon: Icons.info_outline,
-            child: const Text('Литерия 1.0.1'),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -150,21 +160,34 @@ class _SettingsCard extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => Card(
-    margin: const EdgeInsets.only(bottom: 14),
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(bottom: 8),
+    decoration: BoxDecoration(
+      color: const Color(0x52160B07),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(
+        color: BookLeatherColors.stitch.withValues(alpha: 0.38),
+      ),
+    ),
     child: Padding(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              Icon(icon),
-              const SizedBox(width: 10),
-              Text(title, style: Theme.of(context).textTheme.titleMedium),
+              Icon(icon, size: 19, color: BookLeatherColors.accent),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: BookLeatherColors.foreground,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           child,
         ],
       ),

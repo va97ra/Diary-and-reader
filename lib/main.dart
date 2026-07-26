@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:dnevnik/app/author_studio_app.dart';
@@ -23,7 +24,7 @@ Future<void> main() async {
   await controller.load(preferredLanguage: systemLanguage);
   final sourceStorage = await createBookSourceStorage();
   final deviceCatalog = createBookDeviceCatalog();
-  await sourceStorage.cleanup(controller.projects);
+  await controller.compactImportedCatalogs(sourceStorage);
 
   runApp(
     AuthorStudioApp(
@@ -32,4 +33,5 @@ Future<void> main() async {
       deviceCatalog: deviceCatalog,
     ),
   );
+  unawaited(sourceStorage.cleanup(controller.projects));
 }
