@@ -1,3 +1,5 @@
+import 'dart:isolate';
+
 import 'package:crypto/crypto.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/application/book_import_file.dart';
@@ -71,7 +73,36 @@ class BookImportCoordinator {
     final results = <BookImportItemResult>[];
     var remainingBytes = availableBytes;
     for (final file in files) {
-      final fingerprint = sha256.convert(file.bytes).toString();
+      _PreparedBookImport prepared;
+      try {
+        prepared = await Isolate.run(() => _prepareBookImport(file));
+      } on BookImportException catch (error) {
+        results.add(
+          BookImportItemResult(
+            fileName: file.name,
+            failure: switch (error.failure) {
+              BookImportFailure.unsupportedFormat =>
+                BookImportItemFailure.unsupportedFormat,
+              BookImportFailure.conversionRequired =>
+                BookImportItemFailure.conversionRequired,
+              BookImportFailure.noReadableText =>
+                BookImportItemFailure.noReadableText,
+              BookImportFailure.invalidFile =>
+                BookImportItemFailure.invalidFile,
+            },
+          ),
+        );
+        continue;
+      } on Object {
+        results.add(
+          BookImportItemResult(
+            fileName: file.name,
+            failure: BookImportItemFailure.invalidFile,
+          ),
+        );
+        continue;
+      }
+      final fingerprint = prepared.fingerprint;
       final duplicate = controller.projects.any(
         (project) =>
             project.isReadOnly && project.sourceFingerprint == fingerprint,
@@ -95,27 +126,7 @@ class BookImportCoordinator {
         continue;
       }
 
-      BookProject parsed;
-      try {
-        parsed = BookImportParser.parse(file);
-      } on BookImportException catch (error) {
-        results.add(
-          BookImportItemResult(
-            fileName: file.name,
-            failure: switch (error.failure) {
-              BookImportFailure.unsupportedFormat =>
-                BookImportItemFailure.unsupportedFormat,
-              BookImportFailure.conversionRequired =>
-                BookImportItemFailure.conversionRequired,
-              BookImportFailure.noReadableText =>
-                BookImportItemFailure.noReadableText,
-              BookImportFailure.invalidFile =>
-                BookImportItemFailure.invalidFile,
-            },
-          ),
-        );
-        continue;
-      }
+      var parsed = prepared.project;
 
       try {
         final stored = await sourceStorage.store(
@@ -146,4 +157,17 @@ class BookImportCoordinator {
     }
     return BookImportBatchResult(List.unmodifiable(results));
   }
+}
+
+_PreparedBookImport _prepareBookImport(BookImportFile file) =>
+    _PreparedBookImport(
+      fingerprint: sha256.convert(file.bytes).toString(),
+      project: BookImportParser.parse(file),
+    );
+
+class _PreparedBookImport {
+  const _PreparedBookImport({required this.fingerprint, required this.project});
+
+  final String fingerprint;
+  final BookProject project;
 }

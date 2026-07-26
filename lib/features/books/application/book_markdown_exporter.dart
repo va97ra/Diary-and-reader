@@ -22,9 +22,12 @@ abstract final class BookMarkdownExporter {
     for (final entry in BookSectionOutline.flatten(project.sections)) {
       final level = (entry.depth + 2).clamp(2, 6);
       final headingPrefix = List.filled(level, '#').join();
-      text
-        ..writeln('\n$headingPrefix ${_heading(entry.section.title)}\n')
-        ..writeln(MarkdownRichTextRenderer.render(entry.section.content));
+      if (project.layoutSettings.showChapterTitlesInBody) {
+        text.writeln('\n$headingPrefix ${_heading(entry.section.title)}\n');
+      } else {
+        text.writeln();
+      }
+      text.writeln(MarkdownRichTextRenderer.render(entry.section.content));
     }
     return BookExportArtifact(
       bytes: Uint8List.fromList(

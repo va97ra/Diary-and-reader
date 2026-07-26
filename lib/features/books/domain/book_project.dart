@@ -9,6 +9,8 @@ import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
 import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
+import 'package:dnevnik/features/books/domain/book_section_trash.dart';
+import 'package:dnevnik/features/books/domain/book_writing_state.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 
 enum BookProjectKind { manuscript, importedBook }
@@ -34,11 +36,14 @@ class BookProject {
     this.sourceFileSize = 0,
     this.collectionName = '',
     this.libraryState = const BookLibraryState(),
+    this.writingState = const BookWritingState(),
+    List<BookSectionTrashEntry> sectionTrash = const [],
     List<BookAsset> assets = const [],
     this.coverAssetId,
     BookReaderAnnotations? readerAnnotations,
   }) : readerAnnotations = readerAnnotations ?? BookReaderAnnotations(),
        _sections = List.unmodifiable(sections),
+       _sectionTrash = List.unmodifiable(sectionTrash),
        _assets = List.unmodifiable(assets);
 
   factory BookProject.create({
@@ -166,6 +171,19 @@ class BookProject {
               Map<String, dynamic>.from(json['libraryState'] as Map),
             )
           : const BookLibraryState(),
+      writingState: json['writingState'] is Map
+          ? BookWritingState.fromJson(
+              Map<String, dynamic>.from(json['writingState'] as Map),
+            )
+          : const BookWritingState(),
+      sectionTrash: (json['sectionTrash'] as List<dynamic>? ?? const [])
+          .whereType<Map>()
+          .map(
+            (item) =>
+                BookSectionTrashEntry.fromJson(Map<String, dynamic>.from(item)),
+          )
+          .where((entry) => entry.sections.isNotEmpty)
+          .toList(),
       assets: (json['assets'] as List<dynamic>? ?? const [])
           .whereType<Map>()
           .map(
@@ -198,6 +216,8 @@ class BookProject {
   final int sourceFileSize;
   final String collectionName;
   final BookLibraryState libraryState;
+  final BookWritingState writingState;
+  final List<BookSectionTrashEntry> _sectionTrash;
   final List<BookAsset> _assets;
   final String? coverAssetId;
 
@@ -207,6 +227,9 @@ class BookProject {
       UnmodifiableListView(_sections);
 
   UnmodifiableListView<BookAsset> get assets => UnmodifiableListView(_assets);
+
+  UnmodifiableListView<BookSectionTrashEntry> get sectionTrash =>
+      UnmodifiableListView(_sectionTrash);
 
   BookAsset? get coverAsset => _assets
       .where((asset) => asset.id == coverAssetId && asset.isRenderableImage)
@@ -242,6 +265,8 @@ class BookProject {
     bool clearStoredSource = false,
     String? collectionName,
     BookLibraryState? libraryState,
+    BookWritingState? writingState,
+    List<BookSectionTrashEntry>? sectionTrash,
     List<BookAsset>? assets,
     String? coverAssetId,
     bool clearCoverAsset = false,
@@ -272,6 +297,8 @@ class BookProject {
         : sourceFileSize ?? this.sourceFileSize,
     collectionName: collectionName ?? this.collectionName,
     libraryState: libraryState ?? this.libraryState,
+    writingState: writingState ?? this.writingState,
+    sectionTrash: sectionTrash ?? _sectionTrash,
     assets: assets ?? _assets,
     coverAssetId: clearCoverAsset ? null : coverAssetId ?? this.coverAssetId,
   );
@@ -297,6 +324,8 @@ class BookProject {
     'sourceFileSize': sourceFileSize,
     'collectionName': collectionName,
     'libraryState': libraryState.toJson(),
+    'writingState': writingState.toJson(),
+    'sectionTrash': _sectionTrash.map((entry) => entry.toJson()).toList(),
     'assets': _assets.map((asset) => asset.toJson()).toList(),
     'coverAssetId': coverAssetId,
     'documentFormatVersion': _currentDocumentFormatVersion,

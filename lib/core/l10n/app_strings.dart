@@ -103,6 +103,8 @@ class AppStrings {
   String get resetSettings => _text('resetSettings');
   String get library => _text('library');
   String get librarySearchHint => _text('librarySearchHint');
+  String get manuscriptLibrarySearchHint =>
+      _text('manuscriptLibrarySearchHint');
   String get sortBy => _text('sortBy');
   String get recentlyUpdated => _text('recentlyUpdated');
   String get byTitle => _text('byTitle');
@@ -139,6 +141,8 @@ class AppStrings {
   String get noBooksFound => _text('noBooksFound');
   String get emptyLibrary => _text('emptyLibrary');
   String get manuscript => _text('manuscript');
+  String get chapters => _text('chapters');
+  String get updated => _text('updated');
   String get properties => _text('properties');
   String get newBook => _text('newBook');
   String get importEbook => _text('importEbook');
@@ -163,6 +167,7 @@ class AppStrings {
   String get importedBookHint => _text('importedBookHint');
   String get sourceFile => _text('sourceFile');
   String get bookImported => _text('bookImported');
+  String get importingBooks => _text('importingBooks');
   String get bookImportFailed => _text('bookImportFailed');
   String get unsupportedBookFormat => _text('unsupportedBookFormat');
   String get conversionRequired => _text('conversionRequired');
@@ -191,12 +196,26 @@ class AppStrings {
   String get moreActions => _text('moreActions');
   String get moveUp => _text('moveUp');
   String get moveDown => _text('moveDown');
+  String get dragSectionHint => _text('dragSectionHint');
   String get deleteSection => _text('deleteSection');
   String get deleteBook => _text('deleteBook');
   String get deleteSectionQuestion => _text('deleteSectionQuestion');
+  String get sectionTrash => _text('sectionTrash');
+  String get sectionTrashEmpty => _text('sectionTrashEmpty');
+  String get emptyTrash => _text('emptyTrash');
+  String get emptyTrashHint => _text('emptyTrashHint');
+  String get restoreSection => _text('restoreSection');
+  String get sectionRestored => _text('sectionRestored');
+  String get deletePermanently => _text('deletePermanently');
+  String get deleteForeverHint => _text('deleteForeverHint');
+  String get automaticBeforeDelete => _text('automaticBeforeDelete');
+  String get automaticBeforeReplace => _text('automaticBeforeReplace');
   String get deleteBookQuestion => _text('deleteBookQuestion');
   String get pageLayout => _text('pageLayout');
   String get paperFormat => _text('paperFormat');
+  String get showChapterTitlesInBody => _text('showChapterTitlesInBody');
+  String get showChapterTitlesInBodyHint =>
+      _text('showChapterTitlesInBodyHint');
   String get orientation => _text('orientation');
   String get portrait => _text('portrait');
   String get landscape => _text('landscape');
@@ -205,6 +224,16 @@ class AppStrings {
   String get paragraphs => _text('paragraphs');
   String get writingGoal => _text('writingGoal');
   String get writingGoalHint => _text('writingGoalHint');
+  String get writingStatistics => _text('writingStatistics');
+  String get today => _text('today');
+  String get wholeBook => _text('wholeBook');
+  String get writingTime => _text('writingTime');
+  String get activeDays => _text('activeDays');
+  String get writingStreak => _text('writingStreak');
+  String get goals => _text('goals');
+  String get dailyWritingGoal => _text('dailyWritingGoal');
+  String get projectWritingGoal => _text('projectWritingGoal');
+  String get saveGoals => _text('saveGoals');
   String get saved => _text('saved');
   String get saving => _text('saving');
   String get saveError => _text('saveError');
@@ -258,10 +287,18 @@ class AppStrings {
   String get centerTapControls => _text('centerTapControls');
   String get swipeChapterNavigation => _text('swipeChapterNavigation');
   String get textToSpeech => _text('textToSpeech');
+  String get voiceSettings => _text('voiceSettings');
   String get speechRate => _text('speechRate');
   String get speechPitch => _text('speechPitch');
   String get startReadingAloud => _text('startReadingAloud');
   String get stopReadingAloud => _text('stopReadingAloud');
+  String get chooseSpeechStart => _text('chooseSpeechStart');
+  String get cancelSpeechStart => _text('cancelSpeechStart');
+  String get pauseReadingAloud => _text('pauseReadingAloud');
+  String get resumeReadingAloud => _text('resumeReadingAloud');
+  String get slowerSpeech => _text('slowerSpeech');
+  String get fasterSpeech => _text('fasterSpeech');
+  String get speechError => _text('speechError');
   String get textWidth => _text('textWidth');
   String get previousSection => _text('previousSection');
   String get nextSection => _text('nextSection');
@@ -384,6 +421,7 @@ class AppStrings {
       '${_text('readerPage')} $current ${_text('ofPages')} $count';
   String sectionOf(int current, int count) =>
       '${_text('section')} $current ${_text('ofPages')} $count';
+  String sectionTitle(int number) => '${_text('section')} $number';
 
   static const _values = <String, Map<String, String>>{
     'ru': appStringValuesRu,

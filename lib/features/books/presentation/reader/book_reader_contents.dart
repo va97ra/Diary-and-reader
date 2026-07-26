@@ -1,3 +1,4 @@
+import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:flutter/material.dart';
 
@@ -14,26 +15,43 @@ class BookReaderContents extends StatelessWidget {
   final ValueChanged<BookSection> onSelected;
 
   @override
-  Widget build(BuildContext context) => ListView.builder(
-    key: const ValueKey('reader-contents'),
-    padding: const EdgeInsets.symmetric(vertical: 12),
-    itemCount: sections.length,
-    itemBuilder: (context, index) {
-      final section = sections[index];
-      final depth = _depthOf(section);
-      return ListTile(
-        selected: section.id == activeSectionId,
-        leading: Icon(_iconFor(section.type), size: 20),
-        contentPadding: EdgeInsets.only(left: 16 + depth * 18, right: 12),
-        title: Text(
-          section.title,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        onTap: () => onSelected(section),
-      );
-    },
-  );
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    final titleCounts = <String, int>{};
+    for (final section in sections) {
+      final key = section.title.trim().toLowerCase();
+      titleCounts[key] = (titleCounts[key] ?? 0) + 1;
+    }
+    return ListView.builder(
+      key: const ValueKey('reader-contents'),
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      itemCount: sections.length,
+      itemBuilder: (context, index) {
+        final section = sections[index];
+        final depth = _depthOf(section);
+        final duplicateTitle =
+            titleCounts[section.title.trim().toLowerCase()]! > 1;
+        return ListTile(
+          selected: section.id == activeSectionId,
+          leading: Icon(_iconFor(section.type), size: 20),
+          contentPadding: EdgeInsets.only(left: 16 + depth * 18, right: 12),
+          title: Text(
+            duplicateTitle ? strings.sectionTitle(index + 1) : section.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          subtitle: duplicateTitle
+              ? Text(
+                  section.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                )
+              : null,
+          onTap: () => onSelected(section),
+        );
+      },
+    );
+  }
 
   int _depthOf(BookSection section) {
     var depth = 0;

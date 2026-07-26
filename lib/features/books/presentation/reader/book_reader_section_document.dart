@@ -1,6 +1,17 @@
 part of 'book_reader_section_view.dart';
 
 extension _BookReaderDocumentFlow on _BookReaderSectionViewState {
+  void _selectSpeechTarget({
+    required int displayOffset,
+    required int displayStart,
+  }) {
+    final plainText = richDocumentPlainText(widget.section.content);
+    final originalOffset = _displayDocument.displayToOriginal(
+      displayStart + displayOffset,
+    );
+    widget.onSpeechTargetSelected(originalOffset.clamp(0, plainText.length));
+  }
+
   QuillController _pageController(RichDocument document, int displayStart) =>
       QuillController(
         document: _readerDocument(document, displayStart: displayStart),
@@ -45,6 +56,28 @@ extension _BookReaderDocumentFlow on _BookReaderSectionViewState {
         ),
       );
     }
+    if (widget.speechRange case final speechRange?) {
+      final start = math.max(
+        0,
+        _displayDocument.originalToDisplay(speechRange.start) - displayStart,
+      );
+      final end = math.min(
+        localLength,
+        _displayDocument.originalToDisplay(speechRange.end) - displayStart,
+      );
+      if (end > start) {
+        document.format(
+          start,
+          end - start,
+          BackgroundAttribute(
+            BookReaderHighlightStyle.backgroundHex(
+              BookReaderHighlightColor.blue,
+              widget.palette,
+            ),
+          ),
+        );
+      }
+    }
     return document;
   }
 
@@ -61,6 +94,12 @@ extension _BookReaderDocumentFlow on _BookReaderSectionViewState {
         displayStart + selection.extentOffset,
       ),
     );
+    if (widget.speechTargetMode && mappedSelection.isCollapsed) {
+      widget.onSpeechTargetSelected(
+        mappedSelection.extentOffset.clamp(0, plainText.length),
+      );
+      return;
+    }
     final resolved = BookReaderSelectionResolver.resolve(
       selection: mappedSelection,
       globalStart: 0,

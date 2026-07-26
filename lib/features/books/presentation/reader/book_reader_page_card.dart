@@ -24,6 +24,8 @@ class BookReaderPageCard extends StatelessWidget {
     required this.editorKey,
     required this.viewportKey,
     required this.assets,
+    required this.showCursor,
+    this.onSpeechTargetSelected,
     this.isMeasurement = false,
     super.key,
   });
@@ -40,6 +42,8 @@ class BookReaderPageCard extends StatelessWidget {
   final GlobalKey<EditorState> editorKey;
   final GlobalKey viewportKey;
   final List<BookAsset> assets;
+  final bool showCursor;
+  final ValueChanged<int>? onSpeechTargetSelected;
   final bool isMeasurement;
 
   @override
@@ -90,7 +94,15 @@ class BookReaderPageCard extends StatelessWidget {
                   customStyles: BookReaderTypography.styles(settings, palette),
                   scrollable: false,
                   autoFocus: false,
-                  showCursor: false,
+                  showCursor: showCursor,
+                  onTapUp: onSpeechTargetSelected == null
+                      ? null
+                      : (details, getPositionForOffset) {
+                          onSpeechTargetSelected!(
+                            getPositionForOffset(details.globalPosition).offset,
+                          );
+                          return true;
+                        },
                   embedBuilders: [
                     BookImageEmbedBuilder(assets),
                     const BookPageBreakEmbedBuilder(showLabel: false),

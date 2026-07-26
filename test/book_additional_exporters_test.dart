@@ -5,6 +5,7 @@ import 'package:dnevnik/features/books/application/book_fb2_exporter.dart';
 import 'package:dnevnik/features/books/application/book_html_exporter.dart';
 import 'package:dnevnik/features/books/application/book_markdown_exporter.dart';
 import 'package:dnevnik/features/books/application/book_txt_exporter.dart';
+import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
@@ -85,6 +86,28 @@ void main() {
       expect(text, contains('Жирный & текст'));
       expect(text, contains('• Пункт'));
       expect(text, isNot(contains('**Жирный')));
+    });
+
+    test('hides body chapter headings but keeps navigation metadata', () {
+      final project = _project().copyWith(
+        layoutSettings: const BookLayoutSettings(
+          showChapterTitlesInBody: false,
+        ),
+      );
+      final fb2 = utf8.decode(BookFb2Exporter.create(project).bytes);
+      final html = utf8.decode(BookHtmlExporter.create(project).bytes);
+      final markdown = utf8.decode(BookMarkdownExporter.create(project).bytes);
+      final text = utf8.decode(BookTxtExporter.create(project).bytes);
+
+      expect(fb2, contains('.literia-hidden-title { display: none; }'));
+      expect(
+        fb2,
+        contains('<p style="literia-hidden-title">Глава &amp; первая</p>'),
+      );
+      expect(html, contains('href="#section-2">Глава &amp; первая</a>'));
+      expect(html, isNot(contains('<h3>Глава &amp; первая</h3>')));
+      expect(markdown, isNot(contains('### Глава & первая')));
+      expect(text, isNot(contains('\n  Глава & первая\n')));
     });
   });
 }

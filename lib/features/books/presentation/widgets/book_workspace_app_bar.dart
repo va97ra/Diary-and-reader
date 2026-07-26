@@ -6,7 +6,16 @@ import 'package:dnevnik/features/books/presentation/widgets/book_save_status.dar
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-enum BookWorkspaceAction { search, export, preview, history, backup, restore }
+enum BookWorkspaceAction {
+  search,
+  statistics,
+  export,
+  preview,
+  history,
+  trash,
+  backup,
+  restore,
+}
 
 class BookWorkspaceAppBar extends StatelessWidget
     implements PreferredSizeWidget {
@@ -151,6 +160,11 @@ class BookWorkspaceAppBar extends StatelessWidget
               strings.findAndReplace,
             ),
             _item(
+              BookWorkspaceAction.statistics,
+              Icons.insights_outlined,
+              strings.writingStatistics,
+            ),
+            _item(
               BookWorkspaceAction.export,
               Icons.ios_share_outlined,
               strings.exportBook,
@@ -164,6 +178,11 @@ class BookWorkspaceAppBar extends StatelessWidget
               BookWorkspaceAction.history,
               Icons.history,
               strings.versionHistory,
+            ),
+            _item(
+              BookWorkspaceAction.trash,
+              Icons.delete_outline,
+              strings.sectionTrash,
             ),
             _item(
               BookWorkspaceAction.backup,

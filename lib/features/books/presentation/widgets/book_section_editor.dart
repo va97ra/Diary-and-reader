@@ -35,6 +35,7 @@ class BookSectionEditor extends StatefulWidget {
     required this.showPageNavigation,
     required this.viewMode,
     required this.onMetricsChanged,
+    required this.showChapterTitleOnPage,
     this.onControllerReady,
     super.key,
   });
@@ -54,6 +55,7 @@ class BookSectionEditor extends StatefulWidget {
   final bool showPageNavigation;
   final BookPageViewMode viewMode;
   final ValueChanged<BookEditorMetrics> onMetricsChanged;
+  final bool showChapterTitleOnPage;
   final ValueChanged<QuillController>? onControllerReady;
 
   @override
@@ -537,6 +539,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
                   viewportKey: _measurementViewportKey!,
                   titleController: _measurementTitleController,
                   onTitleChanged: (_) {},
+                  showChapterTitle: widget.showChapterTitleOnPage,
                   isMeasurement: true,
                 ),
               ),
@@ -628,6 +631,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     viewportKey: _viewportKeys[index],
     titleController: _titleController,
     onTitleChanged: widget.onTitleChanged,
+    showChapterTitle: widget.showChapterTitleOnPage,
   );
 
   @override

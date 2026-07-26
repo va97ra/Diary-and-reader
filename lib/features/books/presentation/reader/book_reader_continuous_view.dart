@@ -4,6 +4,7 @@ import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.d
 import 'package:dnevnik/features/books/presentation/reader/book_reader_typography.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_image_embed_builder.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_page_break_embed_builder.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
@@ -18,7 +19,11 @@ class BookReaderContinuousView extends StatelessWidget {
     required this.scrollController,
     required this.onPointerDown,
     required this.onPointerUp,
+    required this.onPointerMove,
+    required this.onPointerSignal,
     required this.onPointerCancel,
+    required this.showCursor,
+    this.onSpeechTargetSelected,
     super.key,
   });
 
@@ -31,7 +36,11 @@ class BookReaderContinuousView extends StatelessWidget {
   final ScrollController scrollController;
   final PointerDownEventListener onPointerDown;
   final PointerUpEventListener onPointerUp;
+  final PointerMoveEventListener onPointerMove;
+  final void Function(PointerSignalEvent) onPointerSignal;
   final PointerCancelEventListener onPointerCancel;
+  final bool showCursor;
+  final ValueChanged<int>? onSpeechTargetSelected;
 
   @override
   Widget build(BuildContext context) => ColoredBox(
@@ -55,6 +64,8 @@ class BookReaderContinuousView extends StatelessWidget {
           child: Listener(
             onPointerDown: onPointerDown,
             onPointerUp: onPointerUp,
+            onPointerMove: onPointerMove,
+            onPointerSignal: onPointerSignal,
             onPointerCancel: onPointerCancel,
             child: QuillEditor(
               key: ValueKey('reader-document-$sectionId'),
@@ -66,7 +77,15 @@ class BookReaderContinuousView extends StatelessWidget {
                 customStyles: BookReaderTypography.styles(settings, palette),
                 scrollable: true,
                 autoFocus: false,
-                showCursor: false,
+                showCursor: showCursor,
+                onTapUp: onSpeechTargetSelected == null
+                    ? null
+                    : (details, getPositionForOffset) {
+                        onSpeechTargetSelected!(
+                          getPositionForOffset(details.globalPosition).offset,
+                        );
+                        return true;
+                      },
                 embedBuilders: [
                   BookImageEmbedBuilder(assets),
                   const BookPageBreakEmbedBuilder(showLabel: false),

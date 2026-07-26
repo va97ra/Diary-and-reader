@@ -82,11 +82,23 @@ class BookFormattingSheet extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            AppStrings.of(context).writerFormatting,
-            style: Theme.of(context).textTheme.titleLarge,
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  AppStrings.of(context).writerFormatting,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+              IconButton(
+                key: const ValueKey('writer-formatting-close'),
+                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                onPressed: () => Navigator.maybePop(context),
+                icon: const Icon(Icons.close),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
           BookParagraphStyleSelector(controller: controller),
           const SizedBox(height: 10),
           SizedBox(

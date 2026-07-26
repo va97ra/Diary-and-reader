@@ -44,6 +44,8 @@ class WorkspaceVersionCoordinator {
       sourceFileSize: current.sourceFileSize,
       collectionName: current.collectionName,
       libraryState: current.libraryState,
+      writingState: copied.writingState,
+      sectionTrash: copied.sectionTrash,
       assets: current.assets,
       coverAssetId: current.coverAssetId,
     );

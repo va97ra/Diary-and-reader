@@ -23,6 +23,7 @@ class BookPageCanvas extends StatelessWidget {
     required this.viewportKey,
     required this.titleController,
     required this.onTitleChanged,
+    required this.showChapterTitle,
     this.isMeasurement = false,
     super.key,
   });
@@ -39,6 +40,7 @@ class BookPageCanvas extends StatelessWidget {
   final GlobalKey viewportKey;
   final TextEditingController titleController;
   final ValueChanged<String> onTitleChanged;
+  final bool showChapterTitle;
   final bool isMeasurement;
 
   bool get _isFirstPage => pageNumber == 1;
@@ -72,8 +74,9 @@ class BookPageCanvas extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  if (_isFirstPage) ...[
+                  if (_isFirstPage && showChapterTitle) ...[
                     TextField(
+                      key: const ValueKey('writer-page-chapter-title'),
                       controller: titleController,
                       cursorColor: AppTheme.ink,
                       onChanged: onTitleChanged,

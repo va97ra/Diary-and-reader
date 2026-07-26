@@ -16,6 +16,10 @@ void registerAdaptiveLayoutScenarios() {
       findsNothing,
     );
     expect(find.byKey(const ValueKey('book-page-1')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('writer-page-chapter-title')),
+      findsNothing,
+    );
     expect(find.byKey(const ValueKey('book-editor-status-bar')), findsNothing);
     expect(find.byKey(const ValueKey('writer-header-metrics')), findsOneWidget);
     expect(find.textContaining('Слов: 0 · Страница 1/1'), findsOneWidget);
@@ -46,6 +50,53 @@ void registerAdaptiveLayoutScenarios() {
       BookPageOrientation.landscape,
     );
     expect(find.textContaining('A4 297×210 мм'), findsOneWidget);
+
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('shows chapter title only in explicit A4 preview', (
+    tester,
+  ) async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(),
+    );
+    await controller.load(preferredLanguage: 'ru');
+    await tester.binding.setSurfaceSize(const Size(1920, 1080));
+    await tester.pumpWidget(AuthorStudioApp(controller: controller));
+    await tester.pumpAndSettle();
+    await openLastManuscript(tester, controller);
+
+    expect(
+      find.byKey(const ValueKey('writer-page-chapter-title')),
+      findsNothing,
+    );
+    await tester.tap(find.byKey(const ValueKey('writer-settings-action')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('writer-a4-preview-action')));
+    await pumpUntilFound(
+      tester,
+      find.byKey(const ValueKey('writer-page-chapter-title')),
+    );
+    expect(
+      find.byKey(const ValueKey('writer-page-chapter-title')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey('writer-settings-action')));
+    await tester.pumpAndSettle();
+    final titleSetting = find.byKey(
+      ValueKey('${controller.activeProject!.id}-show-chapter-titles'),
+    );
+    await tester.ensureVisible(titleSetting);
+    await tester.tap(titleSetting);
+    await tester.pumpAndSettle();
+    expect(
+      controller.activeProject!.layoutSettings.showChapterTitlesInBody,
+      isFalse,
+    );
+    expect(
+      find.byKey(const ValueKey('writer-page-chapter-title')),
+      findsNothing,
+    );
 
     await tester.binding.setSurfaceSize(null);
   });
@@ -132,7 +183,7 @@ void registerAdaptiveLayoutScenarios() {
     await tester.tap(find.byKey(const ValueKey('writer-settings-action')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('writer-a4-preview-action')));
-    await _pumpUntil(tester, find.byKey(const ValueKey('book-page-1')));
+    await pumpUntilFound(tester, find.byKey(const ValueKey('book-page-1')));
     expect(find.textContaining('Точная разметка A4'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('mobile-a4-page-preview')),
@@ -153,7 +204,7 @@ void registerAdaptiveLayoutScenarios() {
     await tester.tap(find.byKey(const ValueKey('writer-settings-action')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('writer-a4-preview-action')));
-    await _pumpUntil(tester, find.byKey(const ValueKey('book-page-1')));
+    await pumpUntilFound(tester, find.byKey(const ValueKey('book-page-1')));
     await tester.tap(find.byKey(const ValueKey('writer-hide-panels-button')));
     await tester.pumpAndSettle();
     expect(

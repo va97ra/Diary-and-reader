@@ -20,12 +20,26 @@ class BookExportSheet extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
-                  child: Text(
-                    strings.exportBook,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
+                        child: Text(
+                          strings.exportBook,
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      key: const ValueKey('book-export-close'),
+                      tooltip: MaterialLocalizations.of(
+                        context,
+                      ).closeButtonTooltip,
+                      onPressed: () => Navigator.maybePop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
                 ),
                 _SectionLabel(text: strings.readerExportFormats),
                 _ExportTile(

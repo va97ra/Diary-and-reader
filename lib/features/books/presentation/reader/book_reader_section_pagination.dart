@@ -61,6 +61,7 @@ extension _BookReaderPaginationFlow on _BookReaderSectionViewState {
                     editorKey: _measurementEditorKey!,
                     viewportKey: _measurementViewportKey!,
                     assets: widget.assets,
+                    showCursor: false,
                     isMeasurement: true,
                   ),
                 ),
@@ -85,6 +86,13 @@ extension _BookReaderPaginationFlow on _BookReaderSectionViewState {
         editorKey: _pageEditorKeys[index],
         viewportKey: _pageViewportKeys[index],
         assets: widget.assets,
+        showCursor: widget.speechTargetMode,
+        onSpeechTargetSelected: widget.speechTargetMode
+            ? (localOffset) => _selectSpeechTarget(
+                displayOffset: localOffset,
+                displayStart: _pageDisplayStartOffsets[index],
+              )
+            : null,
       );
 
   void _selectPage(int page) {

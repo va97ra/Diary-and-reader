@@ -85,6 +85,28 @@ void main() {
     expect(core, contains('<dc:title>Книга &amp; море</dc:title>'));
     expect(core, contains('2026-07-15T09:30:45Z'));
   });
+
+  test('keeps TOC text while hiding chapter heading paragraphs', () {
+    final project = _project().copyWith(
+      layoutSettings: const BookLayoutSettings(showChapterTitlesInBody: false),
+    );
+    final archive = ZipDecoder().decodeBytes(
+      BookDocxExporter.create(project).bytes,
+    );
+    final document = _text(
+      archive.files.singleWhere((file) => file.name == 'word/document.xml'),
+    );
+
+    expect(document, contains('Глава &amp; первая'));
+    expect(
+      document,
+      isNot(
+        contains(
+          '<w:pStyle w:val="Heading2"/><w:pageBreakBefore/></w:pPr><w:bookmarkStart w:id="2"',
+        ),
+      ),
+    );
+  });
 }
 
 BookProject _project() {

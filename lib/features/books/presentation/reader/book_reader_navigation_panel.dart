@@ -51,41 +51,64 @@ class BookReaderNavigationPanel extends StatelessWidget {
           LayoutBuilder(
             builder: (context, constraints) {
               final compact = constraints.maxWidth < 500;
-              return Row(
+              return Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: TabBar(
-                      isScrollable: !compact,
-                      tabAlignment: compact ? null : TabAlignment.start,
-                      labelColor: colors.primary,
-                      unselectedLabelColor: colors.onSurfaceVariant,
-                      indicatorColor: colors.primary,
-                      tabs: [
-                        _readerTab(strings.contentsShort, Icons.toc, compact),
-                        _readerTab(
-                          strings.bookmarks,
-                          Icons.bookmarks_outlined,
-                          compact,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 4, 0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            strings.tableOfContents,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
                         ),
-                        _readerTab(
-                          strings.highlights,
-                          Icons.auto_awesome_outlined,
-                          compact,
+                        IconButton(
+                          key: const ValueKey(
+                            'reader-export-annotations-button',
+                          ),
+                          tooltip: strings.exportAnnotations,
+                          onPressed: onExport,
+                          color: colors.onSurfaceVariant,
+                          icon: const Icon(Icons.download_outlined),
                         ),
-                        _readerTab(
-                          strings.notes,
-                          Icons.sticky_note_2_outlined,
-                          compact,
+                        IconButton(
+                          key: const ValueKey('reader-navigation-close'),
+                          tooltip: MaterialLocalizations.of(
+                            context,
+                          ).closeButtonTooltip,
+                          onPressed: () => Navigator.maybePop(context),
+                          color: colors.onSurfaceVariant,
+                          icon: const Icon(Icons.close),
                         ),
                       ],
                     ),
                   ),
-                  IconButton(
-                    key: const ValueKey('reader-export-annotations-button'),
-                    tooltip: strings.exportAnnotations,
-                    onPressed: onExport,
-                    color: colors.onSurfaceVariant,
-                    icon: const Icon(Icons.download_outlined),
+                  TabBar(
+                    isScrollable: !compact,
+                    tabAlignment: compact ? null : TabAlignment.start,
+                    labelColor: colors.primary,
+                    unselectedLabelColor: colors.onSurfaceVariant,
+                    indicatorColor: colors.primary,
+                    tabs: [
+                      _readerTab(strings.contentsShort, Icons.toc, compact),
+                      _readerTab(
+                        strings.bookmarks,
+                        Icons.bookmarks_outlined,
+                        compact,
+                      ),
+                      _readerTab(
+                        strings.highlights,
+                        Icons.auto_awesome_outlined,
+                        compact,
+                      ),
+                      _readerTab(
+                        strings.notes,
+                        Icons.sticky_note_2_outlined,
+                        compact,
+                      ),
+                    ],
                   ),
                 ],
               );
@@ -131,14 +154,12 @@ class BookReaderNavigationPanel extends StatelessWidget {
   }
 }
 
-Tab _readerTab(String label, IconData icon, bool compact) => compact
-    ? Tab(
-        icon: Tooltip(
-          message: label,
-          child: Icon(icon, semanticLabel: label),
-        ),
-      )
-    : Tab(text: label, icon: Icon(icon));
+Tab _readerTab(String label, IconData icon, bool compact) => Tab(
+  height: compact ? 58 : null,
+  text: label,
+  icon: Icon(icon, semanticLabel: label),
+  iconMargin: const EdgeInsets.only(bottom: 2),
+);
 
 class _BookmarksList extends StatelessWidget {
   const _BookmarksList({

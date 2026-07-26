@@ -10,10 +10,12 @@ import 'package:pdf/widgets.dart' as pw;
 
 class BookDocxEmbeddedImage {
   const BookDocxEmbeddedImage({
+    required this.drawingId,
     required this.relationship,
     required this.asset,
   });
 
+  final int drawingId;
   final BookDocxImageRelationship relationship;
   final BookAsset asset;
 }
@@ -42,9 +44,13 @@ abstract final class BookDocxContentRenderer {
 }
 
 class _DocxRenderContext {
-  _DocxRenderContext(this.project);
+  _DocxRenderContext(this.project)
+    : _sectionById = {
+        for (final section in project.sections) section.id: section,
+      };
 
   final BookProject project;
+  final Map<String, BookSection> _sectionById;
   final _relationships = <BookDocxHyperlinkRelationship>[];
   final _relationshipByTarget = <String, String>{};
   final _decimalNumberingIds = <int>[];
@@ -126,7 +132,7 @@ $body  </w:body>
       );
     for (var index = 0; index < project.sections.length; index++) {
       final section = project.sections[index];
-      final level = _outlineLevel(section).clamp(0, 2);
+      final level = _outlineLevel(section);
       final bookmark = _bookmark(index);
       output.writeln(
         '<w:p><w:pPr><w:pStyle w:val="TOC${level + 1}"/></w:pPr><w:hyperlink w:anchor="$bookmark" w:history="1"><w:r><w:rPr><w:rStyle w:val="Hyperlink"/></w:rPr><w:t>${_text(section.title)}</w:t></w:r></w:hyperlink><w:r><w:tab/></w:r><w:fldSimple w:instr="PAGEREF $bookmark \\h"><w:r><w:t>?</w:t></w:r></w:fldSimple></w:p>',
@@ -139,11 +145,21 @@ $body  </w:body>
   }
 
   String _section(BookSection section, int index) {
-    final level = _outlineLevel(section).clamp(0, 2);
+    final level = _outlineLevel(section);
     final bookmark = _bookmark(index);
+    final showTitle = project.layoutSettings.showChapterTitlesInBody;
+    final pageBreak = section.type == BookSectionType.scene
+        ? ''
+        : '<w:pageBreakBefore/>';
+    final titleProperties = showTitle
+        ? '<w:pStyle w:val="Heading${level + 1}"/>$pageBreak'
+        : '<w:pStyle w:val="BodyText"/>$pageBreak';
+    final titleRun = showTitle
+        ? '<w:r><w:t>${_text(section.title)}</w:t></w:r>'
+        : '<w:r><w:t xml:space="preserve"> </w:t></w:r>';
     final output = StringBuffer()
       ..writeln(
-        '<w:p><w:pPr><w:pStyle w:val="Heading${level + 1}"/>${section.type == BookSectionType.scene ? '' : '<w:pageBreakBefore/>'}</w:pPr><w:bookmarkStart w:id="${index + 1}" w:name="$bookmark"/><w:r><w:t>${_text(section.title)}</w:t></w:r><w:bookmarkEnd w:id="${index + 1}"/></w:p>',
+        '<w:p><w:pPr>$titleProperties</w:pPr><w:bookmarkStart w:id="${index + 1}" w:name="$bookmark"/>$titleRun<w:bookmarkEnd w:id="${index + 1}"/></w:p>',
       );
     final blocks = BookExportContentParser.parse(section.content);
     BookExportBlockType? activeListType;
@@ -312,11 +328,13 @@ $body  </w:body>
         'image/webp' => 'webp',
         _ => 'bin',
       };
+      final drawingId = _images.length + 1;
       final relationship = BookDocxImageRelationship(
         id: 'rId${_nextRelationshipId++}',
-        target: 'media/image-${_images.length + 1}.$extension',
+        target: 'media/image-$drawingId.$extension',
       );
       final value = BookDocxEmbeddedImage(
+        drawingId: drawingId,
         relationship: relationship,
         asset: asset,
       );
@@ -340,7 +358,7 @@ $body  </w:body>
     );
     final cx = (naturalWidth * scale).round();
     final cy = (naturalHeight * scale).round();
-    final drawingId = _images.indexOf(embedded) + 1;
+    final drawingId = embedded.drawingId;
     final name = docxEscapeXml(
       embedded.asset.sourcePath.isEmpty
           ? 'Image $drawingId'
@@ -351,12 +369,11 @@ $body  </w:body>
 
   int _outlineLevel(BookSection section) {
     if (section.type == BookSectionType.part) return 0;
-    final byId = {for (final item in project.sections) item.id: item};
     var depth = 0;
     var parentId = section.parentId;
     final visited = <String>{section.id};
     while (parentId != null && visited.add(parentId)) {
-      final parent = byId[parentId];
+      final parent = _sectionById[parentId];
       if (parent == null) break;
       depth++;
       parentId = parent.parentId;

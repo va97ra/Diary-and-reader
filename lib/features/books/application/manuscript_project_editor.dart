@@ -7,6 +7,7 @@ import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
+import 'package:dnevnik/features/books/domain/book_section_trash.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 
 abstract final class ManuscriptProjectEditor {
@@ -44,6 +45,14 @@ abstract final class ManuscriptProjectEditor {
     String id, {
     required String languageCode,
   }) {
+    final originalIndex = project.sections.indexWhere(
+      (section) => section.id == id,
+    );
+    if (originalIndex < 0) return project;
+    final removedIds = SectionTreeEditor.subtreeIds(project.sections, id);
+    final removed = project.sections
+        .where((section) => removedIds.contains(section.id))
+        .toList();
     var sections = SectionTreeEditor.removeSubtree(project.sections, id);
     if (sections.isEmpty) {
       sections = [
@@ -59,6 +68,15 @@ abstract final class ManuscriptProjectEditor {
     final sectionIds = sections.map((section) => section.id).toSet();
     return project.copyWith(
       sections: sections,
+      sectionTrash: [
+        ...project.sectionTrash,
+        BookSectionTrashEntry(
+          id: 'trash-${DateTime.now().microsecondsSinceEpoch}',
+          deletedAt: DateTime.now(),
+          originalIndex: originalIndex,
+          sections: removed,
+        ),
+      ].takeLast(30).toList(),
       activeSectionId: activeStillExists
           ? project.activeSectionId
           : sections.first.id,
@@ -69,6 +87,44 @@ abstract final class ManuscriptProjectEditor {
       updatedAt: DateTime.now(),
     );
   }
+
+  static BookProject restoreDeletedSection(
+    BookProject project,
+    String trashId,
+  ) {
+    final entry = project.sectionTrash
+        .where((candidate) => candidate.id == trashId)
+        .firstOrNull;
+    if (entry == null || entry.sections.isEmpty) return project;
+    final activeIds = project.sections.map((section) => section.id).toSet();
+    if (entry.sections.any((section) => activeIds.contains(section.id))) {
+      return project;
+    }
+    final insertion = entry.originalIndex.clamp(0, project.sections.length);
+    return project.copyWith(
+      sections: [
+        ...project.sections.take(insertion),
+        ...entry.sections,
+        ...project.sections.skip(insertion),
+      ],
+      activeSectionId: entry.root.id,
+      sectionTrash: project.sectionTrash
+          .where((candidate) => candidate.id != trashId)
+          .toList(),
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  static BookProject deleteTrashEntry(BookProject project, String trashId) =>
+      project.copyWith(
+        sectionTrash: project.sectionTrash
+            .where((entry) => entry.id != trashId)
+            .toList(),
+        updatedAt: DateTime.now(),
+      );
+
+  static BookProject emptySectionTrash(BookProject project) =>
+      project.copyWith(sectionTrash: const [], updatedAt: DateTime.now());
 
   static BookProject updateSectionTitle(BookProject project, String title) =>
       _updateActiveSection(
@@ -203,4 +259,11 @@ class ManuscriptReplaceResult {
 
   final BookProject project;
   final int count;
+}
+
+extension<T> on Iterable<T> {
+  Iterable<T> takeLast(int count) {
+    final items = toList();
+    return items.skip((items.length - count).clamp(0, items.length));
+  }
 }

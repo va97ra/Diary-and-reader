@@ -67,4 +67,64 @@ void main() {
       'part-2',
     ]);
   });
+
+  test('drops a chapter into another part together with its scenes', () {
+    final sections = [
+      section('part-1', BookSectionType.part),
+      section('chapter-1', BookSectionType.chapter, parentId: 'part-1'),
+      section('scene-1', BookSectionType.scene, parentId: 'chapter-1'),
+      section('part-2', BookSectionType.part),
+      section('chapter-2', BookSectionType.chapter, parentId: 'part-2'),
+    ];
+
+    final moved = SectionTreeEditor.moveToTarget(
+      sections,
+      'chapter-1',
+      'part-2',
+    );
+
+    expect(moved.map((item) => item.id), [
+      'part-1',
+      'part-2',
+      'chapter-2',
+      'chapter-1',
+      'scene-1',
+    ]);
+    expect(
+      moved.firstWhere((item) => item.id == 'chapter-1').parentId,
+      'part-2',
+    );
+  });
+
+  test('drops a scene into another chapter and rejects cyclic drops', () {
+    final sections = [
+      section('chapter-1', BookSectionType.chapter),
+      section('scene-1', BookSectionType.scene, parentId: 'chapter-1'),
+      section('chapter-2', BookSectionType.chapter),
+    ];
+
+    final moved = SectionTreeEditor.moveToTarget(
+      sections,
+      'scene-1',
+      'chapter-2',
+    );
+    expect(moved.last.parentId, 'chapter-2');
+    expect(
+      SectionTreeEditor.canMoveToTarget(sections, 'chapter-1', 'scene-1'),
+      isFalse,
+    );
+  });
+
+  test('generates unique ids for sections created in the same clock tick', () {
+    final created = [
+      for (var index = 0; index < 100; index += 1)
+        BookSection.create(
+          title: 'Раздел $index',
+          type: BookSectionType.chapter,
+          now: now,
+        ),
+    ];
+
+    expect(created.map((section) => section.id).toSet(), hasLength(100));
+  });
 }

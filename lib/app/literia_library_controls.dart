@@ -6,7 +6,11 @@ class _LibraryControls extends StatelessWidget {
     required this.filter,
     required this.collectionName,
     required this.collections,
+    required this.showGrid,
+    required this.sort,
     required this.onSearchChanged,
+    required this.onLayoutChanged,
+    required this.onSortChanged,
     required this.onFilterChanged,
     required this.onCollectionChanged,
   });
@@ -15,7 +19,11 @@ class _LibraryControls extends StatelessWidget {
   final BookLibraryFilter filter;
   final String? collectionName;
   final List<String> collections;
+  final bool showGrid;
+  final BookLibrarySort sort;
   final ValueChanged<String> onSearchChanged;
+  final VoidCallback onLayoutChanged;
+  final ValueChanged<BookLibrarySort> onSortChanged;
   final ValueChanged<BookLibraryFilter> onFilterChanged;
   final ValueChanged<String?> onCollectionChanged;
 
@@ -38,9 +46,19 @@ class _LibraryControls extends StatelessWidget {
         children: [
           SearchBar(
             key: const ValueKey('library-search'),
-            hintText: strings.librarySearchHint,
+            hintText: writing
+                ? strings.manuscriptLibrarySearchHint
+                : strings.librarySearchHint,
             leading: const Icon(Icons.search),
             onChanged: onSearchChanged,
+          ),
+          const SizedBox(height: 10),
+          _LibraryDisplayControls(
+            writing: writing,
+            showGrid: showGrid,
+            sort: sort,
+            onLayoutChanged: onLayoutChanged,
+            onSortChanged: onSortChanged,
           ),
           if (!writing) ...[
             const SizedBox(height: 10),
@@ -99,6 +117,98 @@ class _LibraryControls extends StatelessWidget {
         BookLibraryFilter.favorites => strings.favoriteBooks,
         BookLibraryFilter.manuscripts => strings.manuscripts,
         BookLibraryFilter.imported => strings.importedBooks,
+      };
+}
+
+class _LibraryDisplayControls extends StatelessWidget {
+  const _LibraryDisplayControls({
+    required this.writing,
+    required this.showGrid,
+    required this.sort,
+    required this.onLayoutChanged,
+    required this.onSortChanged,
+  });
+
+  final bool writing;
+  final bool showGrid;
+  final BookLibrarySort sort;
+  final VoidCallback onLayoutChanged;
+  final ValueChanged<BookLibrarySort> onSortChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    final layoutButton = OutlinedButton.icon(
+      key: const ValueKey('library-layout-toggle'),
+      onPressed: onLayoutChanged,
+      icon: Icon(showGrid ? Icons.grid_view : Icons.view_list),
+      label: Text(
+        '${strings.viewMode}: '
+        '${showGrid ? strings.gridView : strings.listView}',
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+    final sortButton = MenuAnchor(
+      menuChildren: [
+        MenuItemButton(
+          onPressed: () => onSortChanged(BookLibrarySort.recentlyUpdated),
+          child: Text(strings.recentlyUpdated),
+        ),
+        if (!writing)
+          MenuItemButton(
+            onPressed: () => onSortChanged(BookLibrarySort.lastRead),
+            child: Text(strings.byLastRead),
+          ),
+        MenuItemButton(
+          onPressed: () => onSortChanged(BookLibrarySort.title),
+          child: Text(strings.byTitle),
+        ),
+        MenuItemButton(
+          onPressed: () => onSortChanged(BookLibrarySort.author),
+          child: Text(strings.byAuthor),
+        ),
+        if (!writing)
+          MenuItemButton(
+            onPressed: () => onSortChanged(BookLibrarySort.progress),
+            child: Text(strings.byProgress),
+          ),
+      ],
+      builder: (context, controller, _) => OutlinedButton.icon(
+        key: const ValueKey('library-sort-menu'),
+        onPressed: controller.isOpen ? controller.close : controller.open,
+        icon: const Icon(Icons.sort),
+        label: Text(
+          '${strings.sortBy}: ${_sortLabel(strings, sort)}',
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 520) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [layoutButton, const SizedBox(height: 8), sortButton],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(child: layoutButton),
+            const SizedBox(width: 8),
+            Expanded(child: sortButton),
+          ],
+        );
+      },
+    );
+  }
+
+  String _sortLabel(AppStrings strings, BookLibrarySort value) =>
+      switch (value) {
+        BookLibrarySort.recentlyUpdated => strings.recentlyUpdated,
+        BookLibrarySort.lastRead => strings.byLastRead,
+        BookLibrarySort.title => strings.byTitle,
+        BookLibrarySort.author => strings.byAuthor,
+        BookLibrarySort.progress => strings.byProgress,
       };
 }
 

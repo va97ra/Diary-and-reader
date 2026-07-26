@@ -1,11 +1,15 @@
+import 'dart:convert';
+
 import 'package:dnevnik/features/books/application/book_speech_engine.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_page.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -57,7 +61,35 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('reader-tts-action')));
     await tester.pump();
 
-    expect(engine.spoken.single, contains('Первый текст'));
+    expect(
+      find.byKey(const ValueKey('reader-speech-controls')),
+      findsOneWidget,
+    );
+    final reader = tester.widget<QuillEditor>(find.byType(QuillEditor).first);
+    final handled = reader.config.onTapUp!(
+      TapUpDetails(
+        globalPosition: Offset.zero,
+        kind: PointerDeviceKind.touch,
+      ),
+      (_) => const TextPosition(offset: 7),
+    );
+    expect(handled, isTrue);
+    await tester.pumpAndSettle();
+
+    expect(engine.spoken.single, startsWith('текст'));
+    final highlightedReader = tester.widget<QuillEditor>(
+      find.byType(QuillEditor).first,
+    );
+    expect(
+      jsonEncode(highlightedReader.controller.document.toDelta().toJson()),
+      contains('background'),
+    );
+    await tester.tap(find.byKey(const ValueKey('reader-speech-pause-resume')));
+    await tester.pump();
+    expect(engine.pauseCount, 1);
+    await tester.tap(find.byKey(const ValueKey('reader-speech-pause-resume')));
+    await tester.pump();
+    expect(engine.resumeCount, 1);
     engine.complete();
     await tester.pumpAndSettle();
     expect(engine.spoken.last, contains('Второй текст'));
@@ -69,6 +101,8 @@ class _FakeSpeechEngine implements BookSpeechEngine {
   final spoken = <String>[];
   final configuredChapters = <String>[];
   void Function()? _completion;
+  int pauseCount = 0;
+  int resumeCount = 0;
 
   @override
   Future<void> configure({
@@ -81,6 +115,15 @@ class _FakeSpeechEngine implements BookSpeechEngine {
 
   @override
   void setCompletionHandler(void Function() handler) => _completion = handler;
+
+  @override
+  void setErrorHandler(void Function(String message) handler) {}
+
+  @override
+  Future<void> pause() async => pauseCount++;
+
+  @override
+  Future<void> resume() async => resumeCount++;
 
   @override
   Future<void> speak(String text) async => spoken.add(text);
