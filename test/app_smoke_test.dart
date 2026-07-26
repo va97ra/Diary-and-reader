@@ -37,7 +37,9 @@ void main() {
     await tester.pumpAndSettle();
     await openLastManuscript(tester, controller);
 
-    expect(find.byKey(const ValueKey('writer-context-bar')), findsOneWidget);
+    expect(find.byKey(const ValueKey('writer-context-bar')), findsNothing);
+    expect(find.byKey(const ValueKey('writer-left-panel')), findsOneWidget);
+    expect(find.byKey(const ValueKey('writer-right-panel')), findsOneWidget);
     expect(
       find.byKey(const ValueKey('editor-bottom-navigation')),
       findsNothing,
@@ -47,12 +49,12 @@ void main() {
       findsNothing,
     );
 
-    await tester.tap(find.byKey(const ValueKey('writer-more-menu')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Предпросмотр книги'));
+    await tester.tap(find.byKey(const ValueKey('writer-panel-preview')));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('reader-context-bar')), findsOneWidget);
+    expect(find.byKey(const ValueKey('reader-context-bar')), findsNothing);
+    expect(find.byKey(const ValueKey('reader-left-panel')), findsOneWidget);
+    expect(find.byKey(const ValueKey('reader-right-panel')), findsOneWidget);
     expect(find.byKey(const ValueKey('reader-navigation')), findsNothing);
     expect(find.byKey(const ValueKey('reader-settings-button')), findsNothing);
   });

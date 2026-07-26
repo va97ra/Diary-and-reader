@@ -39,7 +39,9 @@ class AuthorWorkspaceController extends ChangeNotifier {
     _persistence = WorkspacePersistenceCoordinator(
       repository,
       () => _snapshot,
-      onStateChanged: notifyListeners,
+      onStateChanged: () {
+        if (!_readerSessionActive) notifyListeners();
+      },
       saveDebounce: saveDebounce,
       maxSaveDelay: maxSaveDelay,
     );
@@ -51,6 +53,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
   String? _activeProjectId;
   String _languageCode = 'ru';
   LiteriaAppPreferences _appPreferences = const LiteriaAppPreferences();
+  bool _readerSessionActive = false;
 
   UnmodifiableListView<BookProject> get projects =>
       UnmodifiableListView(_projects);
@@ -253,6 +256,19 @@ class AuthorWorkspaceController extends ChangeNotifier {
   }
 
   void recordReadingTime(String id, Duration duration) {
+    _recordReadingTime(id, duration, notify: true);
+  }
+
+  void recordReadingTimeDuringReading(String id, Duration duration) {
+    _readerSessionActive = true;
+    _recordReadingTime(id, duration, notify: false);
+  }
+
+  void _recordReadingTime(
+    String id,
+    Duration duration, {
+    required bool notify,
+  }) {
     if (duration.inSeconds <= 0) return;
     final index = _projects.indexWhere((project) => project.id == id);
     if (index < 0) return;
@@ -260,7 +276,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
       _projects[index],
       duration,
     );
-    _changed();
+    notify ? _changed() : _changedWithoutNotification();
   }
 
   void selectSection(String id) {
@@ -380,6 +396,32 @@ class AuthorWorkspaceController extends ChangeNotifier {
     }
     _replaceActiveProject(
       (current) => ManuscriptProjectEditor.addAsset(current, asset),
+    );
+    _changed();
+  }
+
+  void setCoverAsset(BookAsset asset) {
+    final project = activeProject;
+    if (project == null || project.isReadOnly || !asset.isRenderableImage) {
+      return;
+    }
+    _replaceActiveProject(
+      (current) => ManuscriptProjectEditor.addAsset(
+        current,
+        asset,
+      ).copyWith(coverAssetId: asset.id, updatedAt: DateTime.now()),
+    );
+    _changed();
+  }
+
+  void clearCoverAsset() {
+    final project = activeProject;
+    if (project == null || project.isReadOnly || project.coverAssetId == null) {
+      return;
+    }
+    _replaceActiveProject(
+      (current) =>
+          current.copyWith(clearCoverAsset: true, updatedAt: DateTime.now()),
     );
     _changed();
   }
@@ -513,33 +555,81 @@ class AuthorWorkspaceController extends ChangeNotifier {
   }
 
   void updateReaderSettings(BookReaderSettings readerSettings) {
+    _updateReaderSettings(readerSettings, notify: true);
+  }
+
+  void updateReaderSettingsDuringReading(BookReaderSettings readerSettings) {
+    _readerSessionActive = true;
+    _updateReaderSettings(readerSettings, notify: false);
+  }
+
+  void _updateReaderSettings(
+    BookReaderSettings readerSettings, {
+    required bool notify,
+  }) {
+    if (_appPreferences.readerSettings == readerSettings) return;
     _appPreferences = _appPreferences.copyWith(readerSettings: readerSettings);
     for (var index = 0; index < _projects.length; index++) {
       _projects[index] = _projects[index].copyWith(
         readerSettings: readerSettings,
       );
     }
-    _changed();
+    notify ? _changed() : _changedWithoutNotification();
   }
 
   void updateReaderProgress(BookReaderProgress readerProgress) {
+    _updateReaderProgress(readerProgress, notify: true);
+  }
+
+  void updateReaderProgressDuringReading(BookReaderProgress readerProgress) {
+    _readerSessionActive = true;
+    _updateReaderProgress(readerProgress, notify: false);
+  }
+
+  void _updateReaderProgress(
+    BookReaderProgress readerProgress, {
+    required bool notify,
+  }) {
+    if (activeProject?.readerProgress == readerProgress) return;
     _replaceActiveProject(
       (project) => project.copyWith(
         readerProgress: readerProgress,
         updatedAt: DateTime.now(),
       ),
     );
-    _changed();
+    notify ? _changed() : _changedWithoutNotification();
   }
 
   void updateReaderAnnotations(BookReaderAnnotations readerAnnotations) {
+    _updateReaderAnnotations(readerAnnotations, notify: true);
+  }
+
+  void updateReaderAnnotationsDuringReading(
+    BookReaderAnnotations readerAnnotations,
+  ) {
+    _readerSessionActive = true;
+    _updateReaderAnnotations(readerAnnotations, notify: false);
+  }
+
+  void _updateReaderAnnotations(
+    BookReaderAnnotations readerAnnotations, {
+    required bool notify,
+  }) {
+    if (activeProject?.readerAnnotations == readerAnnotations) return;
     _replaceActiveProject(
       (project) => project.copyWith(
         readerAnnotations: readerAnnotations,
         updatedAt: DateTime.now(),
       ),
     );
-    _changed();
+    notify ? _changed() : _changedWithoutNotification();
+  }
+
+  void beginReaderSession() => _readerSessionActive = true;
+
+  void finishReaderSession() {
+    _readerSessionActive = false;
+    notifyListeners();
   }
 
   void setLanguage(String languageCode) {
@@ -665,6 +755,11 @@ class AuthorWorkspaceController extends ChangeNotifier {
   void _changed() {
     _markDirty();
     notifyListeners();
+    _persistence.scheduleSave();
+  }
+
+  void _changedWithoutNotification() {
+    _markDirty();
     _persistence.scheduleSave();
   }
 

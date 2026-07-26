@@ -1,6 +1,7 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/domain/manuscript_project_statistics.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -50,44 +51,35 @@ class _BookWritingStatisticsSheetState
       Localizations.localeOf(context).toLanguageTag(),
     );
     return Material(
+      color: Colors.transparent,
       child: SafeArea(
         child: ListView(
           key: const ValueKey('writing-statistics-sheet'),
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    strings.writingStatistics,
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                ),
-                IconButton(
-                  tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
-                ),
-              ],
+            BookLeatherModalHeader(
+              title: strings.writingStatistics,
+              onClose: () => Navigator.pop(context),
+              padding: const EdgeInsets.fromLTRB(0, 12, 0, 8),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             _ProgressCard(
               title: strings.today,
               value: todayWords,
               target: writing.dailyTargetWords,
               number: number,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             _ProgressCard(
               title: strings.wholeBook,
               value: statistics.words,
               target: writing.projectTargetWords,
               number: number,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             Wrap(
-              spacing: 10,
-              runSpacing: 10,
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 _Metric(
                   label: strings.words,
@@ -115,9 +107,9 @@ class _BookWritingStatisticsSheetState
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             Text(strings.goals, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             TextField(
               key: const ValueKey('daily-writing-goal'),
               controller: _dailyGoal,
@@ -129,7 +121,7 @@ class _BookWritingStatisticsSheetState
                 border: const OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             TextField(
               key: const ValueKey('project-writing-goal'),
               controller: _projectGoal,
@@ -141,7 +133,7 @@ class _BookWritingStatisticsSheetState
                 border: const OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             FilledButton.icon(
               key: const ValueKey('save-writing-goals'),
               onPressed: () {
@@ -181,7 +173,7 @@ class _ProgressCard extends StatelessWidget {
         : (value / target).clamp(0, 1).toDouble();
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -194,7 +186,7 @@ class _ProgressCard extends StatelessWidget {
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             if (target > 0) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               LinearProgressIndicator(value: progress),
             ],
           ],
@@ -213,7 +205,7 @@ class _Metric extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     width: 150,
-    padding: const EdgeInsets.all(14),
+    padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
       borderRadius: BorderRadius.circular(14),

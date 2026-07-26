@@ -45,8 +45,11 @@ Future<void> openReaderPreview(
   AuthorWorkspaceController controller,
 ) async {
   await openLastManuscript(tester, controller);
-  await tester.tap(find.byKey(const ValueKey('writer-more-menu')));
-  await tester.pumpAndSettle();
-  await tester.tap(find.text('Предпросмотр книги'));
+  final directPreview = find.byKey(const ValueKey('writer-panel-preview'));
+  if (directPreview.evaluate().isEmpty) {
+    await tester.tap(find.byKey(const ValueKey('writer-more-menu')));
+    await tester.pumpAndSettle();
+  }
+  await tester.tap(find.byKey(const ValueKey('writer-panel-preview')));
   await tester.pumpAndSettle();
 }

@@ -53,6 +53,7 @@ $hiddenTitleStyle  <description>
       <genre>${_genre(metadata.genre)}</genre>
       ${_author(metadata.author, fallback: 'Неизвестный автор')}
       <book-title>${escapeXml(metadata.title)}</book-title>
+      ${project.coverAsset == null ? '' : '<coverpage><image l:href="#${escapeXml(project.coverAsset!.id)}"/></coverpage>'}
       ${_annotation(metadata.description)}
       ${_optionalElement('keywords', metadata.genre)}
       <date value="$date">$date</date>

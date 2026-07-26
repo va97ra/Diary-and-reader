@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:dnevnik/features/books/application/book_docx_package_parts.dart';
 import 'package:dnevnik/features/books/application/book_export_content.dart';
 import 'package:dnevnik/features/books/domain/book_asset.dart';
+import 'package:dnevnik/features/books/domain/book_image_placement.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
@@ -86,8 +87,20 @@ $body  </w:body>
 
   String _titlePage() {
     final metadata = project.metadata;
-    final output = StringBuffer()
-      ..writeln(_simpleParagraph(metadata.title, style: 'Title'));
+    final output = StringBuffer();
+    if (project.coverAsset != null) {
+      output.writeln(
+        _imageParagraph(
+          BookExportBlock(
+            type: BookExportBlockType.image,
+            runs: const [],
+            assetId: project.coverAsset!.id,
+            imageWidthPercent: 75,
+          ),
+        ),
+      );
+    }
+    output.writeln(_simpleParagraph(metadata.title, style: 'Title'));
     if (metadata.subtitle.trim().isNotEmpty) {
       output.writeln(_simpleParagraph(metadata.subtitle, style: 'Subtitle'));
     }
@@ -185,7 +198,7 @@ $body  </w:body>
   String _block(BookExportBlock block, int? numberingId) {
     if (block.type == BookExportBlockType.pageBreak) return _pageBreak();
     if (block.type == BookExportBlockType.image) {
-      return _imageParagraph(block.assetId);
+      return _imageParagraph(block);
     }
     final settings = project.paragraphSettings;
     final paragraphProperties = _paragraphProperties(
@@ -317,8 +330,8 @@ $body  </w:body>
 
   String _pageBreak() => '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
 
-  String _imageParagraph(String? assetId) {
-    final asset = project.assetById(assetId ?? '');
+  String _imageParagraph(BookExportBlock block) {
+    final asset = project.assetById(block.assetId ?? '');
     if (asset == null || !asset.isRenderableImage) return '';
     final embedded = _imageByAssetId.putIfAbsent(asset.id, () {
       final extension = switch (asset.mediaType.toLowerCase()) {
@@ -348,7 +361,7 @@ $body  </w:body>
       width = (image.width ?? 640).toDouble();
       height = (image.height ?? 480).toDouble();
     } catch (_) {}
-    const maxWidth = 5486400.0;
+    final maxWidth = 5486400.0 * block.imageWidthPercent / 100;
     const maxHeight = 4572000.0;
     final naturalWidth = math.max(1.0, width * 9525);
     final naturalHeight = math.max(1.0, height * 9525);
@@ -364,7 +377,18 @@ $body  </w:body>
           ? 'Image $drawingId'
           : embedded.asset.sourcePath,
     );
-    return '<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="$cx" cy="$cy"/><wp:docPr id="$drawingId" name="$name"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="$drawingId" name="$name"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${embedded.relationship.id}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="$cx" cy="$cy"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>';
+    final alignment = switch (block.imageAlignment) {
+      BookImageAlignment.left => 'left',
+      BookImageAlignment.center => 'center',
+      BookImageAlignment.right => 'right',
+    };
+    final caption = block.imageCaption.isEmpty
+        ? ''
+        : _simpleParagraph(
+            block.imageCaption,
+            alignment: BookExportTextAlignment.center,
+          );
+    return '<w:p><w:pPr><w:jc w:val="$alignment"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="$cx" cy="$cy"/><wp:docPr id="$drawingId" name="$name"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="$drawingId" name="$name"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${embedded.relationship.id}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="$cx" cy="$cy"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>$caption';
   }
 
   int _outlineLevel(BookSection section) {

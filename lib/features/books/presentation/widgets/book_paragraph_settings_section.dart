@@ -5,9 +5,14 @@ import 'package:dnevnik/features/books/presentation/widgets/book_setting_number_
 import 'package:flutter/material.dart';
 
 class BookParagraphSettingsSection extends StatelessWidget {
-  const BookParagraphSettingsSection({required this.controller, super.key});
+  const BookParagraphSettingsSection({
+    required this.controller,
+    this.showHeading = true,
+    super.key,
+  });
 
   final AuthorWorkspaceController controller;
+  final bool showHeading;
 
   @override
   Widget build(BuildContext context) {
@@ -17,79 +22,82 @@ class BookParagraphSettingsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          strings.paragraphStyle,
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 12),
-        DropdownButtonFormField<BookParagraphPreset>(
-          key: ValueKey(
-            '${project.id}-paragraph-preset-${settings.preset.name}',
+        if (showHeading) ...[
+          Text(
+            strings.paragraphStyle,
+            style: Theme.of(context).textTheme.titleMedium,
           ),
-          initialValue: settings.preset,
-          decoration: InputDecoration(
-            labelText: strings.stylePreset,
-            border: const OutlineInputBorder(),
-          ),
-          items: BookParagraphPreset.values
-              .map(
-                (preset) => DropdownMenuItem(
-                  value: preset,
-                  child: SizedBox(
-                    width: 210,
-                    child: Text(
-                      _presetLabel(strings, preset),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
+          const SizedBox(height: 10),
+        ],
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<BookParagraphPreset>(
+                key: ValueKey(
+                  '${project.id}-paragraph-preset-${settings.preset.name}',
                 ),
-              )
-              .toList(),
-          selectedItemBuilder: (context) => BookParagraphPreset.values
-              .map(
-                (preset) => Align(
-                  alignment: Alignment.centerLeft,
-                  child: SizedBox(
-                    width: 210,
-                    child: Text(
-                      _presetLabel(strings, preset),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
+                initialValue: settings.preset,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: strings.stylePreset,
+                  border: const OutlineInputBorder(),
                 ),
-              )
-              .toList(),
-          onChanged: (preset) {
-            if (preset != null) {
-              controller.updateParagraphSettings(
-                BookParagraphSettings.forPreset(preset),
-              );
-            }
-          },
+                items: BookParagraphPreset.values
+                    .map(
+                      (preset) => DropdownMenuItem(
+                        value: preset,
+                        child: Text(
+                          _presetLabel(strings, preset),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (preset) {
+                  if (preset != null) {
+                    controller.updateParagraphSettings(
+                      BookParagraphSettings.forPreset(preset),
+                    );
+                  }
+                },
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                key: ValueKey(
+                  '${project.id}-default-font-${settings.fontFamily}',
+                ),
+                initialValue: settings.fontFamily,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: strings.defaultFont,
+                  border: const OutlineInputBorder(),
+                ),
+                items: bookFontFamilies
+                    .map(
+                      (font) => DropdownMenuItem(
+                        value: font,
+                        child: Text(
+                          font,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontFamily: font),
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (font) {
+                  if (font != null) {
+                    _update(settings.copyWith(fontFamily: font));
+                  }
+                },
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
-          key: ValueKey('${project.id}-default-font-${settings.fontFamily}'),
-          initialValue: settings.fontFamily,
-          decoration: InputDecoration(
-            labelText: strings.defaultFont,
-            border: const OutlineInputBorder(),
-          ),
-          items: bookFontFamilies
-              .map(
-                (font) => DropdownMenuItem(
-                  value: font,
-                  child: Text(font, style: TextStyle(fontFamily: font)),
-                ),
-              )
-              .toList(),
-          onChanged: (font) {
-            if (font != null) _update(settings.copyWith(fontFamily: font));
-          },
-        ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
@@ -104,7 +112,7 @@ class BookParagraphSettingsSection extends StatelessWidget {
                     _update(settings.copyWith(fontSizePt: value)),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             Expanded(
               child: BookSettingNumberField(
                 key: ValueKey('${project.id}-paragraph-indent'),
@@ -119,14 +127,14 @@ class BookParagraphSettingsSection extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
         Text(
           strings.lineSpacing,
           style: Theme.of(context).textTheme.labelLarge,
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         Wrap(
-          spacing: 7,
+          spacing: 6,
           children: [1.0, 1.15, 1.35, 1.5, 2.0]
               .map(
                 (height) => ChoiceChip(
@@ -138,7 +146,7 @@ class BookParagraphSettingsSection extends StatelessWidget {
               )
               .toList(),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
@@ -153,7 +161,7 @@ class BookParagraphSettingsSection extends StatelessWidget {
                     _update(settings.copyWith(spacingBeforePt: value)),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             Expanded(
               child: BookSettingNumberField(
                 key: ValueKey('${project.id}-spacing-after'),

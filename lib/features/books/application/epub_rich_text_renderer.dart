@@ -1,4 +1,5 @@
 import 'package:dnevnik/features/books/application/book_export_content.dart';
+import 'package:dnevnik/features/books/domain/book_image_placement.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 
 abstract final class EpubRichTextRenderer {
@@ -28,8 +29,18 @@ abstract final class EpubRichTextRenderer {
             ? null
             : imageSource?.call(block.assetId!);
         if (source != null) {
+          final alignment = switch (block.imageAlignment) {
+            BookImageAlignment.left => 'margin-left:0;margin-right:auto',
+            BookImageAlignment.center => 'margin-left:auto;margin-right:auto',
+            BookImageAlignment.right => 'margin-left:auto;margin-right:0',
+          };
+          final caption = block.imageCaption.isEmpty
+              ? ''
+              : '<figcaption>${escapeXml(block.imageCaption)}</figcaption>';
           output.writeln(
-            '<figure class="book-image"><img src="${escapeXml(source)}" alt=""/></figure>',
+            '<figure class="book-image" style="width:${block.imageWidthPercent}%;$alignment">'
+            '<img src="${escapeXml(source)}" alt="${escapeXml(block.imageCaption)}"/>'
+            '$caption</figure>',
           );
         }
         continue;

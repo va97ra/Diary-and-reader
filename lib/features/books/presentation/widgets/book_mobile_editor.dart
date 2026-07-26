@@ -22,6 +22,7 @@ class BookMobileEditor extends StatelessWidget {
     required this.onPreviousPage,
     required this.onNextPage,
     required this.showPageNavigation,
+    this.onImageTap,
     super.key,
   });
 
@@ -36,6 +37,7 @@ class BookMobileEditor extends StatelessWidget {
   final VoidCallback? onPreviousPage;
   final VoidCallback? onNextPage;
   final bool showPageNavigation;
+  final BookImageTapCallback? onImageTap;
 
   @override
   Widget build(BuildContext context) => ColoredBox(
@@ -57,7 +59,7 @@ class BookMobileEditor extends StatelessWidget {
                 customStyles: BookTypography.editorStyles(paragraphSettings),
                 textSelectionThemeData: BookTypography.selectionTheme,
                 embedBuilders: [
-                  BookImageEmbedBuilder(assets),
+                  BookImageEmbedBuilder(assets, onTap: onImageTap),
                   const BookPageBreakEmbedBuilder(),
                 ],
                 scrollable: true,

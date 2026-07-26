@@ -1,6 +1,7 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/domain/book_project_version.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -36,29 +37,15 @@ class _BookVersionHistorySheetState extends State<BookVersionHistorySheet> {
     return SafeArea(
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 12, 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    strings.versionHistory,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ),
-                FilledButton.icon(
-                  key: const ValueKey('create-version-button'),
-                  onPressed: _busy ? null : _createVersion,
-                  icon: const Icon(Icons.add),
-                  label: Text(strings.createVersion),
-                ),
-                IconButton(
-                  tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close),
-                ),
-              ],
+          BookLeatherModalHeader(
+            title: strings.versionHistory,
+            trailing: FilledButton.icon(
+              key: const ValueKey('create-version-button'),
+              onPressed: _busy ? null : _createVersion,
+              icon: const Icon(Icons.add),
+              label: Text(strings.createVersion),
             ),
+            onClose: () => Navigator.of(context).pop(),
           ),
           const Divider(height: 1),
           if (kIsWeb)
@@ -148,7 +135,7 @@ class _BookVersionHistorySheetState extends State<BookVersionHistorySheet> {
     var enteredLabel = '';
     final label = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => BookLeatherDialog(
         title: Text(strings.createVersion),
         content: TextField(
           key: const ValueKey('version-label-field'),
@@ -259,7 +246,7 @@ class _BookVersionHistorySheetState extends State<BookVersionHistorySheet> {
   }) async =>
       await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => BookLeatherDialog(
           title: Text(title),
           content: Text(message),
           actions: [

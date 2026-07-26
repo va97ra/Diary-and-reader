@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:isolate';
 
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 import 'package:hyphenator_impure/hyphenator.dart';
@@ -25,10 +26,21 @@ class BookReaderDisplayDocument {
 }
 
 class BookReaderHyphenation {
-  BookReaderHyphenation._(this._hyphenator);
+  BookReaderHyphenation._({
+    required this._patterns,
+    required this._exceptions,
+    required this._repairRussianEncoding,
+  });
 
   static final _loaders = <String, Future<BookReaderHyphenation>>{};
-  final Hyphenator _hyphenator;
+  final List<String> _patterns;
+  final List<String> _exceptions;
+  final bool _repairRussianEncoding;
+  late final Hyphenator _hyphenator = _createHyphenator(
+    _patterns,
+    _exceptions,
+    repairRussianEncoding: _repairRussianEncoding,
+  );
 
   static Future<BookReaderHyphenation> forLanguage(String languageCode) =>
       _loaders.putIfAbsent(languageCode == 'en' ? 'en' : 'ru', () async {
@@ -36,11 +48,10 @@ class BookReaderHyphenation {
             ? DefaultResourceLoaderLanguage.enUs
             : DefaultResourceLoaderLanguage.ru;
         final loadedResource = await DefaultResourceLoader.load(language);
-        final resource = language == DefaultResourceLoaderLanguage.ru
-            ? _RepairedRussianResource(loadedResource)
-            : loadedResource;
         return BookReaderHyphenation._(
-          Hyphenator(resource: resource, minWordLength: 7, minLetterCount: 3),
+          patterns: loadedResource.patternsStrings.toList(growable: false),
+          exceptions: loadedResource.exceptionsStrings.toList(growable: false),
+          repairRussianEncoding: language == DefaultResourceLoaderLanguage.ru,
         );
       });
 
@@ -49,6 +60,20 @@ class BookReaderHyphenation {
 
   BookReaderDisplayDocument apply(RichDocument source) =>
       _build(source, _hyphenator.hyphenate);
+
+  Future<BookReaderDisplayDocument> applyInBackground(RichDocument source) {
+    final patterns = _patterns;
+    final exceptions = _exceptions;
+    final repairRussianEncoding = _repairRussianEncoding;
+    return Isolate.run(() {
+      final hyphenator = _createHyphenator(
+        patterns,
+        exceptions,
+        repairRussianEncoding: repairRussianEncoding,
+      );
+      return _build(source, hyphenator.hyphenate);
+    });
+  }
 
   static BookReaderDisplayDocument _build(
     RichDocument source,
@@ -101,6 +126,31 @@ class BookReaderHyphenation {
       displayToOriginal,
     );
   }
+}
+
+Hyphenator _createHyphenator(
+  List<String> patterns,
+  List<String> exceptions, {
+  required bool repairRussianEncoding,
+}) {
+  final stored = _StoredHyphenationResource(patterns, exceptions);
+  final resource = repairRussianEncoding
+      ? _RepairedRussianResource(stored)
+      : stored;
+  return Hyphenator(resource: resource, minWordLength: 7, minLetterCount: 3);
+}
+
+class _StoredHyphenationResource implements ResourceLoader {
+  const _StoredHyphenationResource(
+    this.patternsStrings,
+    this.exceptionsStrings,
+  );
+
+  @override
+  final Iterable<String> patternsStrings;
+
+  @override
+  final Iterable<String> exceptionsStrings;
 }
 
 /// The bundled Russian TeX file in `hyphenator_impure` is UTF-8 text that was

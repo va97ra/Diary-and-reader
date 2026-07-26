@@ -1,5 +1,6 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/material.dart';
 
 class BookMetadataEditorDialog extends StatefulWidget {
@@ -40,7 +41,7 @@ class _BookMetadataEditorDialogState extends State<BookMetadataEditorDialog> {
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
-    return AlertDialog(
+    return BookLeatherDialog(
       title: Text(strings.editMetadata),
       content: SizedBox(
         width: 520,
@@ -79,7 +80,7 @@ class _BookMetadataEditorDialogState extends State<BookMetadataEditorDialog> {
     int maxLines = 1,
     bool autofocus = false,
   }) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
+    padding: const EdgeInsets.only(bottom: bookModalGrid),
     child: TextField(
       key: ValueKey('book-metadata-$key'),
       controller: _controllers[key],

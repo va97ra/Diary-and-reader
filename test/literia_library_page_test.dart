@@ -2,6 +2,7 @@ import 'package:dnevnik/app/literia_library_page.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_adaptive_control_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -48,6 +49,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('library-search')), findsOneWidget);
+    expect(find.byKey(const ValueKey('library-control-panel')), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(ValueKey('literia-project-${seed.id}')),
+        matching: find.byType(BookLeatherPanel),
+      ),
+      findsOneWidget,
+    );
     expect(find.byKey(ValueKey('literia-project-${seed.id}')), findsOneWidget);
     await tester.tap(find.byIcon(Icons.star_border));
     await tester.pump();
@@ -66,6 +75,51 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('По заданным условиям книг не найдено'), findsOneWidget);
+
+    await tester.binding.setSurfaceSize(null);
+    controller.dispose();
+  });
+
+  testWidgets('mobile library keeps leather controls on a compact grid', (
+    tester,
+  ) async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(seedManuscript: false),
+    );
+    await controller.load(preferredLanguage: 'ru');
+
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('ru'),
+        supportedLocales: const [Locale('ru'), Locale('en')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        home: LiteriaLibraryPage(
+          mode: LiteriaLibraryMode.reading,
+          controller: controller,
+          onPrimaryAction: () async {},
+          onFindOnDevice: () async {},
+          countDeviceBooks: () async => 0,
+          onOpen: (_) async {},
+          onDelete: (_) async {},
+          onAbout: (_) async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final controls = find.byKey(const ValueKey('library-control-panel'));
+    expect(tester.getSize(controls).height, lessThan(320));
+    expect(
+      tester.getCenter(find.byKey(const ValueKey('library-layout-toggle'))).dy,
+      tester.getCenter(find.byKey(const ValueKey('library-sort-menu'))).dy,
+    );
+    expect(
+      tester.getCenter(find.byKey(const ValueKey('import-book-button'))).dy,
+      tester
+          .getCenter(find.byKey(const ValueKey('find-device-books-button')))
+          .dy,
+    );
 
     await tester.binding.setSurfaceSize(null);
     controller.dispose();

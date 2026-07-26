@@ -10,6 +10,7 @@ import 'package:dnevnik/features/books/application/book_import_parser.dart';
 import 'package:dnevnik/features/books/application/book_source_storage.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_scan_folder.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -100,10 +101,10 @@ void main() {
     expect(tester.widget<OutlinedButton>(deleteOriginal).onPressed, isNotNull);
     await tester.tap(deleteOriginal);
     await tester.pumpAndSettle();
-    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.byType(BookLeatherDialog), findsOneWidget);
     await tester.tap(
       find.descendant(
-        of: find.byType(AlertDialog),
+        of: find.byType(BookLeatherDialog),
         matching: find.byType(FilledButton),
       ),
     );

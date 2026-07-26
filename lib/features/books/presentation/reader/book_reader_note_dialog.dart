@@ -1,4 +1,5 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/material.dart';
 
 class BookReaderNoteDialog extends StatefulWidget {
@@ -23,7 +24,7 @@ class _BookReaderNoteDialogState extends State<BookReaderNoteDialog> {
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
     final isEditing = widget.initialText.isNotEmpty;
-    return AlertDialog(
+    return BookLeatherDialog(
       title: Text(isEditing ? strings.editNote : strings.newNote),
       content: TextField(
         key: const ValueKey('reader-note-field'),

@@ -33,12 +33,14 @@ void main() {
     );
     expect(find.text('Глава 1'), findsOneWidget);
     expect(find.textContaining('Страница 1 из'), findsOneWidget);
-    final nextButton = tester.widget<IconButton>(
-      find.byKey(const ValueKey('reader-next-page')),
-    );
-    expect(nextButton.onPressed, isNotNull);
+    expect(find.byKey(const ValueKey('reader-previous-page')), findsNothing);
+    expect(find.byKey(const ValueKey('reader-next-page')), findsNothing);
 
-    await tester.tap(find.byKey(const ValueKey('reader-next-page')));
+    await tester.fling(
+      find.byKey(const ValueKey('reader-page-swipe-area')),
+      const Offset(-360, 0),
+      1200,
+    );
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('reader-page-2')), findsOneWidget);
@@ -115,6 +117,88 @@ void main() {
     await tester.binding.setSurfaceSize(null);
   });
 
+  testWidgets('paged reader stays usable in compact landscape constraints', (
+    tester,
+  ) async {
+    final controller = await _controllerWithLongChapter(
+      const BookReaderSettings(
+        viewMode: BookReaderViewMode.singlePage,
+        fontSize: 32,
+        verticalPadding: 80,
+      ),
+    );
+
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pumpWidget(AuthorStudioApp(controller: controller));
+    await tester.pumpAndSettle();
+    await openReaderPreview(tester, controller);
+    await _pumpUntil(tester, find.byKey(const ValueKey('reader-page-1')));
+    await tester.binding.setSurfaceSize(const Size(640, 420));
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(tester.takeException(), isNull);
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('next chapter shows its first page before full pagination', (
+    tester,
+  ) async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(),
+    );
+    await controller.load(preferredLanguage: 'ru');
+    controller.updateSectionContent([
+      {'insert': 'Короткая первая глава.\n'},
+    ]);
+    final firstChapterId = controller.activeSection!.id;
+    controller.addSection(BookSectionType.chapter);
+    controller.updateSectionTitle('Большая следующая глава');
+    controller.updateSectionContent([
+      for (var index = 0; index < 180; index++)
+        {
+          'insert':
+              'Абзац $index следующей главы для продолжительного фонового расчёта страниц и проверки быстрого перехода.\n',
+        },
+    ]);
+    final nextChapterId = controller.activeSection!.id;
+    controller.selectSection(firstChapterId);
+    controller.updateReaderSettings(
+      const BookReaderSettings(viewMode: BookReaderViewMode.singlePage),
+    );
+
+    await tester.binding.setSurfaceSize(const Size(1280, 820));
+    await tester.pumpWidget(AuthorStudioApp(controller: controller));
+    await tester.pumpAndSettle();
+    await openReaderPreview(tester, controller);
+    await _pumpUntil(tester, find.byKey(const ValueKey('reader-page-1')));
+
+    await tester.fling(
+      find.byKey(const ValueKey('reader-page-swipe-area')),
+      const Offset(-360, 0),
+      1200,
+    );
+    for (var attempt = 0; attempt < 12; attempt++) {
+      await tester.pump(const Duration(milliseconds: 50));
+      if (find
+          .byKey(const ValueKey('reader-page-background-loading'))
+          .evaluate()
+          .isNotEmpty) {
+        break;
+      }
+    }
+
+    expect(controller.activeProject!.readerProgress.sectionId, nextChapterId);
+    expect(find.byKey(const ValueKey('reader-page-1')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('reader-page-background-loading')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('reader-page-loading')), findsNothing);
+
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.binding.setSurfaceSize(null);
+  });
+
   testWidgets('last reader page continues with the next chapter', (
     tester,
   ) async {
@@ -143,7 +227,11 @@ void main() {
           firstChapterId) {
         break;
       }
-      await tester.tap(find.byKey(const ValueKey('reader-next-page')));
+      await tester.fling(
+        find.byKey(const ValueKey('reader-page-swipe-area')),
+        const Offset(-360, 0),
+        1200,
+      );
       await tester.pumpAndSettle();
     }
 

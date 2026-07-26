@@ -40,19 +40,21 @@ class _LibraryControls extends StatelessWidget {
             BookLibraryFilter.favorites,
           ];
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SearchBar(
             key: const ValueKey('library-search'),
+            constraints: const BoxConstraints(minHeight: 48),
+            elevation: const WidgetStatePropertyAll(0),
             hintText: writing
                 ? strings.manuscriptLibrarySearchHint
                 : strings.librarySearchHint,
             leading: const Icon(Icons.search),
             onChanged: onSearchChanged,
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           _LibraryDisplayControls(
             writing: writing,
             showGrid: showGrid,
@@ -61,7 +63,7 @@ class _LibraryControls extends StatelessWidget {
             onSortChanged: onSortChanged,
           ),
           if (!writing) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -138,13 +140,18 @@ class _LibraryDisplayControls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
+    final compact = MediaQuery.sizeOf(context).width < 520;
     final layoutButton = OutlinedButton.icon(
       key: const ValueKey('library-layout-toggle'),
       onPressed: onLayoutChanged,
       icon: Icon(showGrid ? Icons.grid_view : Icons.view_list),
       label: Text(
-        '${strings.viewMode}: '
-        '${showGrid ? strings.gridView : strings.listView}',
+        compact
+            ? showGrid
+                  ? strings.gridView
+                  : strings.listView
+            : '${strings.viewMode}: '
+                  '${showGrid ? strings.gridView : strings.listView}',
         overflow: TextOverflow.ellipsis,
       ),
     );
@@ -178,27 +185,19 @@ class _LibraryDisplayControls extends StatelessWidget {
         onPressed: controller.isOpen ? controller.close : controller.open,
         icon: const Icon(Icons.sort),
         label: Text(
-          '${strings.sortBy}: ${_sortLabel(strings, sort)}',
+          compact
+              ? _sortLabel(strings, sort)
+              : '${strings.sortBy}: ${_sortLabel(strings, sort)}',
           overflow: TextOverflow.ellipsis,
         ),
       ),
     );
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 520) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [layoutButton, const SizedBox(height: 8), sortButton],
-          );
-        }
-        return Row(
-          children: [
-            Expanded(child: layoutButton),
-            const SizedBox(width: 8),
-            Expanded(child: sortButton),
-          ],
-        );
-      },
+    return Row(
+      children: [
+        Expanded(child: layoutButton),
+        const SizedBox(width: 8),
+        Expanded(child: sortButton),
+      ],
     );
   }
 
@@ -210,6 +209,73 @@ class _LibraryDisplayControls extends StatelessWidget {
         BookLibrarySort.author => strings.byAuthor,
         BookLibrarySort.progress => strings.byProgress,
       };
+}
+
+class _LibraryPrimaryActions extends StatelessWidget {
+  const _LibraryPrimaryActions({
+    required this.writing,
+    required this.foundDeviceBooks,
+    required this.showDeviceAction,
+    required this.onPrimaryAction,
+    required this.onFindOnDevice,
+  });
+
+  final bool writing;
+  final int? foundDeviceBooks;
+  final bool showDeviceAction;
+  final VoidCallback onPrimaryAction;
+  final VoidCallback onFindOnDevice;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: writing
+          ? BookPanelAction(
+              key: const ValueKey('create-manuscript-button'),
+              icon: const Icon(Icons.note_add_outlined),
+              label: strings.createBook,
+              selected: true,
+              onPressed: onPrimaryAction,
+            )
+          : SizedBox(
+              height: 72,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: BookPanelAction(
+                      key: const ValueKey('import-book-button'),
+                      icon: const Icon(Icons.download),
+                      label: strings.importBooks,
+                      semanticLabel:
+                          '${strings.importBooks}. '
+                          '${strings.supportedBookFormats}',
+                      selected: true,
+                      onPressed: onPrimaryAction,
+                    ),
+                  ),
+                  if (showDeviceAction) ...[
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: BookPanelAction(
+                        key: const ValueKey('find-device-books-button'),
+                        icon: const Icon(Icons.folder_open_outlined),
+                        label: foundDeviceBooks == null
+                            ? strings.findOnDevice
+                            : '${strings.findOnDevice}\n'
+                                  '${strings.foundOnDevice}: $foundDeviceBooks',
+                        compactLabelLines: 2,
+                        onPressed: onFindOnDevice,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+    );
+  }
 }
 
 class _EmptyLibrary extends StatelessWidget {

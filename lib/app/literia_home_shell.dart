@@ -23,6 +23,7 @@ import 'package:dnevnik/features/books/data/book_project_backup_file_service.dar
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/presentation/author_workspace_page.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_page.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/material.dart';
 
 class LiteriaHomeShell extends StatefulWidget {
@@ -165,7 +166,8 @@ class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
         barrierDismissible: false,
         builder: (dialogContext) => PopScope(
           canPop: false,
-          child: AlertDialog(
+          child: BookLeatherDialog(
+            title: const SizedBox.shrink(),
             content: Row(
               children: [
                 const SizedBox.square(
@@ -278,19 +280,24 @@ class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
     if (!mounted) return;
     final selected = widget.controller.activeProject;
     if (selected == null || selected.sections.isEmpty) return;
+    widget.controller.beginReaderSession();
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (_) => BookReaderPage(
           project: selected,
           readerSettings: widget.controller.readerSettings,
-          onSettingsChanged: widget.controller.updateReaderSettings,
-          onProgressChanged: widget.controller.updateReaderProgress,
-          onAnnotationsChanged: widget.controller.updateReaderAnnotations,
-          onReadingTimeChanged: (duration) =>
-              widget.controller.recordReadingTime(selected.id, duration),
+          onSettingsChanged:
+              widget.controller.updateReaderSettingsDuringReading,
+          onProgressChanged:
+              widget.controller.updateReaderProgressDuringReading,
+          onAnnotationsChanged:
+              widget.controller.updateReaderAnnotationsDuringReading,
+          onReadingTimeChanged: (duration) => widget.controller
+              .recordReadingTimeDuringReading(selected.id, duration),
         ),
       ),
     );
+    widget.controller.finishReaderSession();
     await widget.controller.flush();
   }
 
@@ -309,7 +316,7 @@ class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
     final strings = AppStrings.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => BookLeatherDialog(
         title: Text(strings.deleteBook),
         content: Text(strings.deleteBookQuestion),
         actions: [
@@ -393,7 +400,7 @@ class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
       final restored = BookProjectArchiveCodec.decode(encoded);
       final confirmed = await showDialog<bool>(
         context: context,
-        builder: (dialogContext) => AlertDialog(
+        builder: (dialogContext) => BookLeatherDialog(
           title: Text(strings.restoreProjectBackup),
           content: Text(
             '${restored.metadata.title}\n\n${strings.confirmProjectRestore}',

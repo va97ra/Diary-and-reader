@@ -5,7 +5,9 @@ import 'package:dnevnik/features/books/domain/book_library_state.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/manuscript_statistics.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_adaptive_control_shell.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_cover_view.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/material.dart';
 
 part 'literia_library_controls.dart';
@@ -95,6 +97,13 @@ class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
     final strings = AppStrings.of(context);
     return Scaffold(
       appBar: AppBar(
+        foregroundColor: BookLeatherColors.foreground,
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        flexibleSpace: const BookLeatherPanel(
+          safeArea: EdgeInsets.only(top: 1, left: 1, right: 1),
+          child: SizedBox.expand(),
+        ),
         title: Text(
           _writing ? strings.manuscriptLibrary : strings.readingLibrary,
         ),
@@ -105,78 +114,44 @@ class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
           key: ValueKey(_writing ? 'manuscript-library' : 'reading-library'),
           slivers: [
             SliverToBoxAdapter(
-              child: _LibraryControls(
-                writing: _writing,
-                filter: _filter,
-                collectionName: _collectionName,
-                collections: collections,
-                showGrid: _showGrid,
-                sort: _sort,
-                onSearchChanged: (value) => setState(() => _search = value),
-                onLayoutChanged: () => setState(() => _showGrid = !_showGrid),
-                onSortChanged: (value) => setState(() => _sort = value),
-                onFilterChanged: (value) => setState(() => _filter = value),
-                onCollectionChanged: (value) =>
-                    setState(() => _collectionName = value),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: FilledButton.icon(
-                  key: ValueKey(
-                    _writing
-                        ? 'create-manuscript-button'
-                        : 'import-book-button',
-                  ),
-                  onPressed: widget.onPrimaryAction,
-                  icon: Icon(
-                    _writing ? Icons.note_add_outlined : Icons.download,
-                  ),
-                  label: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _writing ? strings.createBook : strings.importBooks,
-                        ),
-                        if (!_writing)
-                          Text(
-                            strings.supportedBookFormats,
-                            style: Theme.of(context).textTheme.labelSmall,
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            if (!_writing && widget.onFindOnDevice != null)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                  child: OutlinedButton.icon(
-                    key: const ValueKey('find-device-books-button'),
-                    onPressed: _openDeviceBooks,
-                    icon: const Icon(Icons.folder_open_outlined),
-                    label: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(strings.findOnDevice),
-                          if (_foundDeviceBooks != null)
-                            Text(
-                              '${strings.foundOnDevice}: $_foundDeviceBooks',
-                              style: Theme.of(context).textTheme.labelSmall,
-                            ),
-                        ],
+              child: BookLeatherPanel(
+                key: const ValueKey('library-control-panel'),
+                safeArea: const EdgeInsets.only(left: 1, right: 1),
+                child: Theme(
+                  data: bookLeatherModalTheme(context),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _LibraryControls(
+                        writing: _writing,
+                        filter: _filter,
+                        collectionName: _collectionName,
+                        collections: collections,
+                        showGrid: _showGrid,
+                        sort: _sort,
+                        onSearchChanged: (value) =>
+                            setState(() => _search = value),
+                        onLayoutChanged: () =>
+                            setState(() => _showGrid = !_showGrid),
+                        onSortChanged: (value) => setState(() => _sort = value),
+                        onFilterChanged: (value) =>
+                            setState(() => _filter = value),
+                        onCollectionChanged: (value) =>
+                            setState(() => _collectionName = value),
                       ),
-                    ),
+                      _LibraryPrimaryActions(
+                        writing: _writing,
+                        foundDeviceBooks: _foundDeviceBooks,
+                        showDeviceAction: widget.onFindOnDevice != null,
+                        onPrimaryAction: widget.onPrimaryAction,
+                        onFindOnDevice: _openDeviceBooks,
+                      ),
+                    ],
                   ),
                 ),
               ),
+            ),
             if (projects.isEmpty)
               SliverFillRemaining(
                 hasScrollBody: false,
@@ -262,7 +237,7 @@ class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
     final controller = TextEditingController(text: project.collectionName);
     final value = await showDialog<String>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => BookLeatherDialog(
         title: Text(strings.moveToCollection),
         content: TextField(
           key: const ValueKey('library-collection-field'),
@@ -308,26 +283,29 @@ class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
     final strings = AppStrings.of(context);
     final status = await showDialog<BookReadingStatus>(
       context: context,
-      builder: (dialogContext) => SimpleDialog(
+      builder: (dialogContext) => BookLeatherDialog(
         title: Text(strings.readingStatus),
-        children: [
-          RadioGroup<BookReadingStatus>(
-            groupValue: project.libraryState.readingStatus,
-            onChanged: (selected) {
-              if (selected != null) Navigator.pop(dialogContext, selected);
-            },
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final value in BookReadingStatus.values)
-                  RadioListTile<BookReadingStatus>(
-                    value: value,
-                    title: Text(_readingStatusLabel(strings, value)),
-                  ),
-              ],
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioGroup<BookReadingStatus>(
+              groupValue: project.libraryState.readingStatus,
+              onChanged: (selected) {
+                if (selected != null) Navigator.pop(dialogContext, selected);
+              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final value in BookReadingStatus.values)
+                    RadioListTile<BookReadingStatus>(
+                      value: value,
+                      title: Text(_readingStatusLabel(strings, value)),
+                    ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
     if (status == null) return;

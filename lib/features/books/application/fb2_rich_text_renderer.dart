@@ -13,6 +13,11 @@ abstract final class Fb2RichTextRenderer {
           output.writeln(
             '      <image l:href="#${escapeXml(block.assetId!)}"/>',
           );
+          if (block.imageCaption.isNotEmpty) {
+            output.writeln(
+              '      <p><emphasis>${escapeXml(block.imageCaption)}</emphasis></p>',
+            );
+          }
         }
         continue;
       }

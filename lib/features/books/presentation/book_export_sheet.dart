@@ -1,5 +1,6 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/book_export_artifact.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/material.dart';
 
 class BookExportSheet extends StatelessWidget {
@@ -15,31 +16,16 @@ class BookExportSheet extends StatelessWidget {
         heightFactor: 0.88,
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
-                        child: Text(
-                          strings.exportBook,
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      key: const ValueKey('book-export-close'),
-                      tooltip: MaterialLocalizations.of(
-                        context,
-                      ).closeButtonTooltip,
-                      onPressed: () => Navigator.maybePop(context),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
+                BookLeatherModalHeader(
+                  title: strings.exportBook,
+                  onClose: () => Navigator.maybePop(context),
+                  closeKey: const ValueKey('book-export-close'),
+                  padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
                 ),
                 _SectionLabel(text: strings.readerExportFormats),
                 _ExportTile(
