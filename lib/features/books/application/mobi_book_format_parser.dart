@@ -86,6 +86,43 @@ class MobiBookFormatParser implements BookFormatParser {
     );
   }
 
+  BookProject parseCatalog(BookImportFile file, DateTime timestamp) {
+    final bytes = file.bytes;
+    if (bytes.length < 100) {
+      throw const BookImportException(BookImportFailure.invalidFile);
+    }
+    final records = _recordOffsets(bytes);
+    if (records.length < 2) {
+      throw const BookImportException(BookImportFailure.invalidFile);
+    }
+    final record0 = _record(bytes, records, 0);
+    if (record0.length < 32) {
+      throw const BookImportException(BookImportFailure.invalidFile);
+    }
+    final header = ByteData.sublistView(record0);
+    final compression = header.getUint16(0);
+    final encryption = header.getUint16(12);
+    if (encryption != 0 || (compression != 1 && compression != 2)) {
+      throw const BookImportException(BookImportFailure.unsupportedFormat);
+    }
+    final mobiOffset = _mobiOffset(record0);
+    final encoding = mobiOffset == null || record0.length < mobiOffset + 16
+        ? 65001
+        : header.getUint32(mobiOffset + 12);
+    final title = _title(
+      record0,
+      mobiOffset,
+      encoding,
+      BookImportParsingSupport.baseName(file.name),
+    );
+    return BookImportParsingSupport.catalogProject(
+      file: file,
+      timestamp: timestamp,
+      sourceFormat: 'MOBI',
+      metadata: BookMetadata(title: title),
+    );
+  }
+
   List<int> _recordOffsets(Uint8List bytes) {
     final data = ByteData.sublistView(bytes);
     final count = data.getUint16(76);

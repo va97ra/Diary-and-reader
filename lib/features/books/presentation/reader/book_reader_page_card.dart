@@ -1,14 +1,11 @@
-import 'dart:math' as math;
-
 import 'package:dnevnik/core/l10n/app_strings.dart';
+import 'package:dnevnik/features/books/application/book_reader_text_anchor.dart';
 import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_document_view.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_layout_engine.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.dart';
-import 'package:dnevnik/features/books/presentation/reader/book_reader_typography.dart';
-import 'package:dnevnik/features/books/presentation/widgets/book_image_embed_builder.dart';
-import 'package:dnevnik/features/books/presentation/widgets/book_page_break_embed_builder.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_quill/flutter_quill.dart';
 
 class BookReaderPageCard extends StatelessWidget {
   const BookReaderPageCard({
@@ -18,16 +15,15 @@ class BookReaderPageCard extends StatelessWidget {
     required this.pageCount,
     required this.settings,
     required this.palette,
-    required this.controller,
-    required this.focusNode,
-    required this.scrollController,
-    required this.editorKey,
-    required this.viewportKey,
+    required this.layout,
     required this.assets,
-    required this.showCursor,
+    required this.highlights,
+    required this.selectionGeneration,
+    required this.onSelectionChanged,
+    required this.speechTargetMode,
     required this.showPageNumber,
+    this.speechRange,
     this.onSpeechTargetSelected,
-    this.isMeasurement = false,
     super.key,
   });
 
@@ -37,79 +33,55 @@ class BookReaderPageCard extends StatelessWidget {
   final int pageCount;
   final BookReaderSettings settings;
   final BookReaderPalette palette;
-  final QuillController controller;
-  final FocusNode focusNode;
-  final ScrollController scrollController;
-  final GlobalKey<EditorState> editorKey;
-  final GlobalKey viewportKey;
+  final BookReaderPageLayout layout;
   final List<BookAsset> assets;
-  final bool showCursor;
+  final List<BookReaderRenderHighlight> highlights;
+  final int selectionGeneration;
+  final ValueChanged<TextSelection?> onSelectionChanged;
+  final bool speechTargetMode;
   final bool showPageNumber;
+  final BookReaderTextRange? speechRange;
   final ValueChanged<int>? onSpeechTargetSelected;
-  final bool isMeasurement;
 
   @override
   Widget build(BuildContext context) {
-    final horizontalPadding = math
-        .min(
-          math.min(settings.horizontalPadding, math.max(12, (width - 140) / 2)),
-          math.max(0, (width - 1) / 2),
-        )
-        .toDouble();
-    final footerHeight = math.min(16, height).toDouble();
-    final verticalPadding = math
-        .min(
-          math.min(settings.verticalPadding, math.max(12, (height - 220) / 2)),
-          math.max(0, (height - footerHeight) / 1.5),
-        )
-        .toDouble();
+    final metrics = BookReaderPageMetrics.resolve(
+      width: width,
+      height: height,
+      settings: settings,
+    );
     return Container(
-      key: ValueKey(
-        isMeasurement ? 'reader-page-measurement' : 'reader-page-$pageNumber',
-      ),
+      key: ValueKey('reader-page-$pageNumber'),
       width: width,
       height: height,
       padding: EdgeInsets.fromLTRB(
-        horizontalPadding,
-        verticalPadding,
-        horizontalPadding,
-        verticalPadding / 2,
+        metrics.horizontalPadding,
+        metrics.topPadding,
+        metrics.horizontalPadding,
+        metrics.bottomPadding,
       ),
       child: Column(
         children: [
           Expanded(
             child: ClipRect(
-              key: viewportKey,
-              child: QuillEditor(
-                controller: controller,
-                focusNode: focusNode,
-                scrollController: scrollController,
-                config: QuillEditorConfig(
-                  editorKey: editorKey,
-                  padding: EdgeInsets.zero,
-                  customStyles: BookReaderTypography.styles(settings, palette),
-                  scrollable: false,
-                  autoFocus: false,
-                  showCursor: showCursor,
-                  onTapUp: onSpeechTargetSelected == null
-                      ? null
-                      : (details, getPositionForOffset) {
-                          onSpeechTargetSelected!(
-                            getPositionForOffset(details.globalPosition).offset,
-                          );
-                          return true;
-                        },
-                  embedBuilders: [
-                    BookImageEmbedBuilder(assets),
-                    const BookPageBreakEmbedBuilder(showLabel: false),
-                  ],
-                ),
+              child: BookReaderDocumentView(
+                fragments: layout.fragments,
+                settings: settings,
+                palette: palette,
+                assets: assets,
+                highlights: highlights,
+                selectionGeneration: selectionGeneration,
+                onSelectionChanged: onSelectionChanged,
+                speechTargetMode: speechTargetMode,
+                speechRange: speechRange,
+                onSpeechTargetSelected: onSpeechTargetSelected,
+                constrainToMeasuredHeight: true,
               ),
             ),
           ),
           SizedBox(
-            height: footerHeight,
-            child: isMeasurement || !showPageNumber
+            height: metrics.footerHeight,
+            child: !showPageNumber
                 ? null
                 : Align(
                     alignment: Alignment.bottomRight,

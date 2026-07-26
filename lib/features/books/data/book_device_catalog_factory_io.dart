@@ -9,11 +9,43 @@ import 'package:flutter/services.dart';
 BookDeviceCatalogGateway createBookDeviceCatalog() =>
     IoBookDeviceCatalogGateway();
 
-class IoBookDeviceCatalogGateway implements BookDeviceCatalogGateway {
+class IoBookDeviceCatalogGateway
+    implements BookDeviceCatalogGateway, BookDownloadsCatalogGateway {
   static const _channel = MethodChannel('literia/book_files');
 
   @override
   bool get supportsFolderScanning => true;
+
+  @override
+  Future<bool> hasDownloadsAccess() async {
+    if (!Platform.isAndroid) return true;
+    return await _channel.invokeMethod<bool>('hasDownloadsAccess') ?? false;
+  }
+
+  @override
+  Future<bool> requestDownloadsAccess() async {
+    if (!Platform.isAndroid) return true;
+    return await _channel.invokeMethod<bool>('requestDownloadsAccess') ?? false;
+  }
+
+  @override
+  Future<DeviceBookScanResult> scanDownloads() async {
+    if (Platform.isAndroid) {
+      final value = await _channel.invokeMapMethod<String, dynamic>(
+        'scanDownloads',
+      );
+      return _scanResultFromMap(value);
+    }
+    final home =
+        Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'];
+    if (home == null || home.isEmpty) return const DeviceBookScanResult();
+    return _scanDirectories([
+      BookScanFolder(
+        uri: '$home${Platform.pathSeparator}Downloads',
+        name: 'Downloads',
+      ),
+    ]);
+  }
 
   @override
   Future<BookScanFolder?> chooseFolder() async {
@@ -42,21 +74,15 @@ class IoBookDeviceCatalogGateway implements BookDeviceCatalogGateway {
         'scanFolders',
         {'uris': folders.map((folder) => folder.uri).toList()},
       );
-      final books = (value?['books'] as List<dynamic>? ?? const [])
-          .whereType<Map>()
-          .map(_candidateFromMap)
-          .whereType<DeviceBookCandidate>()
-          .toList();
-      final inaccessible =
-          (value?['inaccessibleFolderUris'] as List<dynamic>? ?? const [])
-              .map((item) => item.toString())
-              .toList();
-      return DeviceBookScanResult(
-        books: books,
-        inaccessibleFolderUris: inaccessible,
-      );
+      return _scanResultFromMap(value);
     }
 
+    return _scanDirectories(folders);
+  }
+
+  Future<DeviceBookScanResult> _scanDirectories(
+    List<BookScanFolder> folders,
+  ) async {
     final books = <DeviceBookCandidate>[];
     final inaccessible = <String>[];
     for (final folder in folders) {
@@ -96,6 +122,8 @@ class IoBookDeviceCatalogGateway implements BookDeviceCatalogGateway {
         name: candidate.name,
         bytes: await File(candidate.uri).readAsBytes(),
         sourceUri: candidate.uri,
+        sourceSizeBytes: candidate.sizeBytes,
+        sourceModifiedMillis: candidate.modifiedAt?.millisecondsSinceEpoch ?? 0,
       );
     }
     final value = await _channel.invokeMapMethod<String, dynamic>(
@@ -112,6 +140,8 @@ class IoBookDeviceCatalogGateway implements BookDeviceCatalogGateway {
         name: value?['name']?.toString() ?? candidate.name,
         bytes: await temporary.readAsBytes(),
         sourceUri: candidate.uri,
+        sourceSizeBytes: candidate.sizeBytes,
+        sourceModifiedMillis: candidate.modifiedAt?.millisecondsSinceEpoch ?? 0,
       );
     } finally {
       if (await temporary.exists()) await temporary.delete();
@@ -146,6 +176,22 @@ class IoBookDeviceCatalogGateway implements BookDeviceCatalogGateway {
       modifiedAt: modifiedMillis > 0
           ? DateTime.fromMillisecondsSinceEpoch(modifiedMillis)
           : null,
+    );
+  }
+
+  DeviceBookScanResult _scanResultFromMap(Map<String, dynamic>? value) {
+    final books = (value?['books'] as List<dynamic>? ?? const [])
+        .whereType<Map>()
+        .map(_candidateFromMap)
+        .whereType<DeviceBookCandidate>()
+        .toList();
+    final inaccessible =
+        (value?['inaccessibleFolderUris'] as List<dynamic>? ?? const [])
+            .map((item) => item.toString())
+            .toList();
+    return DeviceBookScanResult(
+      books: books,
+      inaccessibleFolderUris: inaccessible,
     );
   }
 

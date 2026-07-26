@@ -7,6 +7,7 @@ import 'package:dnevnik/features/books/application/book_import_file.dart';
 import 'package:dnevnik/features/books/application/book_import_parsing_support.dart';
 import 'package:dnevnik/features/books/application/xml_text_decoder.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
+import 'package:dnevnik/features/books/domain/book_plain_text_chunk.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:xml/xml.dart';
@@ -42,6 +43,51 @@ class TextDocumentBookFormatParser implements BookFormatParser {
     BookImportFormat.docx => _parseDocx(file, timestamp),
     _ => throw const BookImportException(BookImportFailure.unsupportedFormat),
   };
+
+  BookProject parseCatalog(
+    BookImportFile file,
+    DateTime timestamp,
+    BookImportFormat format,
+  ) {
+    final metadata = switch (format) {
+      BookImportFormat.docx => _catalogDocxMetadata(file),
+      BookImportFormat.txt || BookImportFormat.rtf => BookMetadata(
+        title: BookImportParsingSupport.baseName(file.name),
+      ),
+      _ => throw const BookImportException(BookImportFailure.unsupportedFormat),
+    };
+    if (format == BookImportFormat.rtf) {
+      final prefix = utf8.decode(
+        file.bytes.take(32).toList(),
+        allowMalformed: true,
+      );
+      if (!prefix.trimLeft().startsWith(r'{\rtf')) {
+        throw const BookImportException(BookImportFailure.invalidFile);
+      }
+    }
+    if (format == BookImportFormat.txt &&
+        utf8
+            .decode(file.bytes.take(4096).toList(), allowMalformed: true)
+            .trim()
+            .isEmpty) {
+      throw const BookImportException(BookImportFailure.noReadableText);
+    }
+    return BookImportParsingSupport.catalogProject(
+      file: file,
+      timestamp: timestamp,
+      sourceFormat: format.name.toUpperCase(),
+      metadata: metadata,
+    );
+  }
+
+  BookMetadata _catalogDocxMetadata(BookImportFile file) {
+    final archive = ZipDecoder().decodeBytes(file.bytes);
+    if (BookImportParsingSupport.archiveFile(archive, 'word/document.xml') ==
+        null) {
+      throw const BookImportException(BookImportFailure.invalidFile);
+    }
+    return _docxMetadata(archive, file.name);
+  }
 
   BookProject _parseDocx(BookImportFile file, DateTime timestamp) {
     final archive = ZipDecoder().decodeBytes(file.bytes);
@@ -134,24 +180,34 @@ class TextDocumentBookFormatParser implements BookFormatParser {
     }
     final title =
         metadata?.title ?? BookImportParsingSupport.baseName(file.name);
-    final section =
+    final baseId = 'imported-${timestamp.microsecondsSinceEpoch}-section-1';
+    final chunks = BookPlainTextChunker.split(normalized);
+    final sections = [
+      for (var index = 0; index < chunks.length; index++)
         BookSection.create(
-          id: 'imported-${timestamp.microsecondsSinceEpoch}-section-1',
-          title: title,
+          id: index == 0 ? baseId : '$baseId-part-${index + 1}',
+          title:
+              chunks[index].heading ??
+              (index == 0 ? title : '$title — ${index + 1}'),
           type: BookSectionType.chapter,
           now: timestamp,
         ).copyWith(
           content: [
-            {'insert': '$normalized\n'},
+            {
+              'insert': chunks[index].text.endsWith('\n')
+                  ? chunks[index].text
+                  : '${chunks[index].text}\n',
+            },
           ],
           status: DraftStatus.complete,
-        );
+        ),
+    ];
     return BookImportParsingSupport.project(
       file: file,
       timestamp: timestamp,
       sourceFormat: sourceFormat,
       metadata: metadata ?? BookMetadata(title: title),
-      sections: [section],
+      sections: sections,
     );
   }
 

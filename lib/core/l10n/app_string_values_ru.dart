@@ -56,6 +56,7 @@ const appStringValuesRu = <String, String>{
   'about': 'О приложении',
   'bookStorage': 'Хранилище книг',
   'bookStorageSubtitle': 'Оригиналы книг и занимаемое место',
+  'bookStorageLoadFailed': 'Не удалось получить данные хранилища',
   'totalBookData': 'Всего данных книг',
   'storedOriginals': 'Сохранённые оригиналы',
   'processedBooks': 'Текст, изображения и обложки',
@@ -82,7 +83,14 @@ const appStringValuesRu = <String, String>{
   'onboarding': 'Обучение',
   'quickStart': 'Быстрый старт',
   'quickStartBody':
-      '«Писать» — рукописи, «Читать» — книги. Нажмите название, чтобы изменить его, или центр страницы, чтобы скрыть панели.',
+      '«Писать» — создание и редактирование собственных книг.\n'
+      '«Читать» — библиотека загруженных книг.\n\n'
+      'Чтобы добавить книгу, нажмите «Загрузить книги» или «Сканировать».\n\n'
+      'В писалке выберите раздел, коснитесь текста и начните редактирование. '
+      'Инструменты оформления находятся на панели.\n\n'
+      'В читалке перелистывайте страницы свайпом. Оглавление, поиск, озвучка, '
+      'закладки и настройки открываются кнопками на панели.\n\n'
+      'Поддерживаемые форматы:',
   'understood': 'Понятно',
   'more': 'Ещё',
   'previewBook': 'Предпросмотр книги',
@@ -91,6 +99,7 @@ const appStringValuesRu = <String, String>{
   'librarySearchHint': 'Название, автор, серия или коллекция',
   'manuscriptLibrarySearchHint': 'Название рукописи или главы',
   'sortBy': 'Сортировка',
+  'filterBooks': 'Фильтр',
   'recentlyUpdated': 'Недавно открытые',
   'byTitle': 'По названию',
   'byAuthor': 'По автору',
@@ -132,8 +141,18 @@ const appStringValuesRu = <String, String>{
   'newBook': 'Новая книга',
   'importEbook': 'Загрузить книгу',
   'importBooks': 'Загрузить книги',
-  'findOnDevice': 'Найти на устройстве',
-  'foundOnDevice': 'Найдено новых книг',
+  'scanBooks': 'Сканировать',
+  'scanningBooks': 'Сканирование…',
+  'noNewBooks': 'Новых книг не найдено',
+  'scanFolders': 'Папки для сканирования',
+  'scanFolderAccessLost':
+      'Литерия потеряла доступ к одной из папок. Выберите её повторно.',
+  'selectScanFolder': 'Выбрать папку',
+  'scanFailed': 'Не удалось просканировать папки',
+  'downloadsAccessExplanation':
+      'Чтобы автоматически находить книги в Downloads и её подпапках, разрешите Литерии доступ ко всем файлам. Приложение использует доступ только для поиска и импорта поддерживаемых книг.',
+  'grantFileAccess': 'Разрешить доступ',
+  'fileAccessNotGranted': 'Доступ к Downloads не предоставлен',
   'addBookFolder': 'Добавить папку',
   'refresh': 'Обновить',
   'addSelected': 'Добавить выбранные',
@@ -157,6 +176,7 @@ const appStringValuesRu = <String, String>{
   'imagesInBook': 'Изображений',
   'bookImported': 'Книга добавлена в библиотеку',
   'importingBooks': 'Книга обрабатывается и добавляется в библиотеку…',
+  'openingBook': 'Подготавливаем книгу к чтению…',
   'bookImportFailed': 'Не удалось прочитать книгу',
   'unsupportedBookFormat': 'Формат книги пока не поддерживается',
   'conversionRequired':

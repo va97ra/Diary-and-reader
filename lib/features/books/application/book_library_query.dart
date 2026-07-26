@@ -93,6 +93,7 @@ BookReadingStatus effectiveReadingStatus(BookProject project) {
 }
 
 double readingProgress(BookProject project) {
+  if (project.isCatalogOnly) return project.catalogReadingProgress;
   return bookReadingProgress(project.sections, project.readerProgress);
 }
 

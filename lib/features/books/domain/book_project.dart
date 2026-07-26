@@ -5,6 +5,7 @@ import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
 import 'package:dnevnik/features/books/domain/book_library_state.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
+import 'package:dnevnik/features/books/domain/book_plain_text_chunk.dart';
 import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
 import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
@@ -34,6 +35,8 @@ class BookProject {
     this.sourceFingerprint = '',
     this.sourceExternalUri = '',
     this.sourceFileSize = 0,
+    this.sourceModifiedMillis = 0,
+    this.catalogReadingProgress = 0,
     this.collectionName = '',
     this.libraryState = const BookLibraryState(),
     this.writingState = const BookWritingState(),
@@ -79,6 +82,12 @@ class BookProject {
   }
 
   factory BookProject.fromJson(Map<String, dynamic> json) {
+    final kind =
+        BookProjectKind.values.where((kind) {
+          return kind.name == json['kind']?.toString();
+        }).firstOrNull ??
+        BookProjectKind.manuscript;
+    final sourceFormat = json['sourceFormat']?.toString() ?? '';
     var sections = (json['sections'] as List<dynamic>? ?? const [])
         .whereType<Map>()
         .map(
@@ -97,27 +106,43 @@ class BookProject {
           )
           .toList();
     }
+    final sectionMigration = _migrateOversizedPlainTextSections(
+      sections,
+      kind: kind,
+      sourceFormat: sourceFormat,
+    );
+    sections = sectionMigration.sections;
     final createdAt =
         DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
         DateTime.now();
     final requestedActiveId = json['activeSectionId']?.toString();
     final sectionIds = sections.map((section) => section.id).toSet();
-    final requestedReaderProgress = json['readerProgress'] is Map
+    final storedReaderProgress = json['readerProgress'] is Map
         ? BookReaderProgress.fromJson(
             Map<String, dynamic>.from(json['readerProgress'] as Map),
           )
         : BookReaderProgress(sectionId: sections.firstOrNull?.id);
-    final readerProgress =
-        sectionIds.contains(requestedReaderProgress.sectionId)
+    final requestedReaderProgress = sectionMigration.remapProgress(
+      storedReaderProgress,
+    );
+    final isImportedCatalog =
+        kind == BookProjectKind.importedBook && sections.isEmpty;
+    final readerProgress = isImportedCatalog
+        ? requestedReaderProgress
+        : sectionIds.contains(requestedReaderProgress.sectionId)
         ? requestedReaderProgress
         : BookReaderProgress(sectionId: sections.firstOrNull?.id);
-    final readerAnnotations =
-        (json['readerAnnotations'] is Map
-                ? BookReaderAnnotations.fromJson(
-                    Map<String, dynamic>.from(json['readerAnnotations'] as Map),
-                  )
-                : BookReaderAnnotations())
-            .retainSections(sectionIds);
+    final storedReaderAnnotations = (json['readerAnnotations'] is Map
+        ? BookReaderAnnotations.fromJson(
+            Map<String, dynamic>.from(json['readerAnnotations'] as Map),
+          )
+        : BookReaderAnnotations());
+    final remappedAnnotations = sectionMigration.remapAnnotations(
+      storedReaderAnnotations,
+    );
+    final readerAnnotations = isImportedCatalog
+        ? remappedAnnotations
+        : remappedAnnotations.retainSections(sectionIds);
     return BookProject(
       id:
           json['id']?.toString() ??
@@ -152,12 +177,8 @@ class BookProject {
           : const BookReaderSettings(),
       readerProgress: readerProgress,
       readerAnnotations: readerAnnotations,
-      kind:
-          BookProjectKind.values.where((kind) {
-            return kind.name == json['kind']?.toString();
-          }).firstOrNull ??
-          BookProjectKind.manuscript,
-      sourceFormat: json['sourceFormat']?.toString() ?? '',
+      kind: kind,
+      sourceFormat: sourceFormat,
       sourceFileName: json['sourceFileName']?.toString() ?? '',
       sourceStoredPath: json['sourceStoredPath']?.toString() ?? '',
       sourceFingerprint: json['sourceFingerprint']?.toString() ?? '',
@@ -165,6 +186,15 @@ class BookProject {
       sourceFileSize: json['sourceFileSize'] is num
           ? (json['sourceFileSize'] as num).toInt().clamp(0, 1 << 62).toInt()
           : 0,
+      sourceModifiedMillis: json['sourceModifiedMillis'] is num
+          ? (json['sourceModifiedMillis'] as num)
+                .toInt()
+                .clamp(0, 1 << 62)
+                .toInt()
+          : 0,
+      catalogReadingProgress: _normalizedProgress(
+        json['catalogReadingProgress'],
+      ),
       collectionName: json['collectionName']?.toString() ?? '',
       libraryState: json['libraryState'] is Map
           ? BookLibraryState.fromJson(
@@ -214,6 +244,8 @@ class BookProject {
   final String sourceFingerprint;
   final String sourceExternalUri;
   final int sourceFileSize;
+  final int sourceModifiedMillis;
+  final double catalogReadingProgress;
   final String collectionName;
   final BookLibraryState libraryState;
   final BookWritingState writingState;
@@ -222,6 +254,7 @@ class BookProject {
   final String? coverAssetId;
 
   bool get isReadOnly => kind == BookProjectKind.importedBook;
+  bool get isCatalogOnly => isReadOnly && _sections.isEmpty;
 
   UnmodifiableListView<BookSection> get sections =>
       UnmodifiableListView(_sections);
@@ -262,6 +295,8 @@ class BookProject {
     String? sourceFingerprint,
     String? sourceExternalUri,
     int? sourceFileSize,
+    int? sourceModifiedMillis,
+    double? catalogReadingProgress,
     bool clearStoredSource = false,
     String? collectionName,
     BookLibraryState? libraryState,
@@ -295,6 +330,10 @@ class BookProject {
     sourceFileSize: clearStoredSource
         ? 0
         : sourceFileSize ?? this.sourceFileSize,
+    sourceModifiedMillis: sourceModifiedMillis ?? this.sourceModifiedMillis,
+    catalogReadingProgress: _normalizedProgress(
+      catalogReadingProgress ?? this.catalogReadingProgress,
+    ),
     collectionName: collectionName ?? this.collectionName,
     libraryState: libraryState ?? this.libraryState,
     writingState: writingState ?? this.writingState,
@@ -322,6 +361,8 @@ class BookProject {
     'sourceFingerprint': sourceFingerprint,
     'sourceExternalUri': sourceExternalUri,
     'sourceFileSize': sourceFileSize,
+    'sourceModifiedMillis': sourceModifiedMillis,
+    'catalogReadingProgress': catalogReadingProgress,
     'collectionName': collectionName,
     'libraryState': libraryState.toJson(),
     'writingState': writingState.toJson(),
@@ -334,3 +375,233 @@ class BookProject {
 
 const _currentDocumentFormatVersion = 3;
 const _automaticLineHeightMigrationVersion = 2;
+
+double _normalizedProgress(Object? value) {
+  final parsed = value is num ? value.toDouble() : double.tryParse('$value');
+  if (parsed == null || !parsed.isFinite) return 0;
+  return parsed.clamp(0, 1).toDouble();
+}
+
+_PlainTextSectionMigration _migrateOversizedPlainTextSections(
+  List<BookSection> sections, {
+  required BookProjectKind kind,
+  required String sourceFormat,
+}) {
+  if (kind != BookProjectKind.importedBook ||
+      !_plainTextSourceFormats.contains(sourceFormat.toUpperCase())) {
+    return _PlainTextSectionMigration.unchanged(sections);
+  }
+
+  final migrated = <BookSection>[];
+  final ranges = <String, List<_PlainTextChunkRange>>{};
+  for (final section in sections) {
+    final text = richDocumentPlainText(section.content);
+    final isPlainText = section.content.every(
+      (operation) => operation['insert'] is String,
+    );
+    if (!isPlainText || text.length <= BookPlainTextChunker.maximumCharacters) {
+      migrated.add(section);
+      continue;
+    }
+
+    final chunks = BookPlainTextChunker.split(text);
+    final chunkRanges = <_PlainTextChunkRange>[];
+    for (var index = 0; index < chunks.length; index++) {
+      final chunk = chunks[index];
+      final id = index == 0 ? section.id : '${section.id}-part-${index + 1}';
+      migrated.add(
+        BookSection(
+          id: id,
+          title:
+              chunk.heading ??
+              (index == 0 ? section.title : '${section.title} — ${index + 1}'),
+          type: section.type,
+          status: section.status,
+          content: [
+            {
+              'insert': chunk.text.endsWith('\n')
+                  ? chunk.text
+                  : '${chunk.text}\n',
+            },
+          ],
+          createdAt: section.createdAt,
+          updatedAt: section.updatedAt,
+          parentId: section.parentId,
+          targetWords: section.targetWords,
+        ),
+      );
+      chunkRanges.add(
+        _PlainTextChunkRange(
+          sectionId: id,
+          startOffset: chunk.startOffset,
+          endOffset: chunk.endOffset,
+        ),
+      );
+    }
+    ranges[section.id] = chunkRanges;
+  }
+  return _PlainTextSectionMigration(migrated, ranges);
+}
+
+const _plainTextSourceFormats = {'TXT', 'RTF', 'DOCX'};
+
+class _PlainTextChunkRange {
+  const _PlainTextChunkRange({
+    required this.sectionId,
+    required this.startOffset,
+    required this.endOffset,
+  });
+
+  final String sectionId;
+  final int startOffset;
+  final int endOffset;
+
+  int get length => endOffset - startOffset;
+}
+
+class _PlainTextSectionMigration {
+  const _PlainTextSectionMigration(this.sections, this._ranges);
+
+  factory _PlainTextSectionMigration.unchanged(List<BookSection> sections) =>
+      _PlainTextSectionMigration(sections, const {});
+
+  final List<BookSection> sections;
+  final Map<String, List<_PlainTextChunkRange>> _ranges;
+
+  BookReaderProgress remapProgress(BookReaderProgress progress) {
+    final point = _point(progress.sectionId, progress.sectionProgress);
+    if (point == null) return progress;
+    return BookReaderProgress(
+      sectionId: point.range.sectionId,
+      sectionProgress: point.localProgress,
+    );
+  }
+
+  BookReaderAnnotations remapAnnotations(BookReaderAnnotations annotations) =>
+      BookReaderAnnotations(
+        bookmarks: annotations.bookmarks.map((bookmark) {
+          final point = _point(bookmark.sectionId, bookmark.sectionProgress);
+          if (point == null) return bookmark;
+          return BookReaderBookmark(
+            id: bookmark.id,
+            sectionId: point.range.sectionId,
+            sectionProgress: point.localProgress,
+            excerpt: bookmark.excerpt,
+            createdAt: bookmark.createdAt,
+          );
+        }).toList(),
+        notes: annotations.notes.map((note) {
+          final point = _point(note.sectionId, note.sectionProgress);
+          if (point == null) return note;
+          return BookReaderNote(
+            id: note.id,
+            sectionId: point.range.sectionId,
+            sectionProgress: point.localProgress,
+            excerpt: note.excerpt,
+            text: note.text,
+            createdAt: note.createdAt,
+            updatedAt: note.updatedAt,
+          );
+        }).toList(),
+        highlights: annotations.highlights.map((highlight) {
+          final range = _range(
+            highlight.sectionId,
+            highlight.startOffset,
+            highlight.endOffset,
+          );
+          if (range == null) return highlight;
+          return BookReaderHighlight(
+            id: highlight.id,
+            sectionId: range.chunk.sectionId,
+            sectionProgress: range.sectionProgress,
+            startOffset: range.startOffset,
+            endOffset: range.endOffset,
+            excerpt: highlight.excerpt,
+            color: highlight.color,
+            createdAt: highlight.createdAt,
+          );
+        }).toList(),
+        quotes: annotations.quotes.map((quote) {
+          final range = _range(
+            quote.sectionId,
+            quote.startOffset,
+            quote.endOffset,
+          );
+          if (range == null) return quote;
+          return BookReaderQuote(
+            id: quote.id,
+            sectionId: range.chunk.sectionId,
+            sectionProgress: range.sectionProgress,
+            startOffset: range.startOffset,
+            endOffset: range.endOffset,
+            text: quote.text,
+            createdAt: quote.createdAt,
+          );
+        }).toList(),
+      );
+
+  _RemappedPoint? _point(String? sectionId, double progress) {
+    final chunks = _ranges[sectionId];
+    if (chunks == null || chunks.isEmpty) return null;
+    final totalLength = chunks.last.endOffset;
+    final absoluteOffset = (totalLength * progress.clamp(0, 1)).round();
+    final chunk = chunks.firstWhere(
+      (item) => absoluteOffset < item.endOffset,
+      orElse: () => chunks.last,
+    );
+    final localOffset = (absoluteOffset - chunk.startOffset).clamp(
+      0,
+      chunk.length,
+    );
+    return _RemappedPoint(
+      chunk,
+      chunk.length == 0 ? 0 : localOffset / chunk.length,
+    );
+  }
+
+  _RemappedRange? _range(String sectionId, int start, int end) {
+    final chunks = _ranges[sectionId];
+    if (chunks == null || chunks.isEmpty) return null;
+    final normalizedStart = start.clamp(0, chunks.last.endOffset);
+    final normalizedEnd = end.clamp(normalizedStart, chunks.last.endOffset);
+    final chunk = chunks.firstWhere(
+      (item) => normalizedStart < item.endOffset,
+      orElse: () => chunks.last,
+    );
+    final localStart = (normalizedStart - chunk.startOffset).clamp(
+      0,
+      chunk.length,
+    );
+    final localEnd = (normalizedEnd - chunk.startOffset).clamp(
+      localStart,
+      chunk.length,
+    );
+    return _RemappedRange(
+      chunk: chunk,
+      startOffset: localStart,
+      endOffset: localEnd,
+      sectionProgress: chunk.length == 0 ? 0 : localStart / chunk.length,
+    );
+  }
+}
+
+class _RemappedPoint {
+  const _RemappedPoint(this.range, this.localProgress);
+
+  final _PlainTextChunkRange range;
+  final double localProgress;
+}
+
+class _RemappedRange {
+  const _RemappedRange({
+    required this.chunk,
+    required this.startOffset,
+    required this.endOffset,
+    required this.sectionProgress,
+  });
+
+  final _PlainTextChunkRange chunk;
+  final int startOffset;
+  final int endOffset;
+  final double sectionProgress;
+}

@@ -43,6 +43,41 @@ abstract final class BookImportParser {
     }
   }
 
+  static BookProject parseCatalog(BookImportFile file, {DateTime? now}) {
+    final timestamp = now ?? DateTime.now();
+    try {
+      if (file.bytes.isEmpty || file.bytes.length > 256 * 1024 * 1024) {
+        throw const BookImportException(BookImportFailure.invalidFile);
+      }
+      final format = _detect(file);
+      return switch (format) {
+        BookImportFormat.epub => const EpubBookFormatParser().parseCatalog(
+          file,
+          timestamp,
+        ),
+        BookImportFormat.fb2 || BookImportFormat.fb2Zip =>
+          const Fb2BookFormatParser().parseCatalog(file, timestamp, format),
+        BookImportFormat.txt || BookImportFormat.rtf || BookImportFormat.docx =>
+          const TextDocumentBookFormatParser().parseCatalog(
+            file,
+            timestamp,
+            format,
+          ),
+        BookImportFormat.mobi => const MobiBookFormatParser().parseCatalog(
+          file,
+          timestamp,
+        ),
+      };
+    } on BookImportException {
+      rethrow;
+    } on Exception catch (error) {
+      throw BookImportException(
+        BookImportFailure.invalidFile,
+        error.toString(),
+      );
+    }
+  }
+
   static BookImportFormat _detect(BookImportFile file) {
     final name = file.name.toLowerCase();
     if (name.endsWith('.epub')) return BookImportFormat.epub;

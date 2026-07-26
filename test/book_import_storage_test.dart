@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/application/book_import_coordinator.dart';
 import 'package:dnevnik/features/books/application/book_import_file.dart';
+import 'package:dnevnik/features/books/application/book_reading_session_loader.dart';
 import 'package:dnevnik/features/books/data/file_book_source_storage.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_repository.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_snapshot.dart';
@@ -44,6 +45,7 @@ void main() {
     expect(second.imported, isEmpty);
     expect(second.duplicateCount, 1);
     final project = first.imported.single;
+    expect(project.isCatalogOnly, isTrue);
     expect(project.sourceFingerprint, isNotEmpty);
     expect(project.sourceExternalUri, 'content://books/sample');
     expect(project.sourceFileSize, file.bytes.length);
@@ -69,19 +71,25 @@ void main() {
       sourceStorage: storage,
     ).import([file]);
     final project = result.imported.single;
+    final loaded = await BookReadingSessionLoader(storage).load(project);
+    expect(loaded.sections, isNotEmpty);
+    controller.selectProject(project.id);
+    controller.beginReaderSession(hydratedProject: loaded);
+    controller.finishReaderSession();
 
     controller.clearImportedBookStoredSource(project.id);
     await controller.flush();
     await storage.deleteOriginal(project);
 
     final retained = controller.projects.single;
-    expect(retained.sections, isNotEmpty);
+    expect(retained.isCatalogOnly, isTrue);
     expect(retained.assets, isNotEmpty);
     expect(retained.sourceStoredPath, isEmpty);
     expect(retained.sourceFingerprint, isNotEmpty);
     final overview = await storage.inspect(controller.projects);
     expect(overview.originalBytes, 0);
     expect(overview.processedBytes, greaterThan(0));
+    expect(await storage.loadProcessed(retained), isNotNull);
   });
 
   test('rolls back the import when the workspace cannot be saved', () async {

@@ -30,15 +30,6 @@ class _LibraryControls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
-    final filters = writing
-        ? const [BookLibraryFilter.all]
-        : const [
-            BookLibraryFilter.all,
-            BookLibraryFilter.unread,
-            BookLibraryFilter.inProgress,
-            BookLibraryFilter.finished,
-            BookLibraryFilter.favorites,
-          ];
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: Column(
@@ -46,7 +37,7 @@ class _LibraryControls extends StatelessWidget {
         children: [
           SearchBar(
             key: const ValueKey('library-search'),
-            constraints: const BoxConstraints(minHeight: 48),
+            constraints: const BoxConstraints(minHeight: 44),
             elevation: const WidgetStatePropertyAll(0),
             hintText: writing
                 ? strings.manuscriptLibrarySearchHint
@@ -59,27 +50,11 @@ class _LibraryControls extends StatelessWidget {
             writing: writing,
             showGrid: showGrid,
             sort: sort,
+            filter: filter,
             onLayoutChanged: onLayoutChanged,
             onSortChanged: onSortChanged,
+            onFilterChanged: onFilterChanged,
           ),
-          if (!writing) ...[
-            const SizedBox(height: 8),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  for (final value in filters) ...[
-                    FilterChip(
-                      selected: filter == value,
-                      label: Text(_filterLabel(strings, value)),
-                      onSelected: (_) => onFilterChanged(value),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                ],
-              ),
-            ),
-          ],
           if (collections.isNotEmpty) ...[
             const SizedBox(height: 8),
             DropdownButtonFormField<String?>(
@@ -109,17 +84,6 @@ class _LibraryControls extends StatelessWidget {
       ),
     );
   }
-
-  String _filterLabel(AppStrings strings, BookLibraryFilter filter) =>
-      switch (filter) {
-        BookLibraryFilter.all => strings.allBooks,
-        BookLibraryFilter.unread => strings.unreadBooks,
-        BookLibraryFilter.inProgress => strings.readingBooks,
-        BookLibraryFilter.finished => strings.finishedBooks,
-        BookLibraryFilter.favorites => strings.favoriteBooks,
-        BookLibraryFilter.manuscripts => strings.manuscripts,
-        BookLibraryFilter.imported => strings.importedBooks,
-      };
 }
 
 class _LibraryDisplayControls extends StatelessWidget {
@@ -127,32 +91,35 @@ class _LibraryDisplayControls extends StatelessWidget {
     required this.writing,
     required this.showGrid,
     required this.sort,
+    required this.filter,
     required this.onLayoutChanged,
     required this.onSortChanged,
+    required this.onFilterChanged,
   });
 
   final bool writing;
   final bool showGrid;
   final BookLibrarySort sort;
+  final BookLibraryFilter filter;
   final VoidCallback onLayoutChanged;
   final ValueChanged<BookLibrarySort> onSortChanged;
+  final ValueChanged<BookLibraryFilter> onFilterChanged;
 
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
-    final compact = MediaQuery.sizeOf(context).width < 520;
+    final buttonStyle = OutlinedButton.styleFrom(
+      minimumSize: const Size(0, 52),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+      textStyle: const TextStyle(fontSize: 10.5, height: 1.08),
+    );
     final layoutButton = OutlinedButton.icon(
       key: const ValueKey('library-layout-toggle'),
       onPressed: onLayoutChanged,
-      icon: Icon(showGrid ? Icons.grid_view : Icons.view_list),
-      label: Text(
-        compact
-            ? showGrid
-                  ? strings.gridView
-                  : strings.listView
-            : '${strings.viewMode}: '
-                  '${showGrid ? strings.gridView : strings.listView}',
-        overflow: TextOverflow.ellipsis,
+      style: buttonStyle,
+      icon: Icon(showGrid ? Icons.grid_view : Icons.view_list, size: 17),
+      label: _LibraryControlLabel(
+        showGrid ? strings.gridView : strings.listView,
       ),
     );
     final sortButton = MenuAnchor(
@@ -183,13 +150,37 @@ class _LibraryDisplayControls extends StatelessWidget {
       builder: (context, controller, _) => OutlinedButton.icon(
         key: const ValueKey('library-sort-menu'),
         onPressed: controller.isOpen ? controller.close : controller.open,
-        icon: const Icon(Icons.sort),
-        label: Text(
-          compact
-              ? _sortLabel(strings, sort)
-              : '${strings.sortBy}: ${_sortLabel(strings, sort)}',
-          overflow: TextOverflow.ellipsis,
+        style: buttonStyle,
+        icon: const Icon(Icons.sort, size: 17),
+        label: _LibraryControlLabel(_sortLabel(strings, sort)),
+      ),
+    );
+    final filterButton = MenuAnchor(
+      menuChildren: [
+        for (final value in const [
+          BookLibraryFilter.all,
+          BookLibraryFilter.unread,
+          BookLibraryFilter.inProgress,
+          BookLibraryFilter.finished,
+          BookLibraryFilter.favorites,
+        ])
+          MenuItemButton(
+            onPressed: () => onFilterChanged(value),
+            leadingIcon: Icon(filter == value ? Icons.check : null, size: 18),
+            child: Text(_filterLabel(strings, value)),
+          ),
+      ],
+      builder: (context, controller, _) => OutlinedButton.icon(
+        key: const ValueKey('library-filter-menu'),
+        onPressed: controller.isOpen ? controller.close : controller.open,
+        style: buttonStyle,
+        icon: Icon(
+          filter == BookLibraryFilter.all
+              ? Icons.filter_alt_outlined
+              : Icons.filter_alt,
+          size: 17,
         ),
+        label: _LibraryControlLabel(strings.filterBooks),
       ),
     );
     return Row(
@@ -197,6 +188,10 @@ class _LibraryDisplayControls extends StatelessWidget {
         Expanded(child: layoutButton),
         const SizedBox(width: 8),
         Expanded(child: sortButton),
+        if (!writing) ...[
+          const SizedBox(width: 8),
+          Expanded(child: filterButton),
+        ],
       ],
     );
   }
@@ -209,22 +204,48 @@ class _LibraryDisplayControls extends StatelessWidget {
         BookLibrarySort.author => strings.byAuthor,
         BookLibrarySort.progress => strings.byProgress,
       };
+
+  String _filterLabel(AppStrings strings, BookLibraryFilter filter) =>
+      switch (filter) {
+        BookLibraryFilter.all => strings.allBooks,
+        BookLibraryFilter.unread => strings.unreadBooks,
+        BookLibraryFilter.inProgress => strings.readingBooks,
+        BookLibraryFilter.finished => strings.finishedBooks,
+        BookLibraryFilter.favorites => strings.favoriteBooks,
+        BookLibraryFilter.manuscripts => strings.manuscripts,
+        BookLibraryFilter.imported => strings.importedBooks,
+      };
+}
+
+class _LibraryControlLabel extends StatelessWidget {
+  const _LibraryControlLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    text,
+    maxLines: 2,
+    softWrap: true,
+    textAlign: TextAlign.center,
+    overflow: TextOverflow.visible,
+  );
 }
 
 class _LibraryPrimaryActions extends StatelessWidget {
   const _LibraryPrimaryActions({
     required this.writing,
-    required this.foundDeviceBooks,
-    required this.showDeviceAction,
+    required this.scanning,
+    required this.showScanAction,
     required this.onPrimaryAction,
-    required this.onFindOnDevice,
+    required this.onScan,
   });
 
   final bool writing;
-  final int? foundDeviceBooks;
-  final bool showDeviceAction;
-  final VoidCallback onPrimaryAction;
-  final VoidCallback onFindOnDevice;
+  final bool scanning;
+  final bool showScanAction;
+  final VoidCallback? onPrimaryAction;
+  final VoidCallback? onScan;
 
   @override
   Widget build(BuildContext context) {
@@ -240,7 +261,7 @@ class _LibraryPrimaryActions extends StatelessWidget {
               onPressed: onPrimaryAction,
             )
           : SizedBox(
-              height: 72,
+              height: 64,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -256,18 +277,23 @@ class _LibraryPrimaryActions extends StatelessWidget {
                       onPressed: onPrimaryAction,
                     ),
                   ),
-                  if (showDeviceAction) ...[
+                  if (showScanAction) ...[
                     const SizedBox(width: 8),
                     Expanded(
                       child: BookPanelAction(
-                        key: const ValueKey('find-device-books-button'),
-                        icon: const Icon(Icons.folder_open_outlined),
-                        label: foundDeviceBooks == null
-                            ? strings.findOnDevice
-                            : '${strings.findOnDevice}\n'
-                                  '${strings.foundOnDevice}: $foundDeviceBooks',
-                        compactLabelLines: 2,
-                        onPressed: onFindOnDevice,
+                        key: const ValueKey('scan-device-books-button'),
+                        icon: scanning
+                            ? const SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.manage_search_outlined),
+                        label: scanning
+                            ? strings.scanningBooks
+                            : strings.scanBooks,
+                        onPressed: onScan,
                       ),
                     ),
                   ],

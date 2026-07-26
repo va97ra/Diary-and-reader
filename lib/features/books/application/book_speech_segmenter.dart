@@ -14,7 +14,7 @@ abstract final class BookSpeechSegmenter {
   static List<BookSpeechSegment> split(
     String text, {
     required int startOffset,
-    int maximumLength = 900,
+    int maximumLength = 3500,
   }) {
     if (text.isEmpty) return const [];
     var start = startOffset.clamp(0, text.length);
@@ -25,14 +25,19 @@ abstract final class BookSpeechSegmenter {
       }
       if (start >= text.length) break;
       final limit = (start + maximumLength).clamp(start + 1, text.length);
-      var end = start;
-      while (end < limit) {
-        end++;
-        if (_isSentenceBoundary(text, end)) break;
-      }
-      if (end == limit && end < text.length) {
-        final whitespace = text.lastIndexOf(RegExp(r'\s'), end - 1);
-        if (whitespace > start) end = whitespace + 1;
+      var end = limit;
+      if (limit < text.length) {
+        final preferredMinimum = start + (maximumLength * 0.6).round();
+        for (var candidate = limit; candidate > preferredMinimum; candidate--) {
+          if (_isSentenceBoundary(text, candidate)) {
+            end = candidate;
+            break;
+          }
+        }
+        if (end == limit && !_isSentenceBoundary(text, end)) {
+          final whitespace = text.lastIndexOf(RegExp(r'\s'), end - 1);
+          if (whitespace > start) end = whitespace + 1;
+        }
       }
       final spoken = text.substring(start, end).trim();
       if (spoken.isNotEmpty) {

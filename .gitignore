@@ -31,7 +31,9 @@ windows/flutter/ephemeral/
 *.local
 output/
 dist/
+/Releases/
 /RuStore Release/
+/third_party/flutter_tts/android/.gradle/
 /.omo/
 /.playwright-mcp/
 /.codex-artifacts/

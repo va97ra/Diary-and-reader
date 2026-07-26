@@ -151,6 +151,189 @@ class BookLeatherPanel extends StatelessWidget {
   );
 }
 
+class LiteriaLeatherAppBar extends StatelessWidget
+    implements PreferredSizeWidget {
+  const LiteriaLeatherAppBar({
+    required this.title,
+    this.actions,
+    this.leading,
+    this.automaticallyImplyLeading = true,
+    super.key,
+  });
+
+  final Widget title;
+  final List<Widget>? actions;
+  final Widget? leading;
+  final bool automaticallyImplyLeading;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+
+  @override
+  Widget build(BuildContext context) => AppBar(
+    title: title,
+    actions: actions,
+    leading: leading,
+    automaticallyImplyLeading: automaticallyImplyLeading,
+    foregroundColor: BookLeatherColors.foreground,
+    backgroundColor: Colors.transparent,
+    surfaceTintColor: Colors.transparent,
+    flexibleSpace: const BookLeatherPanel(
+      safeArea: EdgeInsets.only(top: 1, left: 1, right: 1),
+      child: SizedBox.expand(),
+    ),
+  );
+}
+
+class LiteriaParchmentBackground extends StatelessWidget {
+  const LiteriaParchmentBackground({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: dark ? const Color(0xFF1B100B) : const Color(0xFFF3E7D3),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: dark
+              ? const [Color(0xFF21130D), Color(0xFF160C08)]
+              : const [Color(0xFFFFF8EA), Color(0xFFEAD9BE)],
+        ),
+      ),
+      child: child,
+    );
+  }
+}
+
+class LiteriaLeatherCard extends StatelessWidget {
+  const LiteriaLeatherCard({
+    required this.child,
+    this.padding = const EdgeInsets.all(12),
+    this.borderRadius = 14,
+    this.onTap,
+    this.semanticLabel,
+    super.key,
+  });
+
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final double borderRadius;
+  final VoidCallback? onTap;
+  final String? semanticLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final content = Padding(padding: padding, child: child);
+    return Semantics(
+      button: onTap != null,
+      label: semanticLabel,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: BookLeatherPanel(
+          child: onTap == null
+              ? content
+              : Material(
+                  color: Colors.transparent,
+                  child: InkWell(onTap: onTap, child: content),
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class LiteriaCompactActionTile extends StatelessWidget {
+  const LiteriaCompactActionTile({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+    this.subtitle,
+    this.trailing = const Icon(Icons.chevron_right),
+    this.enabled = true,
+    super.key,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final VoidCallback onTap;
+  final Widget? trailing;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = enabled
+        ? BookLeatherColors.foreground
+        : BookLeatherColors.disabled;
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: subtitle == null ? title : '$title. $subtitle',
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: enabled ? onTap : null,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          decoration: BoxDecoration(
+            color: const Color(0x38140A05),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: BookLeatherColors.stitch.withValues(alpha: 0.38),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 19, color: foreground),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: foreground,
+                        fontWeight: FontWeight.w600,
+                        height: 1.1,
+                      ),
+                    ),
+                    if (subtitle case final value?)
+                      Text(
+                        value,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: BookLeatherColors.mutedForeground,
+                          fontSize: 11,
+                          height: 1.15,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (trailing != null) ...[
+                const SizedBox(width: 6),
+                IconTheme(
+                  data: IconThemeData(size: 18, color: foreground),
+                  child: trailing!,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class BookPanelAction extends StatelessWidget {
   const BookPanelAction({
     required this.icon,
@@ -184,10 +367,10 @@ class BookPanelAction extends StatelessWidget {
       onTap: onPressed,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 140),
-        constraints: BoxConstraints(minWidth: 48, minHeight: compact ? 52 : 60),
+        constraints: BoxConstraints(minWidth: 44, minHeight: compact ? 48 : 56),
         padding: EdgeInsets.symmetric(
-          horizontal: compact ? 3 : 6,
-          vertical: compact ? 5 : 7,
+          horizontal: compact ? 2 : 6,
+          vertical: compact ? 3 : 6,
         ),
         decoration: BoxDecoration(
           color: selected
@@ -205,10 +388,10 @@ class BookPanelAction extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             IconTheme(
-              data: IconThemeData(size: compact ? 20 : 22, color: color),
+              data: IconThemeData(size: compact ? 18 : 21, color: color),
               child: icon,
             ),
-            const SizedBox(height: 3),
+            const SizedBox(height: 2),
             Text(
               label,
               maxLines: compact ? compactLabelLines : 2,
@@ -216,7 +399,7 @@ class BookPanelAction extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: color,
-                fontSize: compact ? 9.5 : 10.5,
+                fontSize: compact ? 9 : 10.5,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
                 height: 1.08,
               ),

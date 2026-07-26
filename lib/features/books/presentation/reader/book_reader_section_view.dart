@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:dnevnik/features/books/application/book_pagination_measurement.dart';
 import 'package:dnevnik/features/books/application/book_reader_hyphenation.dart';
 import 'package:dnevnik/features/books/application/book_reader_text_anchor.dart';
 import 'package:dnevnik/features/books/domain/book_asset.dart';
@@ -10,7 +9,9 @@ import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_continuous_view.dart';
-import 'package:dnevnik/features/books/presentation/reader/book_reader_highlight_style.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_document_model.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_document_view.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_layout_engine.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_page_card.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_page_stage.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.dart';
@@ -18,7 +19,6 @@ import 'package:dnevnik/features/books/presentation/reader/book_reader_selection
 import 'package:dnevnik/features/books/presentation/reader/book_reader_text_selection.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_quill/flutter_quill.dart';
 
 part 'book_reader_section_continuous.dart';
 part 'book_reader_section_document.dart';
@@ -81,26 +81,19 @@ class BookReaderSectionView extends StatefulWidget {
 }
 
 class _BookReaderSectionViewState extends State<BookReaderSectionView> {
-  late QuillController _continuousController;
-  late FocusNode _continuousFocusNode;
-  late ScrollController _continuousScrollController;
+  late final ScrollController _continuousScrollController;
+  final _layoutEngine = BookReaderLayoutEngine();
 
-  final _pageResources = <int, _ReaderPageResources>{};
-  List<RichDocument> _pageDocuments = const [];
-  List<int> _pageStartOffsets = const [];
-  List<int> _pageDisplayStartOffsets = const [];
   late BookReaderDisplayDocument _displayDocument;
+  late BookReaderDocumentModel _readerDocument;
+  List<BookReaderPageLayout> _pages = const [];
   int _hyphenationRequest = 0;
+  int _selectionGeneration = 0;
 
   Timer? _progressTimer;
-  Timer? _paginationTimer;
   double _progress = 0;
   double _pendingProgress = 0;
   int _activePage = 0;
-  int _paginationRequest = 0;
-  final _paginationMeasurement = BookPaginationMeasurement(maxRetries: 8);
-  bool _isPaginating = false;
-  bool _allowProgressivePagination = false;
   bool _navigationLocked = false;
   int? _continuousPointer;
   double? _continuousPointerStartY;
@@ -108,16 +101,8 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
   bool _continuousPointerStartedAtEnd = false;
   bool _continuousForwardInput = false;
   bool _continuousBackwardInput = false;
-  _ReaderPageGeometry? _geometry;
   _ReaderPageGeometry? _completedGeometry;
   BookReaderViewMode _effectiveMode = BookReaderViewMode.continuous;
-
-  RichDocument? _measurementDocument;
-  QuillController? _measurementController;
-  FocusNode? _measurementFocusNode;
-  ScrollController? _measurementScrollController;
-  GlobalKey<EditorState>? _measurementEditorKey;
-  GlobalKey? _measurementViewportKey;
 
   @override
   void initState() {
@@ -126,22 +111,11 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
     _pendingProgress = _progress;
     widget.navigationController._attach(this);
     _displayDocument = BookReaderHyphenation.identity(widget.section.content);
-    _createContinuousResources();
-    _scheduleHyphenation();
-    _restoreContinuousPosition();
-  }
-
-  void _createContinuousResources() {
-    _continuousController = QuillController(
-      document: _readerDocument(_displayDocument.document, displayStart: 0),
-      selection: const TextSelection.collapsed(offset: 0),
-      readOnly: true,
-      onSelectionChanged: (selection) =>
-          _handleTextSelection(selection, displayStart: 0),
-    );
-    _continuousFocusNode = FocusNode();
+    _readerDocument = BookReaderDocumentParser.parse(_displayDocument.document);
     _continuousScrollController = ScrollController()
       ..addListener(_handleContinuousScroll);
+    _scheduleHyphenation();
+    _restoreContinuousPosition();
   }
 
   @override
@@ -158,40 +132,24 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
       widget.navigationController._attach(this);
     }
     if (sectionChanged) _navigationLocked = false;
-    final highlightsChanged = !_sameHighlights(
-      oldWidget.highlights,
-      widget.highlights,
-    );
     final hyphenationChanged =
         oldWidget.settings.hyphenateWords != widget.settings.hyphenateWords ||
         oldWidget.languageCode != widget.languageCode;
     if (sectionChanged || hyphenationChanged) {
       _displayDocument = BookReaderHyphenation.identity(widget.section.content);
-      _scheduleHyphenation();
-      _replaceContinuousResources();
+      _readerDocument = BookReaderDocumentParser.parse(
+        _displayDocument.document,
+      );
+      _layoutEngine.clear();
       _clearVisiblePages();
       _invalidatePagination();
-    } else if (highlightsChanged ||
-        oldWidget.speechRange?.start != widget.speechRange?.start ||
-        oldWidget.speechRange?.end != widget.speechRange?.end ||
-        (oldWidget.settings.theme != widget.settings.theme &&
-            (widget.highlights.isNotEmpty || widget.speechRange != null))) {
-      _replaceContinuousResources();
-      _replaceVisiblePagesForHighlights();
+      _scheduleHyphenation();
     } else if (_layoutSettingsChanged(oldWidget.settings, widget.settings)) {
-      if (oldWidget.settings.justifyText != widget.settings.justifyText) {
-        _replaceContinuousResources();
-      }
       _invalidatePagination();
     }
 
     if (oldWidget.clearSelectionVersion != widget.clearSelectionVersion) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _clearSelection());
-    }
-
-    if (oldWidget.speechTargetMode != widget.speechTargetMode) {
-      _replaceContinuousResources();
-      _replaceVisiblePagesForHighlights();
+      _clearSelection();
     }
 
     if ((widget.initialProgress - _progress).abs() > 0.004 || sectionChanged) {
@@ -227,10 +185,15 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
           widget.languageCode != languageCode) {
         return;
       }
-      _displayDocument = displayDocument;
-      _replaceContinuousResources();
-      _clearVisiblePages();
-      _invalidatePagination();
+      setState(() {
+        _displayDocument = displayDocument;
+        _readerDocument = BookReaderDocumentParser.parse(
+          _displayDocument.document,
+        );
+        _layoutEngine.clear();
+        _clearVisiblePages();
+        _invalidatePagination();
+      });
     }());
   }
 
@@ -246,43 +209,6 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
       oldSettings.contentWidth != newSettings.contentWidth ||
       oldSettings.horizontalPadding != newSettings.horizontalPadding ||
       oldSettings.verticalPadding != newSettings.verticalPadding;
-
-  bool _sameHighlights(
-    List<BookReaderHighlight> oldHighlights,
-    List<BookReaderHighlight> newHighlights,
-  ) {
-    if (identical(oldHighlights, newHighlights)) return true;
-    if (oldHighlights.length != newHighlights.length) return false;
-    for (var index = 0; index < oldHighlights.length; index++) {
-      final oldHighlight = oldHighlights[index];
-      final newHighlight = newHighlights[index];
-      if (oldHighlight.id != newHighlight.id ||
-          oldHighlight.sectionId != newHighlight.sectionId ||
-          oldHighlight.sectionProgress != newHighlight.sectionProgress ||
-          oldHighlight.startOffset != newHighlight.startOffset ||
-          oldHighlight.endOffset != newHighlight.endOffset ||
-          oldHighlight.excerpt != newHighlight.excerpt ||
-          oldHighlight.color != newHighlight.color ||
-          oldHighlight.createdAt != newHighlight.createdAt) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  void _replaceContinuousResources() {
-    final oldController = _continuousController;
-    final oldFocusNode = _continuousFocusNode;
-    final oldScrollController = _continuousScrollController;
-    _createContinuousResources();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      oldController.dispose();
-      oldFocusNode.dispose();
-      oldScrollController.dispose();
-    });
-  }
-
-  void _mutate(VoidCallback mutation) => setState(mutation);
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -302,10 +228,7 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
         settings: widget.settings,
         spread: mode == BookReaderViewMode.spread,
       );
-      if (_geometry != geometry) {
-        _geometry = geometry;
-        _schedulePagination();
-      }
+      _ensurePagination(context, geometry);
       return _buildPagedView(context, geometry, mode);
     },
   );
@@ -318,11 +241,14 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
   }
 
   void _restoreCurrentPosition() {
-    if (_effectiveMode == BookReaderViewMode.continuous) {
-      _restoreContinuousPosition();
-    } else {
-      _selectPageForProgress(_pendingProgress, rebuild: true);
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_effectiveMode == BookReaderViewMode.continuous) {
+        _restoreContinuousPosition();
+      } else {
+        _selectPageForProgress(_pendingProgress, rebuild: true);
+      }
+    });
   }
 
   Future<void> _moveByNavigation(int direction) async {
@@ -357,7 +283,7 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
     }
     final step = _effectiveMode == BookReaderViewMode.spread ? 2 : 1;
     final target = _activePage + direction * step;
-    if (target >= 0 && target < _pageDocuments.length) {
+    if (target >= 0 && target < _pages.length) {
       _selectPage(target);
       return;
     }
@@ -374,44 +300,14 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
     callback();
   }
 
+  void _mutate(VoidCallback mutation) => setState(mutation);
+
   @override
   void dispose() {
     _progressTimer?.cancel();
-    _paginationTimer?.cancel();
-    _paginationRequest++;
     _hyphenationRequest++;
     widget.navigationController._detach(this);
-    _continuousController.dispose();
-    _continuousFocusNode.dispose();
     _continuousScrollController.dispose();
-    for (final resources in _pageResources.values) {
-      resources.dispose();
-    }
-    _measurementController?.dispose();
-    _measurementFocusNode?.dispose();
-    _measurementScrollController?.dispose();
     super.dispose();
-  }
-}
-
-class _ReaderPageResources {
-  _ReaderPageResources({
-    required this.controller,
-    required this.focusNode,
-    required this.scrollController,
-    required this.editorKey,
-    required this.viewportKey,
-  });
-
-  final QuillController controller;
-  final FocusNode focusNode;
-  final ScrollController scrollController;
-  final GlobalKey<EditorState> editorKey;
-  final GlobalKey viewportKey;
-
-  void dispose() {
-    controller.dispose();
-    focusNode.dispose();
-    scrollController.dispose();
   }
 }

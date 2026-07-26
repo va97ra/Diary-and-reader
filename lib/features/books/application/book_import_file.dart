@@ -5,11 +5,17 @@ class BookImportFile {
     required this.name,
     required this.bytes,
     this.sourceUri = '',
+    this.sourceSizeBytes,
+    this.sourceModifiedMillis = 0,
   });
 
   final String name;
   final Uint8List bytes;
   final String sourceUri;
+  final int? sourceSizeBytes;
+  final int sourceModifiedMillis;
+
+  int get effectiveSizeBytes => sourceSizeBytes ?? bytes.length;
 }
 
 enum BookImportFailure {

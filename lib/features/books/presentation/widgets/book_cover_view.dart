@@ -19,32 +19,54 @@ class BookCoverView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cover = project.coverAsset;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+    return RepaintBoundary(
       child: SizedBox(
         width: width,
         height: height,
-        child: cover == null
-            ? ColoredBox(
-                color: AppTheme.accent.withValues(alpha: 0.16),
-                child: const Icon(
-                  Icons.auto_stories_outlined,
-                  color: AppTheme.accent,
-                ),
-              )
-            : Image.memory(
-                cover.bytes,
-                key: const ValueKey('book-cover-image'),
-                fit: BoxFit.cover,
-                gaplessPlayback: true,
-                errorBuilder: (_, _, _) => ColoredBox(
-                  color: AppTheme.accent.withValues(alpha: 0.16),
-                  child: const Icon(
-                    Icons.broken_image_outlined,
-                    color: AppTheme.accent,
-                  ),
-                ),
-              ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final logicalWidth = constraints.maxWidth.isFinite
+                ? constraints.maxWidth
+                : 320.0;
+            final logicalHeight = constraints.maxHeight.isFinite
+                ? constraints.maxHeight
+                : 480.0;
+            return ClipRRect(
+              borderRadius: BorderRadius.circular(borderRadius),
+              child: cover == null
+                  ? ColoredBox(
+                      color: AppTheme.accent.withValues(alpha: 0.16),
+                      child: const Icon(
+                        Icons.auto_stories_outlined,
+                        color: AppTheme.accent,
+                      ),
+                    )
+                  : Image.memory(
+                      cover.bytes,
+                      key: ValueKey('book-cover-${project.id}-${cover.id}'),
+                      fit: BoxFit.cover,
+                      gaplessPlayback: true,
+                      filterQuality: FilterQuality.low,
+                      cacheWidth: (logicalWidth * pixelRatio).round().clamp(
+                        1,
+                        2048,
+                      ),
+                      cacheHeight: (logicalHeight * pixelRatio).round().clamp(
+                        1,
+                        3072,
+                      ),
+                      errorBuilder: (_, _, _) => ColoredBox(
+                        color: AppTheme.accent.withValues(alpha: 0.16),
+                        child: const Icon(
+                          Icons.broken_image_outlined,
+                          color: AppTheme.accent,
+                        ),
+                      ),
+                    ),
+            );
+          },
+        ),
       ),
     );
   }

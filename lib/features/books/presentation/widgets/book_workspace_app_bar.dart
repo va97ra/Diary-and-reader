@@ -1,6 +1,6 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
-import 'package:dnevnik/core/theme/app_theme.dart';
 import 'package:dnevnik/features/books/application/workspace_save_state.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_adaptive_control_shell.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_editor_metrics.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_save_status.dart';
 import 'package:flutter/material.dart';
@@ -53,10 +53,14 @@ class BookWorkspaceAppBar extends StatelessWidget
     );
     return AppBar(
       key: const ValueKey('writer-app-bar'),
-      backgroundColor: AppTheme.surface,
-      foregroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Colors.transparent,
+      foregroundColor: BookLeatherColors.foreground,
       surfaceTintColor: Colors.transparent,
-      titleSpacing: 12,
+      flexibleSpace: const BookLeatherPanel(
+        safeArea: EdgeInsets.only(top: 1, left: 1, right: 1),
+        child: SizedBox.expand(),
+      ),
+      titleSpacing: 8,
       title: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 320;
@@ -80,7 +84,7 @@ class BookWorkspaceAppBar extends StatelessWidget
                       title: bookTitle,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFFF8FAFC),
+                        color: BookLeatherColors.foreground,
                       ),
                       onTap: onRenameBook,
                     ),
@@ -91,7 +95,7 @@ class BookWorkspaceAppBar extends StatelessWidget
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFFE2E8F0),
+                        color: BookLeatherColors.mutedForeground,
                       ),
                       onTap: onRenameSection,
                     ),
@@ -121,7 +125,7 @@ class BookWorkspaceAppBar extends StatelessWidget
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
                                 fontSize: compact ? 9.5 : 11,
-                                color: const Color(0xFFE2E8F0),
+                                color: BookLeatherColors.mutedForeground,
                                 fontFeatures: const [
                                   FontFeature.tabularFigures(),
                                 ],
@@ -195,12 +199,12 @@ class BookWorkspaceAppBar extends StatelessWidget
               strings.restoreProjectBackup,
             ),
           ],
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-            child: Center(child: Text(strings.more)),
+          child: const SizedBox.square(
+            dimension: 40,
+            child: Icon(Icons.more_horiz),
           ),
         ),
-        const SizedBox(width: 4),
+        const SizedBox(width: 2),
       ],
     );
   }
@@ -250,7 +254,7 @@ class _HeaderTitleAction extends StatelessWidget {
                   Icon(
                     Icons.edit_outlined,
                     size: 12,
-                    color: style?.color ?? const Color(0xFFE2E8F0),
+                    color: style?.color ?? BookLeatherColors.mutedForeground,
                   ),
                 ],
               ),

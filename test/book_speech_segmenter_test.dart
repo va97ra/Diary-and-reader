@@ -10,8 +10,8 @@ void main() {
 
     expect(text.substring(start), startsWith('фраза!'));
     expect(segments.first.startOffset, start);
-    expect(segments.first.text, 'фраза!');
-    expect(segments.map((segment) => segment.text), ['фраза!', 'Третья.']);
+    expect(segments, hasLength(1));
+    expect(segments.first.text, 'фраза!\nТретья.');
   });
 
   test('skips whitespace and safely splits a long sentence', () {
@@ -25,5 +25,21 @@ void main() {
     expect(segments, isNotEmpty);
     expect(segments.first.startOffset, 3);
     expect(segments.every((segment) => segment.text.length <= 40), isTrue);
+  });
+
+  test('groups sentences into long continuous utterances', () {
+    final text = List.generate(
+      30,
+      (index) => 'Предложение номер $index.',
+    ).join(' ');
+    final segments = BookSpeechSegmenter.split(
+      text,
+      startOffset: 0,
+      maximumLength: 180,
+    );
+
+    expect(segments.length, lessThan(10));
+    expect(segments.every((segment) => segment.text.length <= 180), isTrue);
+    expect(segments.first.text, contains('Предложение номер 5.'));
   });
 }

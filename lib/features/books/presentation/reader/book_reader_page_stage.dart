@@ -86,6 +86,7 @@ class _ReaderPagedInputState extends State<_ReaderPagedInput> {
   bool _dragging = false;
   double _dragOffset = 0;
   int _transitionDirection = 1;
+  int? _pointer;
 
   void _move(VoidCallback? action, {required int direction}) {
     if (_locked || action == null) {
@@ -102,7 +103,7 @@ class _ReaderPagedInputState extends State<_ReaderPagedInput> {
       _dragOffset = 0;
     });
     action();
-    Future<void>.delayed(const Duration(milliseconds: 300), () {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _locked = false;
     });
   }
@@ -116,24 +117,30 @@ class _ReaderPagedInputState extends State<_ReaderPagedInput> {
     if (delta < 0) _move(widget.onBackward, direction: -1);
   }
 
-  void _handleDragUpdate(DragUpdateDetails details) {
-    if (_locked) return;
+  void _handlePointerDown(PointerDownEvent event) {
+    if (_locked || _pointer != null) return;
+    _pointer = event.pointer;
+    _dragging = true;
+    _dragOffset = 0;
+  }
+
+  void _handlePointerMove(PointerMoveEvent event) {
+    if (_locked || event.pointer != _pointer) return;
     final width = context.size?.width ?? 1;
     setState(() {
       _dragging = true;
-      _dragOffset = (_dragOffset + details.delta.dx)
+      _dragOffset = (_dragOffset + event.delta.dx)
           .clamp(-width, width)
           .toDouble();
     });
   }
 
-  void _handleDragEnd(DragEndDetails details) {
+  void _handlePointerUp(PointerUpEvent event) {
+    if (event.pointer != _pointer) return;
+    _pointer = null;
     if (_locked) return;
     final width = context.size?.width ?? 1;
-    final velocity = details.primaryVelocity ?? 0;
-    final shouldMove =
-        _dragOffset.abs() >= math.max(48, width * 0.16) ||
-        velocity.abs() >= 300;
+    final shouldMove = _dragOffset.abs() >= math.max(48, width * 0.16);
     if (!shouldMove) {
       setState(() {
         _dragging = false;
@@ -141,27 +148,32 @@ class _ReaderPagedInputState extends State<_ReaderPagedInput> {
       });
       return;
     }
-    if (_dragOffset < 0 || velocity < -300) {
+    if (_dragOffset < 0) {
       _move(widget.onForward, direction: 1);
     } else {
       _move(widget.onBackward, direction: -1);
     }
   }
 
+  void _handlePointerCancel(PointerCancelEvent event) {
+    if (event.pointer != _pointer) return;
+    _pointer = null;
+    setState(() {
+      _dragging = false;
+      _dragOffset = 0;
+    });
+  }
+
   @override
   Widget build(BuildContext context) => Listener(
     onPointerSignal: _handlePointerSignal,
-    child: GestureDetector(
+    onPointerDown: _handlePointerDown,
+    onPointerMove: _handlePointerMove,
+    onPointerUp: _handlePointerUp,
+    onPointerCancel: _handlePointerCancel,
+    behavior: HitTestBehavior.translucent,
+    child: KeyedSubtree(
       key: const ValueKey('reader-page-swipe-area'),
-      behavior: HitTestBehavior.translucent,
-      onHorizontalDragUpdate: _handleDragUpdate,
-      onHorizontalDragEnd: _handleDragEnd,
-      onHorizontalDragCancel: () {
-        setState(() {
-          _dragging = false;
-          _dragOffset = 0;
-        });
-      },
       child: AnimatedContainer(
         duration: _dragging ? Duration.zero : const Duration(milliseconds: 140),
         curve: Curves.easeOutCubic,

@@ -20,6 +20,7 @@ dependencies:
   flutter_tts:
     path: third_party/flutter_tts
   hyphenator_impure: ^0.1.4
+  image: 4.9.1
   intl: 0.20.2
   path_provider: ^2.1.6
   pdf: 3.13.0
