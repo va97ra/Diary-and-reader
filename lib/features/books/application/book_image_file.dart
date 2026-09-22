@@ -14,6 +14,14 @@ abstract interface class BookImageFileGateway {
   Future<BookImageFile?> open();
 }
 
+abstract interface class BookClipboardImageGateway {
+  /// Cheap check that must not read the clipboard contents, so Android does
+  /// not show its "pasted from clipboard" notice when a menu merely opens.
+  Future<bool> hasImage();
+
+  Future<BookImageFile?> read();
+}
+
 abstract final class BookImageFileCodec {
   static const maxBytes = 20 * 1024 * 1024;
 
