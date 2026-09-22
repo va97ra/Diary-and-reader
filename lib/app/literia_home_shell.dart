@@ -15,6 +15,7 @@ import 'package:dnevnik/features/books/application/book_pdf_font_assets.dart';
 import 'package:dnevnik/features/books/application/book_project_archive_codec.dart';
 import 'package:dnevnik/features/books/application/book_reading_session_loader.dart';
 import 'package:dnevnik/features/books/application/book_source_storage.dart';
+import 'package:dnevnik/features/books/data/book_clipboard_image_service.dart';
 import 'package:dnevnik/features/books/data/book_export_file_service.dart';
 import 'package:dnevnik/features/books/data/book_image_file_service.dart';
 import 'package:dnevnik/features/books/data/book_import_file_service.dart';
@@ -34,6 +35,7 @@ class LiteriaHomeShell extends StatefulWidget {
     this.pdfFontLoader = const BookPdfAssetFontLoader(),
     this.importFileGateway = const BookImportFileService(),
     this.imageFileGateway = const BookImageFileService(),
+    this.clipboardImageGateway = const BookClipboardImageService(),
     this.sourceStorage = const EphemeralBookSourceStorage(),
     this.deviceCatalog = const UnsupportedBookDeviceCatalog(),
     super.key,
@@ -45,6 +47,7 @@ class LiteriaHomeShell extends StatefulWidget {
   final BookPdfFontLoader pdfFontLoader;
   final BookImportFileGateway importFileGateway;
   final BookImageFileGateway imageFileGateway;
+  final BookClipboardImageGateway clipboardImageGateway;
   final BookSourceStorage sourceStorage;
   final BookDeviceCatalogGateway deviceCatalog;
 
@@ -117,6 +120,7 @@ class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
           backupFileGateway: widget.backupFileGateway,
           pdfFontLoader: widget.pdfFontLoader,
           imageFileGateway: widget.imageFileGateway,
+          clipboardImageGateway: widget.clipboardImageGateway,
         ),
       ),
     );

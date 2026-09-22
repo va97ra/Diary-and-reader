@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/application/book_docx_exporter.dart';
@@ -7,12 +5,14 @@ import 'package:dnevnik/features/books/application/book_epub_exporter.dart';
 import 'package:dnevnik/features/books/application/book_export_artifact.dart';
 import 'package:dnevnik/features/books/application/book_fb2_exporter.dart';
 import 'package:dnevnik/features/books/application/book_html_exporter.dart';
+import 'package:dnevnik/features/books/application/book_image_document_editing.dart';
 import 'package:dnevnik/features/books/application/book_image_file.dart';
 import 'package:dnevnik/features/books/application/book_manuscript_search.dart';
 import 'package:dnevnik/features/books/application/book_markdown_exporter.dart';
 import 'package:dnevnik/features/books/application/book_pdf_font_assets.dart';
 import 'package:dnevnik/features/books/application/book_project_archive_codec.dart';
 import 'package:dnevnik/features/books/application/book_txt_exporter.dart';
+import 'package:dnevnik/features/books/data/book_clipboard_image_service.dart';
 import 'package:dnevnik/features/books/data/book_export_file_service.dart';
 import 'package:dnevnik/features/books/data/book_image_file_service.dart';
 import 'package:dnevnik/features/books/data/book_pdf_asset_font_loader.dart';
@@ -43,9 +43,10 @@ import 'package:dnevnik/features/books/presentation/widgets/book_save_status.dar
 import 'package:dnevnik/features/books/presentation/widgets/book_section_editor.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_sheet_keyboard_dismiss.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_workspace_app_bar.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart';
-import 'package:flutter_quill/quill_delta.dart';
 
 class AuthorWorkspacePage extends StatefulWidget {
   const AuthorWorkspacePage({
@@ -54,6 +55,7 @@ class AuthorWorkspacePage extends StatefulWidget {
     this.backupFileGateway = const BookProjectBackupFileService(),
     this.pdfFontLoader = const BookPdfAssetFontLoader(),
     this.imageFileGateway = const BookImageFileService(),
+    this.clipboardImageGateway = const BookClipboardImageService(),
     super.key,
   });
 
@@ -62,6 +64,7 @@ class AuthorWorkspacePage extends StatefulWidget {
   final BookProjectBackupFileGateway backupFileGateway;
   final BookPdfFontLoader pdfFontLoader;
   final BookImageFileGateway imageFileGateway;
+  final BookClipboardImageGateway clipboardImageGateway;
 
   @override
   State<AuthorWorkspacePage> createState() => _AuthorWorkspacePageState();
@@ -166,6 +169,9 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
                     onExitCompactPreview: _toggleA4Preview,
                     onInsertImage: _insertImage,
                     onImageTap: _showImageSettings,
+                    onPasteImage: _pasteClipboardImageInto,
+                    onInsertImageFile: _insertImageFile,
+                    clipboardHasImage: widget.clipboardImageGateway.hasImage,
                     onInsertPageBreak: _insertPageBreak,
                     showPageNavigation: !_isFocusMode,
                     viewMode: project.layoutSettings.viewMode,
@@ -277,6 +283,12 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
               label: strings.writerFormatting,
               onPressed: _showFormatting,
               selected: true,
+            ),
+            _compactWriterAction(
+              key: const ValueKey('writer-picture-action'),
+              icon: Icons.add_photo_alternate_outlined,
+              label: strings.picture,
+              onPressed: _showAddPicture,
             ),
             _compactWriterAction(
               key: const ValueKey('writer-hide-panels-button'),
@@ -422,6 +434,12 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
           label: strings.writerFormatting,
           onPressed: _showFormatting,
           selected: true,
+        ),
+        _wideWriterAction(
+          key: const ValueKey('writer-picture-action'),
+          icon: Icons.add_photo_alternate_outlined,
+          label: strings.addPicture,
+          onPressed: _showAddPicture,
         ),
         _wideWriterAction(
           key: const ValueKey('writer-settings-action'),
@@ -853,6 +871,10 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
               Navigator.pop(sheetContext);
               _insertImage();
             },
+            onPasteImage: () {
+              Navigator.pop(sheetContext);
+              _pasteClipboardImage();
+            },
             onInsertPageBreak: () {
               Navigator.pop(sheetContext);
               _insertPageBreak();
@@ -863,19 +885,123 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
     );
   }
 
+  static bool get _picksFromGallery =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
+
+  Future<void> _showAddPicture() async {
+    final strings = AppStrings.of(context);
+    final source = await showBookLeatherBottomSheet<_PictureSource>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              BookLeatherModalHeader(
+                title: strings.addPicture,
+                subtitle: strings.addPictureHint,
+                onClose: () => Navigator.pop(sheetContext),
+                closeKey: const ValueKey('add-picture-close'),
+                padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
+              ),
+              OutlinedButton.icon(
+                key: const ValueKey('add-picture-from-device'),
+                onPressed: () =>
+                    Navigator.pop(sheetContext, _PictureSource.device),
+                icon: const Icon(Icons.photo_library_outlined),
+                label: Text(
+                  _picksFromGallery
+                      ? strings.imageFromGallery
+                      : strings.imageFromFile,
+                ),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                key: const ValueKey('add-picture-from-clipboard'),
+                onPressed: () =>
+                    Navigator.pop(sheetContext, _PictureSource.clipboard),
+                icon: const Icon(Icons.content_paste_outlined),
+                label: Text(strings.imageFromClipboard),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (!mounted) return;
+    switch (source) {
+      case _PictureSource.device:
+        await _insertImage();
+      case _PictureSource.clipboard:
+        await _pasteClipboardImage();
+      case null:
+        break;
+    }
+  }
+
   Future<void> _insertImage() async {
     final asset = await _pickImageAsset();
     if (!mounted) return;
     final controller = _editorController;
-    if (asset == null || controller == null) {
-      return;
+    if (asset == null || controller == null) return;
+    _insertImageAsset(controller, asset);
+  }
+
+  Future<bool> _pasteClipboardImage() async {
+    final controller = _editorController;
+    if (controller == null) return false;
+    return _pasteClipboardImageInto(controller);
+  }
+
+  Future<bool> _pasteClipboardImageInto(QuillController controller) async {
+    final strings = AppStrings.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final BookImageFile? file;
+    try {
+      file = await widget.clipboardImageGateway.read();
+    } on PlatformException {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(strings.imageInsertFailed)),
+        );
+      }
+      return false;
     }
-    final selection = controller.selection;
-    final offset = selection.extentOffset.clamp(
+    if (!mounted) return false;
+    if (file == null) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(strings.clipboardHasNoImage)),
+      );
+      return false;
+    }
+    return _insertImageFile(controller, file);
+  }
+
+  Future<bool> _insertImageFile(
+    QuillController controller,
+    BookImageFile file,
+  ) async {
+    final asset = BookImageFileCodec.createAsset(file);
+    if (asset == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppStrings.of(context).imageInsertFailed)),
+      );
+      return false;
+    }
+    _insertImageAsset(controller, asset);
+    return true;
+  }
+
+  void _insertImageAsset(QuillController controller, BookAsset asset) {
+    final offset = controller.selection.extentOffset.clamp(
       0,
       controller.document.length - 1,
     );
-    _insertImageAtOffset(
+    BookImageDocumentEditing.insert(
       controller,
       offset,
       BookImagePlacement(assetId: asset.id),
@@ -978,13 +1104,7 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
       if (actualOffset < 0 || actualOffset >= controller.document.length) {
         return false;
       }
-      controller.replaceText(
-        actualOffset,
-        1,
-        BlockEmbed.custom(CustomBlockEmbed('bookImage', next.encode())),
-        null,
-      );
-      return true;
+      return BookImageDocumentEditing.replace(controller, actualOffset, next);
     });
   }
 
@@ -998,8 +1118,7 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
       if (actualOffset < 0 || actualOffset >= controller.document.length) {
         return false;
       }
-      controller.replaceText(actualOffset, 1, '', null);
-      return true;
+      return BookImageDocumentEditing.remove(controller, actualOffset);
     });
   }
 
@@ -1024,7 +1143,7 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
             0,
             controller.document.length - 1,
           );
-      _insertImageAtOffset(controller, targetOffset, next);
+      BookImageDocumentEditing.insert(controller, targetOffset, next);
       return true;
     });
   }
@@ -1061,7 +1180,7 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
     for (final operation in controller.document.toDelta().toJson()) {
       final insert = operation['insert'];
       if (insert is Map) {
-        final data = _bookImageData(insert);
+        final data = BookImageDocumentEditing.imageData(insert);
         if (data != null &&
             BookImagePlacement.decode(data).assetId == assetId) {
           if (documentOffset == requestedOffset) return documentOffset;
@@ -1077,47 +1196,6 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
       }
     }
     return nearestOffset;
-  }
-
-  String? _bookImageData(Map insert) {
-    final direct = insert['bookImage']?.toString();
-    if (direct != null && direct.isNotEmpty) return direct;
-    final custom = insert['custom'];
-    if (custom is! String) return null;
-    try {
-      final decoded = jsonDecode(custom);
-      return decoded is Map ? decoded['bookImage']?.toString() : null;
-    } on FormatException {
-      return null;
-    }
-  }
-
-  void _insertImageAtOffset(
-    QuillController controller,
-    int requestedOffset,
-    BookImagePlacement placement,
-  ) {
-    final offset = requestedOffset.clamp(0, controller.document.length - 1);
-    final plainText = controller.document.toPlainText();
-    final startsLine = offset == 0 || plainText[offset - 1] == '\n';
-    final insertion = Delta();
-    if (!startsLine) insertion.insert('\n');
-    insertion
-      ..insert(
-        BlockEmbed.custom(
-          CustomBlockEmbed('bookImage', placement.encode()),
-        ).toJson(),
-      )
-      ..insert('\n');
-    controller.replaceText(offset, 0, insertion, null);
-    final cursorOffset = (offset + insertion.length).clamp(
-      0,
-      controller.document.length - 1,
-    );
-    controller.updateSelection(
-      TextSelection.collapsed(offset: cursorOffset),
-      ChangeSource.local,
-    );
   }
 
   void _insertPageBreak() {
@@ -1321,3 +1399,5 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
     await widget.controller.flush();
   }
 }
+
+enum _PictureSource { device, clipboard }

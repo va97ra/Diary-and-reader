@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:dnevnik/features/books/application/book_image_document_editing.dart';
 import 'package:dnevnik/features/books/application/book_page_paginator.dart';
 import 'package:dnevnik/features/books/application/book_pagination_measurement.dart';
 import 'package:dnevnik/features/books/domain/book_asset.dart';
@@ -13,7 +14,7 @@ import 'package:dnevnik/features/books/domain/rich_document.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_editor_metrics.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_editor_page_stage.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_formatting_toolbar.dart';
-import 'package:dnevnik/features/books/presentation/widgets/book_image_embed_builder.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_image_editing_scope.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_mobile_editor.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_page_canvas.dart';
 import 'package:flutter/material.dart';
@@ -38,6 +39,9 @@ class BookSectionEditor extends StatefulWidget {
     required this.onMetricsChanged,
     required this.showChapterTitleOnPage,
     this.onImageTap,
+    this.onPasteImage,
+    this.onInsertImageFile,
+    this.clipboardHasImage,
     this.onControllerReady,
     super.key,
   });
@@ -59,6 +63,9 @@ class BookSectionEditor extends StatefulWidget {
   final ValueChanged<BookEditorMetrics> onMetricsChanged;
   final bool showChapterTitleOnPage;
   final BookImageTapCallback? onImageTap;
+  final BookImagePasteCallback? onPasteImage;
+  final BookImageFileInsertCallback? onInsertImageFile;
+  final Future<bool> Function()? clipboardHasImage;
   final ValueChanged<QuillController>? onControllerReady;
 
   @override
@@ -71,6 +78,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
   final _scrollControllers = <ScrollController>[];
   final _editorKeys = <GlobalKey<EditorState>>[];
   final _viewportKeys = <GlobalKey>[];
+  final _imageSelection = BookImageSelection();
   late final TextEditingController _titleController;
   late final TextEditingController _measurementTitleController;
   late ManuscriptStatistics _statistics;
@@ -180,15 +188,28 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     for (var index = 0; index < documents.length; index++) {
       final document = documents[index];
       final documentLength = _documentLength(document);
-      final controller = QuillController(
-        document: Document.fromJson(document),
+      late final QuillController controller;
+      controller = QuillController(
+        document: Document.fromJson(
+          BookImageDocumentEditing.normalizeEmbeds(document),
+        ),
         selection: TextSelection.collapsed(
           offset: index == selectionPage
               ? selectionOffset.clamp(0, documentLength - 1)
               : 0,
         ),
+        // flutter_quill is pinned, so its experimental paste hook is stable
+        // for this app.
+        config: QuillControllerConfig(
+          // ignore: experimental_member_use
+          clipboardConfig: QuillClipboardConfig(
+            // ignore: experimental_member_use
+            onClipboardPaste: () => _pasteClipboardImage(controller),
+          ),
+        ),
       );
       controller.addListener(() => _handleDocumentChanged(controller));
+      _imageSelection.attach(controller);
       _controllers.add(controller);
 
       final focusNode = FocusNode();
@@ -198,6 +219,17 @@ class BookSectionEditorState extends State<BookSectionEditor> {
       _editorKeys.add(GlobalKey<EditorState>());
       _viewportKeys.add(GlobalKey());
     }
+  }
+
+  /// Runs before Quill's own paste handling; a picture wins only when the
+  /// clipboard holds no text.
+  Future<bool> _pasteClipboardImage(QuillController controller) async {
+    final paste = widget.onPasteImage;
+    if (paste == null ||
+        !await bookClipboardPrefersImage(widget.clipboardHasImage)) {
+      return false;
+    }
+    return paste(controller);
   }
 
   void _handleDocumentChanged(QuillController changedController) {
@@ -482,6 +514,17 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     _usesPagedLayout = widget.usePagedLayout;
     if (pagedLayoutChanged && _usesPagedLayout) _schedulePagination();
 
+    return BookImageEditingScope(
+      selection: _imageSelection,
+      onOpenSettings: widget.onImageTap,
+      onPasteImage: widget.onPasteImage,
+      clipboardHasImage: widget.clipboardHasImage,
+      onInsertImageFile: widget.onInsertImageFile,
+      child: _buildEditors(),
+    );
+  }
+
+  Widget _buildEditors() {
     return Column(
       children: [
         if (widget.showToolbar)
@@ -490,6 +533,9 @@ class BookSectionEditorState extends State<BookSectionEditor> {
             paragraphSettings: widget.paragraphSettings,
             onInsertImage: widget.onInsertImage,
             onInsertPageBreak: widget.onInsertPageBreak,
+            onPasteImage: widget.onPasteImage == null
+                ? null
+                : () => widget.onPasteImage!(controller),
           ),
         Expanded(
           child: widget.usePagedLayout
@@ -661,6 +707,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     _measurementFocusNode?.dispose();
     _measurementScrollController?.dispose();
     _disposePageControllers();
+    _imageSelection.dispose();
     _titleController.dispose();
     _measurementTitleController.dispose();
     super.dispose();
@@ -668,6 +715,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
 
   void _disposePageControllers() {
     for (final controller in _controllers) {
+      _imageSelection.detach(controller);
       controller.dispose();
     }
     for (final focusNode in _focusNodes) {

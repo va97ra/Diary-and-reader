@@ -15,6 +15,7 @@ class BookFormattingToolbar extends StatelessWidget {
     required this.paragraphSettings,
     required this.onInsertImage,
     required this.onInsertPageBreak,
+    this.onPasteImage,
     super.key,
   });
 
@@ -22,6 +23,7 @@ class BookFormattingToolbar extends StatelessWidget {
   final BookParagraphSettings paragraphSettings;
   final VoidCallback onInsertImage;
   final VoidCallback onInsertPageBreak;
+  final VoidCallback? onPasteImage;
 
   @override
   Widget build(BuildContext context) => Material(
@@ -42,6 +44,13 @@ class BookFormattingToolbar extends StatelessWidget {
           onPressed: onInsertImage,
           icon: const Icon(Icons.add_photo_alternate_outlined),
         ),
+        if (onPasteImage != null)
+          IconButton(
+            key: const ValueKey('paste-book-image-button'),
+            tooltip: AppStrings.of(context).imageFromClipboard,
+            onPressed: onPasteImage,
+            icon: const Icon(Icons.content_paste_outlined),
+          ),
         IconButton(
           key: const ValueKey('insert-book-page-break-button'),
           tooltip: AppStrings.of(context).insertPageBreak,
@@ -67,6 +76,7 @@ class BookFormattingSheet extends StatelessWidget {
     required this.paragraphSettings,
     required this.onInsertImage,
     required this.onInsertPageBreak,
+    this.onPasteImage,
     super.key,
   });
 
@@ -75,6 +85,7 @@ class BookFormattingSheet extends StatelessWidget {
   final BookParagraphSettings paragraphSettings;
   final VoidCallback onInsertImage;
   final VoidCallback onInsertPageBreak;
+  final VoidCallback? onPasteImage;
 
   @override
   Widget build(BuildContext context) {
@@ -102,33 +113,51 @@ class BookFormattingSheet extends StatelessWidget {
             _FormattingSection(
               key: const ValueKey('formatting-insert-section'),
               title: strings.insertIntoText,
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      key: const ValueKey('insert-book-image-button'),
-                      onPressed: onInsertImage,
-                      icon: const Icon(Icons.add_photo_alternate_outlined),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          key: const ValueKey('insert-book-image-button'),
+                          onPressed: onInsertImage,
+                          icon: const Icon(Icons.add_photo_alternate_outlined),
+                          label: Text(
+                            strings.image,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          key: const ValueKey('insert-book-page-break-button'),
+                          onPressed: onInsertPageBreak,
+                          icon: const Icon(Icons.insert_page_break_outlined),
+                          label: Text(
+                            strings.pageBreak,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (onPasteImage != null) ...[
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      key: const ValueKey('paste-book-image-button'),
+                      onPressed: onPasteImage,
+                      icon: const Icon(Icons.content_paste_outlined),
                       label: Text(
-                        strings.image,
+                        strings.imageFromClipboard,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      key: const ValueKey('insert-book-page-break-button'),
-                      onPressed: onInsertPageBreak,
-                      icon: const Icon(Icons.insert_page_break_outlined),
-                      label: Text(
-                        strings.pageBreak,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ),
+                  ],
                 ],
               ),
             ),

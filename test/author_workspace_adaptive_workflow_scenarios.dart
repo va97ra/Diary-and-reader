@@ -171,6 +171,8 @@ void registerAdaptiveWorkflowScenarios() {
     );
     await tester.tap(find.byKey(ValueKey('book-image-action-$assetId')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('image-more-settings')));
+    await tester.pumpAndSettle();
     expect(tester.testTextInput.isVisible, isFalse);
     expect(editor.focusNode.canRequestFocus, isFalse);
     expect(
@@ -216,15 +218,11 @@ void registerAdaptiveWorkflowScenarios() {
     final replacedOperation = controller.activeSection!.content.firstWhere(
       (operation) => operation['insert'] is Map,
     );
-    final replacedCustom =
-        (replacedOperation['insert'] as Map)['custom'] as String;
-    final replacedId = BookImagePlacement.decode(
-      jsonDecode(replacedCustom)['bookImage'] as String,
-    ).assetId;
-    expect(replacedId, isNot(assetId));
     final placement = BookImagePlacement.decode(
-      jsonDecode(replacedCustom)['bookImage'] as String,
+      BookImageDocumentEditing.imageData(replacedOperation['insert'] as Map)!,
     );
+    final replacedId = placement.assetId;
+    expect(replacedId, isNot(assetId));
     expect(placement.alignment, BookImageAlignment.right);
     expect(placement.widthPercent, 50);
     expect(placement.caption, 'Подпись к рисунку');
@@ -236,6 +234,8 @@ void registerAdaptiveWorkflowScenarios() {
       ChangeSource.local,
     );
     await tester.tap(find.byKey(ValueKey('book-image-action-$replacedId')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('image-more-settings')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('move-image-to-cursor')));
@@ -249,13 +249,13 @@ void registerAdaptiveWorkflowScenarios() {
     final movedImageOperation = controller.activeSection!.content.firstWhere(
       (operation) => operation['insert'] is Map,
     );
-    final movedCustom =
-        (movedImageOperation['insert'] as Map)['custom'] as String;
     final replacementId = BookImagePlacement.decode(
-      jsonDecode(movedCustom)['bookImage'] as String,
+      BookImageDocumentEditing.imageData(movedImageOperation['insert'] as Map)!,
     ).assetId;
     expect(replacementId, replacedId);
     await tester.tap(find.byKey(ValueKey('book-image-action-$replacementId')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('image-more-settings')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('delete-book-image')));
     await tester.pumpAndSettle();

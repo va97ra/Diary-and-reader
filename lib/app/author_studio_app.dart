@@ -8,6 +8,7 @@ import 'package:dnevnik/features/books/application/book_device_catalog.dart';
 import 'package:dnevnik/features/books/application/book_image_file.dart';
 import 'package:dnevnik/features/books/application/book_pdf_font_assets.dart';
 import 'package:dnevnik/features/books/application/book_source_storage.dart';
+import 'package:dnevnik/features/books/data/book_clipboard_image_service.dart';
 import 'package:dnevnik/features/books/data/book_export_file_service.dart';
 import 'package:dnevnik/features/books/data/book_image_file_service.dart';
 import 'package:dnevnik/features/books/data/book_import_file_service.dart';
@@ -26,6 +27,7 @@ class AuthorStudioApp extends StatelessWidget {
     this.pdfFontLoader = const BookPdfAssetFontLoader(),
     this.importFileGateway = const BookImportFileService(),
     this.imageFileGateway = const BookImageFileService(),
+    this.clipboardImageGateway = const BookClipboardImageService(),
     this.sourceStorage = const EphemeralBookSourceStorage(),
     this.deviceCatalog = const UnsupportedBookDeviceCatalog(),
     super.key,
@@ -37,6 +39,7 @@ class AuthorStudioApp extends StatelessWidget {
   final BookPdfFontLoader pdfFontLoader;
   final BookImportFileGateway importFileGateway;
   final BookImageFileGateway imageFileGateway;
+  final BookClipboardImageGateway clipboardImageGateway;
   final BookSourceStorage sourceStorage;
   final BookDeviceCatalogGateway deviceCatalog;
 
@@ -70,6 +73,7 @@ class AuthorStudioApp extends StatelessWidget {
           pdfFontLoader: pdfFontLoader,
           importFileGateway: importFileGateway,
           imageFileGateway: imageFileGateway,
+          clipboardImageGateway: clipboardImageGateway,
           sourceStorage: sourceStorage,
           deviceCatalog: deviceCatalog,
         ),
