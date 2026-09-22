@@ -2,6 +2,8 @@ package com.va97ra.literia
 
 import android.Manifest
 import android.app.Activity
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.Cursor
@@ -66,8 +68,54 @@ class MainActivity : AudioServiceActivity() {
                     result.success(null)
                 }
                 "availableBytes" -> result.success(StatFs(filesDir.path).availableBytes)
+                "hasClipboardImage" -> result.success(hasClipboardImage())
+                "readClipboardImage" -> readClipboardImage(result)
                 else -> result.notImplemented()
             }
+        }
+    }
+
+    private fun clipboardManager(): ClipboardManager =
+        getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+
+    // Only inspects the clip description, which does not trigger Android's
+    // "pasted from clipboard" notice.
+    private fun hasClipboardImage(): Boolean {
+        val clipboard = clipboardManager()
+        if (!clipboard.hasPrimaryClip()) return false
+        val description = clipboard.primaryClipDescription ?: return false
+        return (0 until description.mimeTypeCount).any {
+            description.getMimeType(it).startsWith("image/")
+        }
+    }
+
+    private fun readClipboardImage(result: MethodChannel.Result) {
+        val clip = clipboardManager().primaryClip
+        if (clip == null) {
+            result.success(null)
+            return
+        }
+        val uris = (0 until clip.itemCount).mapNotNull { clip.getItemAt(it).uri }
+        runInBackground(result) {
+            val uri = uris.firstOrNull {
+                contentResolver.getType(it)?.startsWith("image/") == true
+            } ?: return@runInBackground null
+            val bytes = contentResolver.openInputStream(uri)?.use { input ->
+                val output = java.io.ByteArrayOutputStream()
+                val buffer = ByteArray(64 * 1024)
+                var total = 0L
+                while (true) {
+                    val read = input.read(buffer)
+                    if (read < 0) break
+                    total += read
+                    if (total > MAX_CLIPBOARD_IMAGE_BYTES) {
+                        throw IllegalStateException("The clipboard image is too large.")
+                    }
+                    output.write(buffer, 0, read)
+                }
+                output.toByteArray()
+            } ?: return@runInBackground null
+            mapOf("name" to displayName(uri).ifBlank { "clipboard-image" }, "bytes" to bytes)
         }
     }
 
@@ -429,6 +477,7 @@ class MainActivity : AudioServiceActivity() {
         private const val REQUEST_DOWNLOADS_ACCESS = 7013
         private const val REQUEST_SAVE_FILE = 7014
         private const val MAX_DOCUMENTS = 10_000
+        private const val MAX_CLIPBOARD_IMAGE_BYTES = 20L * 1024 * 1024
         private const val STORAGE_ROOT_URI =
             "content://com.android.externalstorage.documents/root/primary"
         private const val DOWNLOADS_URI =
