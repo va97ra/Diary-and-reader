@@ -53,6 +53,8 @@ class BookReaderSectionView extends StatefulWidget {
     required this.speechTargetMode,
     required this.onSpeechTargetSelected,
     required this.navigationController,
+    required this.onUserNavigation,
+    required this.readingInsets,
     this.speechRange,
     this.onNextSectionRequested,
     this.onPreviousSectionRequested,
@@ -72,6 +74,12 @@ class BookReaderSectionView extends StatefulWidget {
   final bool speechTargetMode;
   final ValueChanged<int> onSpeechTargetSelected;
   final BookReaderSectionController navigationController;
+
+  /// Called when the reader scrolls or turns a page themselves.
+  final VoidCallback onUserNavigation;
+
+  /// Room the floating panels need at the start and end of a chapter.
+  final EdgeInsets readingInsets;
   final BookReaderTextRange? speechRange;
   final VoidCallback? onNextSectionRequested;
   final VoidCallback? onPreviousSectionRequested;
@@ -82,13 +90,22 @@ class BookReaderSectionView extends StatefulWidget {
 
 class _BookReaderSectionViewState extends State<BookReaderSectionView> {
   late final ScrollController _continuousScrollController;
+  final _continuousController = BookReaderContinuousController();
   final _layoutEngine = BookReaderLayoutEngine();
 
   late BookReaderDisplayDocument _displayDocument;
   late BookReaderDocumentModel _readerDocument;
-  List<BookReaderPageLayout> _pages = const [];
+  late String _plainText;
+  BookReaderPagination? _pagination;
+  bool _awaitingPage = false;
+  Timer? _paginationSliceTimer;
+  List<BookReaderHighlight>? _highlightSource;
+  BookReaderDisplayDocument? _highlightDocument;
+  List<BookReaderRenderHighlight> _highlightCache = const [];
   int _hyphenationRequest = 0;
   int _selectionGeneration = 0;
+
+  List<BookReaderPageLayout> get _pages => _pagination?.pages ?? const [];
 
   Timer? _progressTimer;
   double _progress = 0;
@@ -110,13 +127,24 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
     _progress = widget.initialProgress.clamp(0, 1).toDouble();
     _pendingProgress = _progress;
     widget.navigationController._attach(this);
-    _displayDocument = BookReaderHyphenation.identity(widget.section.content);
-    _readerDocument = BookReaderDocumentParser.parse(_displayDocument.document);
+    _readDisplayDocument(
+      BookReaderHyphenation.identity(widget.section.content),
+    );
     _continuousScrollController = ScrollController()
       ..addListener(_handleContinuousScroll);
     _scheduleHyphenation();
-    _restoreContinuousPosition();
   }
+
+  void _readDisplayDocument(BookReaderDisplayDocument document) {
+    _displayDocument = document;
+    _readerDocument = BookReaderDocumentParser.parse(document.document);
+    _plainText = richDocumentPlainText(widget.section.content);
+  }
+
+  /// Display offset of [progress], the measure both view modes report.
+  int _displayOffsetFor(double progress) => _displayDocument.originalToDisplay(
+    (_displayDocument.originalLength * progress.clamp(0, 1)).round(),
+  );
 
   @override
   void didUpdateWidget(covariant BookReaderSectionView oldWidget) {
@@ -136,9 +164,8 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
         oldWidget.settings.hyphenateWords != widget.settings.hyphenateWords ||
         oldWidget.languageCode != widget.languageCode;
     if (sectionChanged || hyphenationChanged) {
-      _displayDocument = BookReaderHyphenation.identity(widget.section.content);
-      _readerDocument = BookReaderDocumentParser.parse(
-        _displayDocument.document,
+      _readDisplayDocument(
+        BookReaderHyphenation.identity(widget.section.content),
       );
       _layoutEngine.clear();
       _clearVisiblePages();
@@ -186,10 +213,7 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
         return;
       }
       setState(() {
-        _displayDocument = displayDocument;
-        _readerDocument = BookReaderDocumentParser.parse(
-          _displayDocument.document,
-        );
+        _readDisplayDocument(displayDocument);
         _layoutEngine.clear();
         _clearVisiblePages();
         _invalidatePagination();
@@ -283,15 +307,17 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
     }
     final step = _effectiveMode == BookReaderViewMode.spread ? 2 : 1;
     final target = _activePage + direction * step;
-    if (target >= 0 && target < _pages.length) {
+    if (target >= 0 && _hasPage(target)) {
       _selectPage(target);
       return;
     }
+    if (direction > 0 && !(_pagination?.isComplete ?? true)) return;
     _requestSectionNavigation(direction);
   }
 
   void _requestSectionNavigation(int direction) {
     if (_navigationLocked) return;
+    widget.onUserNavigation();
     final callback = direction > 0
         ? widget.onNextSectionRequested
         : widget.onPreviousSectionRequested;
@@ -305,6 +331,7 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
   @override
   void dispose() {
     _progressTimer?.cancel();
+    _paginationSliceTimer?.cancel();
     _hyphenationRequest++;
     widget.navigationController._detach(this);
     _continuousScrollController.dispose();

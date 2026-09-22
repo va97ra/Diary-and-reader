@@ -33,6 +33,9 @@ import 'package:dnevnik/features/books/presentation/widgets/book_sheet_keyboard_
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+const double _compactTopPanelHeight = 72;
+const double _compactBottomPanelHeight = 64;
+
 class BookReaderPage extends StatefulWidget {
   const BookReaderPage({
     required this.project,
@@ -89,8 +92,15 @@ class _BookReaderPageState extends State<BookReaderPage> {
   Offset? _surfaceTapStart;
   bool _surfaceTapMoved = false;
 
+  final _sectionTexts = <String, String>{};
+  late final List<int> _sectionLengths = bookSectionReadableLengths(_sections);
+
   List<BookSection> get _sections => widget.project.sections;
   BookSection get _section => _sections[_activeIndex];
+  String get _sectionText => _textOf(_section);
+
+  String _textOf(BookSection section) =>
+      _sectionTexts[section.id] ??= richDocumentPlainText(section.content);
 
   @override
   void initState() {
@@ -176,8 +186,9 @@ class _BookReaderPageState extends State<BookReaderPage> {
   }
 
   double get _overallProgress {
-    return bookReadingProgress(
+    return bookReadingProgressForLengths(
       _sections,
+      _sectionLengths,
       BookReaderProgress(
         sectionId: _section.id,
         sectionProgress: _sectionProgress,
@@ -231,6 +242,7 @@ class _BookReaderPageState extends State<BookReaderPage> {
                 child: Focus(
                   autofocus: true,
                   child: BookAdaptiveControlShell(
+                    overlayPanels: true,
                     panelsVisible: !_isFocusMode,
                     compactTopPanel: _buildCompactReaderTop(context),
                     compactBottomPanel: _buildCompactReaderBottom(context),
@@ -332,7 +344,7 @@ class _BookReaderPageState extends State<BookReaderPage> {
     final strings = AppStrings.of(themedContext);
     return SizedBox(
       key: const ValueKey('reader-top-panel'),
-      height: 72,
+      height: _compactTopPanelHeight,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(6, 5, 6, 5),
         child: Row(
@@ -388,7 +400,7 @@ class _BookReaderPageState extends State<BookReaderPage> {
     final strings = AppStrings.of(themedContext);
     return SizedBox(
       key: const ValueKey('reader-context-bar'),
-      height: 64,
+      height: _compactBottomPanelHeight,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(6, 5, 6, 5),
         child: Row(
@@ -612,6 +624,22 @@ class _BookReaderPageState extends State<BookReaderPage> {
     setState(() => _isFocusMode = !_isFocusMode);
   }
 
+  /// Reading hides the floating panels so they never cover the text.
+  void _handleUserNavigation() {
+    if (_isFocusMode) return;
+    setState(() => _isFocusMode = true);
+  }
+
+  /// Space the floating panels cover on a phone. It does not depend on
+  /// whether they show, so the text never shifts when they appear.
+  EdgeInsets _readingInsets(BuildContext context) =>
+      MediaQuery.sizeOf(context).width >= bookControlBreakpoint
+      ? EdgeInsets.zero
+      : const EdgeInsets.only(
+          top: _compactTopPanelHeight,
+          bottom: _compactBottomPanelHeight,
+        );
+
   Future<void> _toggleSpeech() async {
     if (_isChoosingSpeechStart) {
       _cancelSpeechTargetSelection();
@@ -634,16 +662,17 @@ class _BookReaderPageState extends State<BookReaderPage> {
   );
 
   void _prepareSpeechSegments({required int startOffset}) {
-    final text = richDocumentPlainText(_section.content);
-    _speechSegments = BookSpeechSegmenter.split(text, startOffset: startOffset);
+    _speechSegments = BookSpeechSegmenter.split(
+      _sectionText,
+      startOffset: startOffset,
+    );
     _speechSegmentIndex = 0;
     _currentSpeechBlock = null;
   }
 
   Future<void> _handleSpeechTargetSelected(int requestedOffset) async {
     if (!_isChoosingSpeechStart) return;
-    final text = richDocumentPlainText(_section.content);
-    final offset = BookSpeechSegmenter.wordStart(text, requestedOffset);
+    final offset = BookSpeechSegmenter.wordStart(_sectionText, requestedOffset);
     setState(() => _isChoosingSpeechStart = false);
     await _startSpeechAt(offset);
   }
@@ -670,7 +699,7 @@ class _BookReaderPageState extends State<BookReaderPage> {
   Future<void> _speakNextSegment() async {
     if (!_isSpeaking || _speechSegmentIndex >= _speechSegments.length) return;
     final segment = _speechSegments[_speechSegmentIndex++];
-    final textLength = richDocumentPlainText(_section.content).length;
+    final textLength = _sectionText.length;
     setState(() {
       _currentSpeechBlock = segment;
       _activeSpeechSegment = segment;
@@ -695,7 +724,7 @@ class _BookReaderPageState extends State<BookReaderPage> {
     final normalizedEnd = localEnd.clamp(normalizedStart, block.text.length);
     final start = block.startOffset + normalizedStart;
     final end = block.startOffset + normalizedEnd;
-    final textLength = richDocumentPlainText(_section.content).length;
+    final textLength = _sectionText.length;
     setState(() {
       _activeSpeechSegment = BookSpeechSegment(
         startOffset: start,
@@ -721,8 +750,7 @@ class _BookReaderPageState extends State<BookReaderPage> {
     _sectionProgress = 1;
     _saveProgress();
     for (var index = _activeIndex + 1; index < _sections.length; index++) {
-      final text = richDocumentPlainText(_sections[index].content).trim();
-      if (text.isEmpty) continue;
+      if (_textOf(_sections[index]).trim().isEmpty) continue;
       _goToLocation(_sections[index].id, 0, fromSpeech: true);
       try {
         await _configureSpeechForSection();
@@ -849,136 +877,139 @@ class _BookReaderPageState extends State<BookReaderPage> {
     }
   }
 
-  Widget _buildReadingSurface(
-    BuildContext context,
-    BookReaderPalette palette,
-  ) => Stack(
-    children: [
-      Positioned.fill(
-        child: Listener(
-          key: const ValueKey('reader-reading-surface-listener'),
-          behavior: HitTestBehavior.translucent,
-          onPointerDown: _settings.centerTapControls
-              ? (event) {
-                  _surfaceTapPointer = event.pointer;
-                  _surfaceTapStart = event.localPosition;
-                  _surfaceTapMoved = false;
-                }
-              : null,
-          onPointerMove: _settings.centerTapControls
-              ? (event) {
-                  if (event.pointer != _surfaceTapPointer ||
-                      _surfaceTapStart == null) {
-                    return;
+  Widget _buildReadingSurface(BuildContext context, BookReaderPalette palette) {
+    final panelInsets = _readingInsets(context);
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Listener(
+            key: const ValueKey('reader-reading-surface-listener'),
+            behavior: HitTestBehavior.translucent,
+            onPointerDown: _settings.centerTapControls
+                ? (event) {
+                    _surfaceTapPointer = event.pointer;
+                    _surfaceTapStart = event.localPosition;
+                    _surfaceTapMoved = false;
                   }
-                  if ((event.localPosition - _surfaceTapStart!).distance > 12) {
-                    _surfaceTapMoved = true;
-                  }
-                }
-              : null,
-          onPointerCancel: _settings.centerTapControls
-              ? (_) => _resetSurfaceTap()
-              : null,
-          onPointerUp: _settings.centerTapControls
-              ? (event) {
-                  final isTap =
-                      event.pointer == _surfaceTapPointer &&
-                      !_surfaceTapMoved &&
-                      _surfaceTapStart != null;
-                  final position = event.localPosition;
-                  _resetSurfaceTap();
-                  if (!isTap) return;
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted) {
-                      _handleReadingSurfaceTap(context, position);
+                : null,
+            onPointerMove: _settings.centerTapControls
+                ? (event) {
+                    if (event.pointer != _surfaceTapPointer ||
+                        _surfaceTapStart == null) {
+                      return;
                     }
-                  });
-                }
-              : null,
-          child: BookReaderSectionView(
-            section: _section,
-            languageCode: widget.project.metadata.languageCode,
-            assets: widget.project.assets,
-            settings: _settings,
-            palette: palette,
-            initialProgress: _sectionProgress,
-            onProgressChanged: _handleSectionProgress,
-            highlights: _annotations.highlights
-                .where((highlight) => highlight.sectionId == _section.id)
-                .toList(),
-            onTextSelection: _handleTextSelection,
-            clearSelectionVersion: _clearSelectionVersion,
-            navigationController: _sectionNavigationController,
-            speechTargetMode: _isChoosingSpeechStart,
-            onSpeechTargetSelected: (offset) =>
-                unawaited(_handleSpeechTargetSelected(offset)),
-            speechRange: _activeSpeechSegment == null
-                ? null
-                : BookReaderTextRange(
-                    _activeSpeechSegment!.startOffset,
-                    _activeSpeechSegment!.endOffset,
-                  ),
-            onNextSectionRequested: _activeIndex < _sections.length - 1
-                ? _goToNextSection
+                    if ((event.localPosition - _surfaceTapStart!).distance >
+                        12) {
+                      _surfaceTapMoved = true;
+                    }
+                  }
                 : null,
-            onPreviousSectionRequested: _activeIndex > 0
-                ? _goToPreviousSectionEnd
+            onPointerCancel: _settings.centerTapControls
+                ? (_) => _resetSurfaceTap()
                 : null,
-          ),
-        ),
-      ),
-      if (_textSelection case final selection?)
-        Positioned(
-          left: 12,
-          right: 12,
-          bottom: 12,
-          child: Center(
-            child: BookReaderSelectionBar(
-              selection: selection,
-              onHighlight: _saveHighlight,
-              onSaveQuote: _saveQuote,
-              onAddNote: () => _addNoteForSelection(context),
-              onCopy: _copySelection,
-              onDictionary: () =>
-                  _openSelectionLookup(BookReaderLookupAction.dictionary),
-              onTranslate: () =>
-                  _openSelectionLookup(BookReaderLookupAction.translate),
-              onWebSearch: () =>
-                  _openSelectionLookup(BookReaderLookupAction.webSearch),
-              onClose: _clearTextSelection,
+            onPointerUp: _settings.centerTapControls
+                ? (event) {
+                    final isTap =
+                        event.pointer == _surfaceTapPointer &&
+                        !_surfaceTapMoved &&
+                        _surfaceTapStart != null;
+                    final position = event.localPosition;
+                    _resetSurfaceTap();
+                    if (!isTap) return;
+                    WidgetsBinding.instance
+                      ..addPostFrameCallback((_) {
+                        if (mounted) {
+                          _handleReadingSurfaceTap(context, position);
+                        }
+                      })
+                      ..scheduleFrame();
+                  }
+                : null,
+            child: BookReaderSectionView(
+              section: _section,
+              languageCode: widget.project.metadata.languageCode,
+              assets: widget.project.assets,
+              settings: _settings,
+              palette: palette,
+              initialProgress: _sectionProgress,
+              onProgressChanged: _handleSectionProgress,
+              highlights: _annotations.highlights,
+              onTextSelection: _handleTextSelection,
+              clearSelectionVersion: _clearSelectionVersion,
+              navigationController: _sectionNavigationController,
+              onUserNavigation: _handleUserNavigation,
+              readingInsets: panelInsets,
+              speechTargetMode: _isChoosingSpeechStart,
+              onSpeechTargetSelected: (offset) =>
+                  unawaited(_handleSpeechTargetSelected(offset)),
+              speechRange: _activeSpeechSegment == null
+                  ? null
+                  : BookReaderTextRange(
+                      _activeSpeechSegment!.startOffset,
+                      _activeSpeechSegment!.endOffset,
+                    ),
+              onNextSectionRequested: _activeIndex < _sections.length - 1
+                  ? _goToNextSection
+                  : null,
+              onPreviousSectionRequested: _activeIndex > 0
+                  ? _goToPreviousSectionEnd
+                  : null,
             ),
           ),
         ),
-      if (_isChoosingSpeechStart || _isSpeaking)
-        Positioned(
-          left: 12,
-          right: 12,
-          top: 12,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
-              child: BookReaderSpeechControls(
-                isChoosingStart: _isChoosingSpeechStart,
-                isPaused: _isSpeechPaused,
-                rate: _settings.speechRate,
-                onCancelChoosing: _cancelSpeechTargetSelection,
-                onPauseOrResume: () => unawaited(_pauseOrResumeSpeech()),
-                onStop: () => unawaited(_stopSpeech()),
-                onSlower: _settings.speechRate > 0.25
-                    ? () => _changeSpeechRate(-0.05)
-                    : null,
-                onFaster: _settings.speechRate < 0.75
-                    ? () => _changeSpeechRate(0.05)
-                    : null,
-                onSettings: () => _showSettings(context),
-                backgroundColor: palette.surface,
-                foregroundColor: palette.ink,
+        if (_textSelection case final selection?)
+          Positioned(
+            left: 12,
+            right: 12,
+            bottom: 12 + panelInsets.bottom,
+            child: Center(
+              child: BookReaderSelectionBar(
+                selection: selection,
+                onHighlight: _saveHighlight,
+                onSaveQuote: _saveQuote,
+                onAddNote: () => _addNoteForSelection(context),
+                onCopy: _copySelection,
+                onDictionary: () =>
+                    _openSelectionLookup(BookReaderLookupAction.dictionary),
+                onTranslate: () =>
+                    _openSelectionLookup(BookReaderLookupAction.translate),
+                onWebSearch: () =>
+                    _openSelectionLookup(BookReaderLookupAction.webSearch),
+                onClose: _clearTextSelection,
               ),
             ),
           ),
-        ),
-    ],
-  );
+        if (_isChoosingSpeechStart || _isSpeaking)
+          Positioned(
+            left: 12,
+            right: 12,
+            top: 12 + panelInsets.top,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: BookReaderSpeechControls(
+                  isChoosingStart: _isChoosingSpeechStart,
+                  isPaused: _isSpeechPaused,
+                  rate: _settings.speechRate,
+                  onCancelChoosing: _cancelSpeechTargetSelection,
+                  onPauseOrResume: () => unawaited(_pauseOrResumeSpeech()),
+                  onStop: () => unawaited(_stopSpeech()),
+                  onSlower: _settings.speechRate > 0.25
+                      ? () => _changeSpeechRate(-0.05)
+                      : null,
+                  onFaster: _settings.speechRate < 0.75
+                      ? () => _changeSpeechRate(0.05)
+                      : null,
+                  onSettings: () => _showSettings(context),
+                  backgroundColor: palette.surface,
+                  foregroundColor: palette.ink,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
 
   void _resetSurfaceTap() {
     _surfaceTapPointer = null;

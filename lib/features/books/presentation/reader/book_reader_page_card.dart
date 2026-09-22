@@ -30,7 +30,7 @@ class BookReaderPageCard extends StatelessWidget {
   final double width;
   final double height;
   final int pageNumber;
-  final int pageCount;
+  final int? pageCount;
   final BookReaderSettings settings;
   final BookReaderPalette palette;
   final BookReaderPageLayout layout;

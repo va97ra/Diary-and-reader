@@ -58,7 +58,7 @@ class BookReaderDocumentView extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       for (final fragment in fragments)
-        _BookReaderBlockFragmentView(
+        BookReaderFragmentView(
           key: ValueKey(
             'reader-fragment-${fragment.block.sourceStart}-'
             '${fragment.localStart}-$selectionGeneration',
@@ -79,8 +79,8 @@ class BookReaderDocumentView extends StatelessWidget {
   );
 }
 
-class _BookReaderBlockFragmentView extends StatelessWidget {
-  const _BookReaderBlockFragmentView({
+class BookReaderFragmentView extends StatelessWidget {
+  const BookReaderFragmentView({
     required this.fragment,
     required this.settings,
     required this.palette,
@@ -224,28 +224,7 @@ class BookReaderTextFragment extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (speechTargetMode && onSpeechTargetSelected != null) {
-      final textKey = GlobalKey();
-      return GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapUp: (details) {
-          final renderObject = textKey.currentContext?.findRenderObject();
-          if (renderObject is! RenderParagraph) return;
-          final position = renderObject.getPositionForOffset(
-            details.localPosition,
-          );
-          final localOffset = (position.offset - prefixLength)
-              .clamp(0, sourceEnd - sourceStart)
-              .toInt();
-          selectSpeechOffset(localOffset);
-        },
-        child: RichText(
-          key: textKey,
-          text: span,
-          textAlign: typography.textAlign,
-          textDirection: typography.textDirection,
-          textScaler: TextScaler.noScaling,
-        ),
-      );
+      return _SpeechTargetText(fragment: this);
     }
     return SelectableText.rich(
       span,
@@ -254,6 +233,47 @@ class BookReaderTextFragment extends StatelessWidget {
       textScaler: TextScaler.noScaling,
       enableInteractiveSelection: true,
       onSelectionChanged: (selection, _) => selectRange(selection),
+    );
+  }
+}
+
+/// Plain text that turns a tap into a speech start offset. It is stateful so
+/// the key of its paragraph survives rebuilds.
+class _SpeechTargetText extends StatefulWidget {
+  const _SpeechTargetText({required this.fragment});
+
+  final BookReaderTextFragment fragment;
+
+  @override
+  State<_SpeechTargetText> createState() => _SpeechTargetTextState();
+}
+
+class _SpeechTargetTextState extends State<_SpeechTargetText> {
+  final _textKey = GlobalKey();
+
+  @override
+  Widget build(BuildContext context) {
+    final fragment = widget.fragment;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapUp: (details) {
+        final renderObject = _textKey.currentContext?.findRenderObject();
+        if (renderObject is! RenderParagraph) return;
+        final position = renderObject.getPositionForOffset(
+          details.localPosition,
+        );
+        final localOffset = (position.offset - fragment.prefixLength)
+            .clamp(0, fragment.sourceEnd - fragment.sourceStart)
+            .toInt();
+        fragment.selectSpeechOffset(localOffset);
+      },
+      child: RichText(
+        key: _textKey,
+        text: fragment.span,
+        textAlign: fragment.typography.textAlign,
+        textDirection: fragment.typography.textDirection,
+        textScaler: TextScaler.noScaling,
+      ),
     );
   }
 }

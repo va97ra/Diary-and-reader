@@ -53,3 +53,14 @@ Future<void> openReaderPreview(
   await tester.tap(find.byKey(const ValueKey('writer-panel-preview')));
   await tester.pumpAndSettle();
 }
+
+/// Taps the middle of the page, which shows or hides the reader panels.
+/// They float above the text and hide themselves once reading starts.
+Future<void> toggleReaderPanels(WidgetTester tester) async {
+  await tester.tapAt(
+    tester.getCenter(
+      find.byKey(const ValueKey('reader-reading-surface-listener')),
+    ),
+  );
+  await tester.pumpAndSettle();
+}

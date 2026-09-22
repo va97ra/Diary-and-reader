@@ -1,15 +1,21 @@
 part of 'book_reader_section_view.dart';
 
 extension _BookReaderDocumentFlow on _BookReaderSectionViewState {
+  /// Resolving an anchor scans the chapter text, so the result is kept until
+  /// the highlights or the displayed text change.
   List<BookReaderRenderHighlight> get _renderHighlights {
-    if (widget.highlights.isEmpty) return const [];
-    final plainText = richDocumentPlainText(widget.section.content);
-    return [
+    if (identical(widget.highlights, _highlightSource) &&
+        identical(_displayDocument, _highlightDocument)) {
+      return _highlightCache;
+    }
+    _highlightSource = widget.highlights;
+    _highlightDocument = _displayDocument;
+    return _highlightCache = [
       for (final highlight in widget.highlights)
         if (highlight.sectionId == widget.section.id)
           (() {
             final resolved = BookReaderTextAnchor.resolve(
-              text: plainText,
+              text: _plainText,
               startOffset: highlight.startOffset,
               endOffset: highlight.endOffset,
               excerpt: highlight.excerpt,
@@ -49,13 +55,12 @@ extension _BookReaderDocumentFlow on _BookReaderSectionViewState {
       baseOffset: _displayDocument.displayToOriginal(selection.baseOffset),
       extentOffset: _displayDocument.displayToOriginal(selection.extentOffset),
     );
-    final plainText = richDocumentPlainText(widget.section.content);
     widget.onTextSelection(
       BookReaderSelectionResolver.resolve(
         selection: mappedSelection,
         globalStart: 0,
-        localLength: plainText.length,
-        plainText: plainText,
+        localLength: _plainText.length,
+        plainText: _plainText,
       ),
     );
   }

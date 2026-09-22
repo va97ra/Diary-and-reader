@@ -49,6 +49,7 @@ void main() {
       greaterThan(0),
     );
 
+    await toggleReaderPanels(tester);
     await tester.tap(find.byKey(const ValueKey('reader-settings-action')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Лента'));
@@ -302,6 +303,7 @@ void main() {
     await openReaderPreview(tester, controller);
     await tester.pumpAndSettle();
 
+    await toggleReaderPanels(tester);
     final continuousView = find.byKey(const ValueKey('reader-continuous-view'));
     final viewBounds = tester.getRect(continuousView);
     final forwardGesture = await tester.startGesture(

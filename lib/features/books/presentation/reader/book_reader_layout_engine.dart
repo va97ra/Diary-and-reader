@@ -103,11 +103,13 @@ class BookReaderPageLayout {
   final int sourceEnd;
 }
 
+/// Caches paginations per document, settings, and page geometry. A
+/// pagination is computed incrementally, so long chapters never block a frame.
 class BookReaderLayoutEngine {
-  final LinkedHashMap<_BookReaderLayoutCacheKey, List<BookReaderPageLayout>>
-  _cache = LinkedHashMap();
+  final LinkedHashMap<_BookReaderLayoutCacheKey, BookReaderPagination> _cache =
+      LinkedHashMap();
 
-  List<BookReaderPageLayout> paginate({
+  BookReaderPagination paginate({
     required BookReaderDocumentModel document,
     required BookReaderSettings settings,
     required BookReaderPalette palette,
@@ -126,246 +128,272 @@ class BookReaderLayoutEngine {
       _cache[key] = cached;
       return cached;
     }
-    final pages = _paginate(
+    final pagination = BookReaderPagination._(
       document: document,
       settings: settings,
       palette: palette,
       metrics: metrics,
       locale: locale,
     );
-    _cache[key] = pages;
+    _cache[key] = pagination;
     while (_cache.length > 8) {
       _cache.remove(_cache.keys.first);
     }
-    return pages;
+    return pagination;
   }
 
   void clear() => _cache.clear();
+}
 
-  List<BookReaderPageLayout> _paginate({
-    required BookReaderDocumentModel document,
-    required BookReaderSettings settings,
-    required BookReaderPalette palette,
-    required BookReaderPageMetrics metrics,
-    required Locale locale,
-  }) {
-    final pages = <BookReaderPageLayout>[];
-    var fragments = <BookReaderBlockSlice>[];
-    var remainingHeight = metrics.contentHeight;
+/// Pages of one chapter, laid out block by block on demand.
+class BookReaderPagination {
+  BookReaderPagination._({
+    required this.document,
+    required this.settings,
+    required this.palette,
+    required this.metrics,
+    required this.locale,
+  }) : _remainingHeight = metrics.contentHeight;
 
-    void finishPage() {
-      if (fragments.isEmpty) return;
-      pages.add(
-        BookReaderPageLayout(
-          fragments: List.unmodifiable(fragments),
-          sourceStart: fragments.first.sourceStart,
-          sourceEnd: fragments.last.sourceEnd,
+  final BookReaderDocumentModel document;
+  final BookReaderSettings settings;
+  final BookReaderPalette palette;
+  final BookReaderPageMetrics metrics;
+  final Locale locale;
+
+  final _pages = <BookReaderPageLayout>[];
+  late final List<BookReaderPageLayout> pages = UnmodifiableListView(_pages);
+  var _fragments = <BookReaderBlockSlice>[];
+  double _remainingHeight;
+  int _blockIndex = 0;
+  bool _isComplete = false;
+
+  bool get isComplete => _isComplete;
+
+  /// Whether the page holding [displayOffset] is final.
+  bool covers(int displayOffset) =>
+      _isComplete ||
+      (_pages.isNotEmpty && _pages.last.sourceEnd > displayOffset);
+
+  /// Lays out blocks until the chapter ends, [budget] runs out, or — when
+  /// given — the page with [targetOffset] and [minPageCount] pages exist.
+  void advance({Duration? budget, int? targetOffset, int minPageCount = 0}) {
+    if (_isComplete) return;
+    final clock = Stopwatch()..start();
+    final blocks = document.blocks;
+    final hasTarget = targetOffset != null || minPageCount > 0;
+    while (_blockIndex < blocks.length) {
+      if (hasTarget &&
+          (targetOffset == null || covers(targetOffset)) &&
+          _pages.length >= minPageCount) {
+        return;
+      }
+      if (budget != null && clock.elapsed >= budget) return;
+      _layoutBlock(blocks[_blockIndex++]);
+    }
+    _finishPage();
+    if (_pages.isEmpty) {
+      _pages.add(
+        const BookReaderPageLayout(fragments: [], sourceStart: 0, sourceEnd: 0),
+      );
+    }
+    _isComplete = true;
+  }
+
+  void _finishPage() {
+    if (_fragments.isEmpty) return;
+    _pages.add(
+      BookReaderPageLayout(
+        fragments: List.unmodifiable(_fragments),
+        sourceStart: _fragments.first.sourceStart,
+        sourceEnd: _fragments.last.sourceEnd,
+      ),
+    );
+    _fragments = <BookReaderBlockSlice>[];
+    _remainingHeight = metrics.contentHeight;
+  }
+
+  void _layoutBlock(BookReaderBlock block) {
+    if (block.type == BookReaderBlockType.pageBreak) {
+      _finishPage();
+      return;
+    }
+    if (!block.isText) {
+      final height = _embedHeight(block);
+      if (_fragments.isNotEmpty && height > _remainingHeight) _finishPage();
+      final fittedHeight = math.min(height, _remainingHeight).toDouble();
+      _fragments.add(
+        BookReaderBlockSlice(
+          block: block,
+          localStart: 0,
+          localEnd: 0,
+          topSpacing: 0,
+          bottomSpacing: 0,
+          contentHeight: fittedHeight,
+          totalHeight: fittedHeight,
+          embedHeight: fittedHeight,
         ),
       );
-      fragments = <BookReaderBlockSlice>[];
-      remainingHeight = metrics.contentHeight;
+      _remainingHeight -= fittedHeight;
+      if (_remainingHeight < 1) _finishPage();
+      return;
     }
 
-    for (final block in document.blocks) {
-      if (block.type == BookReaderBlockType.pageBreak) {
-        finishPage();
+    final typography = BookReaderTypography.block(block, settings, palette);
+    final textLength = block.text.length;
+    final prefix = typography.prefix;
+    final prefixLength = prefix.length;
+    final availableWidth = math
+        .max(
+          24,
+          metrics.contentWidth - typography.leftInset - typography.rightInset,
+        )
+        .toDouble();
+    final blockPainter = _textPainter(
+      block: block,
+      typography: typography,
+      prefix: prefix,
+      width: availableWidth,
+    );
+    final lineMetrics = blockPainter.computeLineMetrics();
+    final lineEnds = <int>[];
+    final remainingLineHeights = List<double>.filled(lineMetrics.length + 1, 0);
+    var previousLineEnd = 0;
+    for (var index = 0; index < lineMetrics.length; index++) {
+      final line = lineMetrics[index];
+      final position = blockPainter.getPositionForOffset(
+        Offset(availableWidth - 0.5, math.max(0, line.baseline - 0.5)),
+      );
+      final boundary = blockPainter.getLineBoundary(position);
+      var lineEnd = (boundary.end - prefixLength).clamp(0, textLength);
+      if (lineEnd <= previousLineEnd && previousLineEnd < textLength) {
+        lineEnd = math.min(textLength, previousLineEnd + 1);
+      }
+      lineEnds.add(lineEnd);
+      previousLineEnd = lineEnd;
+    }
+    blockPainter.dispose();
+    for (var index = lineMetrics.length - 1; index >= 0; index--) {
+      remainingLineHeights[index] =
+          lineMetrics[index].height + remainingLineHeights[index + 1];
+    }
+    var localStart = 0;
+    var lineIndex = 0;
+    var firstFragment = true;
+    do {
+      final topSpacing = firstFragment ? typography.topSpacing : 0.0;
+      final emptyHeight =
+          (typography.textStyle.fontSize ?? 16) *
+          (typography.textStyle.height ?? 1.2);
+      final remainingLineHeight = remainingLineHeights[lineIndex];
+      final fullTextHeight = textLength == 0
+          ? emptyHeight
+          : remainingLineHeight;
+      final fullHeight = topSpacing + fullTextHeight + typography.bottomSpacing;
+      if (fullHeight <= _remainingHeight + 0.5) {
+        _fragments.add(
+          BookReaderBlockSlice(
+            block: block,
+            localStart: localStart,
+            localEnd: textLength,
+            topSpacing: topSpacing,
+            bottomSpacing: typography.bottomSpacing,
+            contentHeight: fullTextHeight,
+            totalHeight: fullHeight,
+          ),
+        );
+        _remainingHeight -= fullHeight;
+        break;
+      }
+
+      final availableTextHeight = _remainingHeight - topSpacing;
+      var fittingLineCount = 0;
+      var contentHeight = 0.0;
+      for (var index = lineIndex; index < lineMetrics.length; index++) {
+        final nextHeight = contentHeight + lineMetrics[index].height;
+        if (nextHeight > availableTextHeight + 0.5) break;
+        contentHeight = nextHeight;
+        fittingLineCount++;
+      }
+      if (fittingLineCount == 0 && _fragments.isNotEmpty) {
+        _finishPage();
         continue;
       }
-      if (!block.isText) {
-        final height = _embedHeight(block, metrics);
-        if (fragments.isNotEmpty && height > remainingHeight) finishPage();
-        final fittedHeight = math.min(height, remainingHeight).toDouble();
-        fragments.add(
+      if (textLength == 0) {
+        final height = math
+            .min(_remainingHeight, topSpacing + emptyHeight)
+            .toDouble();
+        _fragments.add(
           BookReaderBlockSlice(
             block: block,
             localStart: 0,
             localEnd: 0,
-            topSpacing: 0,
-            bottomSpacing: 0,
-            contentHeight: fittedHeight,
-            totalHeight: fittedHeight,
-            embedHeight: fittedHeight,
-          ),
-        );
-        remainingHeight -= fittedHeight;
-        if (remainingHeight < 1) finishPage();
-        continue;
-      }
-
-      final typography = BookReaderTypography.block(block, settings, palette);
-      final textLength = block.text.length;
-      final prefix = typography.prefix;
-      final prefixLength = prefix.length;
-      final availableWidth = math
-          .max(
-            24,
-            metrics.contentWidth - typography.leftInset - typography.rightInset,
-          )
-          .toDouble();
-      final blockPainter = _textPainter(
-        block: block,
-        typography: typography,
-        localStart: 0,
-        localEnd: textLength,
-        prefix: prefix,
-        width: availableWidth,
-        locale: locale,
-      );
-      final lineMetrics = blockPainter.computeLineMetrics();
-      final lineEnds = <int>[];
-      final remainingLineHeights = List<double>.filled(
-        lineMetrics.length + 1,
-        0,
-      );
-      var previousLineEnd = 0;
-      for (var index = 0; index < lineMetrics.length; index++) {
-        final line = lineMetrics[index];
-        final position = blockPainter.getPositionForOffset(
-          Offset(availableWidth - 0.5, math.max(0, line.baseline - 0.5)),
-        );
-        final boundary = blockPainter.getLineBoundary(position);
-        var lineEnd = (boundary.end - prefixLength).clamp(0, textLength);
-        if (lineEnd <= previousLineEnd && previousLineEnd < textLength) {
-          lineEnd = math.min(textLength, previousLineEnd + 1);
-        }
-        lineEnds.add(lineEnd);
-        previousLineEnd = lineEnd;
-      }
-      for (var index = lineMetrics.length - 1; index >= 0; index--) {
-        remainingLineHeights[index] =
-            lineMetrics[index].height + remainingLineHeights[index + 1];
-      }
-      var localStart = 0;
-      var lineIndex = 0;
-      var firstFragment = true;
-      do {
-        final topSpacing = firstFragment ? typography.topSpacing : 0.0;
-        final emptyHeight =
-            (typography.textStyle.fontSize ?? 16) *
-            (typography.textStyle.height ?? 1.2);
-        final remainingLineHeight = remainingLineHeights[lineIndex];
-        final fullTextHeight = textLength == 0
-            ? emptyHeight
-            : remainingLineHeight;
-        final fullHeight =
-            topSpacing + fullTextHeight + typography.bottomSpacing;
-        if (fullHeight <= remainingHeight + 0.5) {
-          fragments.add(
-            BookReaderBlockSlice(
-              block: block,
-              localStart: localStart,
-              localEnd: textLength,
-              topSpacing: topSpacing,
-              bottomSpacing: typography.bottomSpacing,
-              contentHeight: fullTextHeight,
-              totalHeight: fullHeight,
-            ),
-          );
-          remainingHeight -= fullHeight;
-          break;
-        }
-
-        final availableTextHeight = remainingHeight - topSpacing;
-        var fittingLineCount = 0;
-        var contentHeight = 0.0;
-        for (var index = lineIndex; index < lineMetrics.length; index++) {
-          final nextHeight = contentHeight + lineMetrics[index].height;
-          if (nextHeight > availableTextHeight + 0.5) break;
-          contentHeight = nextHeight;
-          fittingLineCount++;
-        }
-        if (fittingLineCount == 0 && fragments.isNotEmpty) {
-          finishPage();
-          continue;
-        }
-        if (textLength == 0) {
-          final height = math
-              .min(remainingHeight, topSpacing + emptyHeight)
-              .toDouble();
-          fragments.add(
-            BookReaderBlockSlice(
-              block: block,
-              localStart: 0,
-              localEnd: 0,
-              topSpacing: topSpacing,
-              bottomSpacing: 0,
-              contentHeight: math.max(0, height - topSpacing).toDouble(),
-              totalHeight: height,
-            ),
-          );
-          remainingHeight -= height;
-          break;
-        }
-
-        if (fittingLineCount == 0) {
-          fittingLineCount = 1;
-          contentHeight = lineMetrics[lineIndex].height;
-        }
-        final lastLineIndex = math.min(
-          lineMetrics.length - 1,
-          lineIndex + fittingLineCount - 1,
-        );
-        var localEnd = lineEnds[lastLineIndex];
-        if (localEnd <= localStart) {
-          localEnd = math.min(textLength, localStart + 1);
-        }
-        final isLast = localEnd >= textLength;
-        final bottomSpacing = isLast ? typography.bottomSpacing : 0.0;
-        final totalHeight = math
-            .min(remainingHeight, topSpacing + contentHeight + bottomSpacing)
-            .toDouble();
-        fragments.add(
-          BookReaderBlockSlice(
-            block: block,
-            localStart: localStart,
-            localEnd: localEnd,
             topSpacing: topSpacing,
-            bottomSpacing: bottomSpacing,
-            contentHeight: contentHeight,
-            totalHeight: totalHeight,
+            bottomSpacing: 0,
+            contentHeight: math.max(0, height - topSpacing).toDouble(),
+            totalHeight: height,
           ),
         );
-        remainingHeight -= totalHeight;
-        localStart = localEnd;
-        lineIndex = lastLineIndex + 1;
-        firstFragment = false;
-        if (localStart < textLength) finishPage();
-      } while (localStart < textLength || textLength == 0 && firstFragment);
-    }
-    finishPage();
-    return pages.isEmpty
-        ? const [
-            BookReaderPageLayout(fragments: [], sourceStart: 0, sourceEnd: 0),
-          ]
-        : List.unmodifiable(pages);
+        _remainingHeight -= height;
+        break;
+      }
+
+      if (fittingLineCount == 0) {
+        fittingLineCount = 1;
+        contentHeight = lineMetrics[lineIndex].height;
+      }
+      final lastLineIndex = math.min(
+        lineMetrics.length - 1,
+        lineIndex + fittingLineCount - 1,
+      );
+      var localEnd = lineEnds[lastLineIndex];
+      if (localEnd <= localStart) {
+        localEnd = math.min(textLength, localStart + 1);
+      }
+      final isLast = localEnd >= textLength;
+      final bottomSpacing = isLast ? typography.bottomSpacing : 0.0;
+      final totalHeight = math
+          .min(_remainingHeight, topSpacing + contentHeight + bottomSpacing)
+          .toDouble();
+      _fragments.add(
+        BookReaderBlockSlice(
+          block: block,
+          localStart: localStart,
+          localEnd: localEnd,
+          topSpacing: topSpacing,
+          bottomSpacing: bottomSpacing,
+          contentHeight: contentHeight,
+          totalHeight: totalHeight,
+        ),
+      );
+      _remainingHeight -= totalHeight;
+      localStart = localEnd;
+      lineIndex = lastLineIndex + 1;
+      firstFragment = false;
+      if (localStart < textLength) _finishPage();
+    } while (localStart < textLength || textLength == 0 && firstFragment);
   }
 
   TextPainter _textPainter({
     required BookReaderBlock block,
     required BookReaderBlockTypography typography,
-    required int localStart,
-    required int localEnd,
     required String prefix,
     required double width,
-    required Locale locale,
-  }) {
-    final span = textSpanForRange(
+  }) => TextPainter(
+    text: textSpanForRange(
       block,
       typography,
-      localStart: localStart,
-      localEnd: localEnd,
+      localStart: 0,
+      localEnd: block.text.length,
       prefix: prefix,
-    );
-    return TextPainter(
-      text: span,
-      textAlign: typography.textAlign,
-      textDirection: typography.textDirection,
-      textScaler: TextScaler.noScaling,
-      locale: locale,
-    )..layout(maxWidth: width);
-  }
+    ),
+    textAlign: typography.textAlign,
+    textDirection: typography.textDirection,
+    textScaler: TextScaler.noScaling,
+    locale: locale,
+  )..layout(maxWidth: width);
 
-  double _embedHeight(BookReaderBlock block, BookReaderPageMetrics metrics) {
+  double _embedHeight(BookReaderBlock block) {
     if (block.type == BookReaderBlockType.unsupportedEmbed) return 72;
     final width =
         metrics.contentWidth * block.imageWidthPercent.clamp(20, 100) / 100;
@@ -432,8 +460,8 @@ class _BookReaderLayoutCacheKey {
       other is _BookReaderLayoutCacheKey &&
           identical(document, other.document) &&
           settings == other.settings &&
-          (width - other.width).abs() < 0.5 &&
-          (height - other.height).abs() < 0.5 &&
+          width.round() == other.width.round() &&
+          height.round() == other.height.round() &&
           locale == other.locale;
 
   @override
