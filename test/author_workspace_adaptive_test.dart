@@ -5,7 +5,6 @@ import 'package:dnevnik/app/author_studio_app.dart';
 import 'package:dnevnik/core/theme/app_theme.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/application/book_export_artifact.dart';
-import 'package:dnevnik/features/books/application/book_image_document_editing.dart';
 import 'package:dnevnik/features/books/application/book_image_file.dart';
 import 'package:dnevnik/features/books/application/book_import_file.dart';
 import 'package:dnevnik/features/books/application/book_pdf_font_assets.dart';

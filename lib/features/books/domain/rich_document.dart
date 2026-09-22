@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 typedef RichDocument = List<Map<String, dynamic>>;
 
 RichDocument emptyRichDocument() => [
@@ -20,6 +22,24 @@ RichDocument mergeRichDocuments(Iterable<RichDocument> documents) {
   }
   return merged.isEmpty ? emptyRichDocument() : merged;
 }
+
+/// Reads the payload of a [type] embed, stored either directly
+/// (`{type: data}`) or wrapped by Quill as `{'custom': '{"type": data}'}`.
+Object? richDocumentEmbedData(Map<dynamic, dynamic> insert, String type) {
+  final direct = insert[type];
+  if (direct != null) return direct;
+  final custom = insert['custom'];
+  if (custom is! String) return null;
+  try {
+    final decoded = jsonDecode(custom);
+    return decoded is Map ? decoded[type] : null;
+  } on FormatException {
+    return null;
+  }
+}
+
+bool richDocumentIsPageBreak(Map<dynamic, dynamic> insert) =>
+    richDocumentEmbedData(insert, 'bookPageBreak') != null;
 
 String richDocumentPlainText(RichDocument document) =>
     document.map((operation) => operation['insert']).whereType<String>().join();

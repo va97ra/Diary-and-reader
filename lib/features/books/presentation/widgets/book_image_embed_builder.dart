@@ -11,9 +11,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
-export 'package:dnevnik/features/books/presentation/widgets/book_image_editing_scope.dart'
-    show BookImageTapCallback;
-
 class BookImageEmbedBuilder extends EmbedBuilder {
   const BookImageEmbedBuilder(this.assets, {this.onTap});
 
@@ -24,7 +21,7 @@ class BookImageEmbedBuilder extends EmbedBuilder {
   final BookImageTapCallback? onTap;
 
   @override
-  String get key => BookImageDocumentEditing.embedType;
+  String get key => BookImagePlacement.embedType;
 
   @override
   String toPlainText(Embed node) => Embed.kObjectReplacementCharacter;
@@ -130,29 +127,13 @@ class _BookImageEmbedViewState extends State<BookImageEmbedView> {
   @override
   Widget build(BuildContext context) {
     final selection = _selection;
-    if (selection == null) return _buildLegacy(context);
+    if (selection == null) return _buildLayout(context, selected: false);
     return ListenableBuilder(
       listenable: selection,
       builder: (context, _) => OverlayPortal(
         controller: _toolbar,
         overlayChildBuilder: _buildToolbarOverlay,
         child: _buildLayout(context, selected: _selected),
-      ),
-    );
-  }
-
-  Widget _buildLegacy(BuildContext context) {
-    final image = _buildLayout(context, selected: false);
-    final callback = widget.onOpenSettings;
-    if (callback == null) return image;
-    return Semantics(
-      button: true,
-      label: AppStrings.of(context).illustrationSettings,
-      child: InkWell(
-        key: ValueKey('book-image-action-${widget.asset.id}'),
-        borderRadius: BorderRadius.circular(10),
-        onTap: () => callback(widget.controller, _offset, widget.placement),
-        child: image,
       ),
     );
   }

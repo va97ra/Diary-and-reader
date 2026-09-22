@@ -115,7 +115,7 @@ abstract final class BookPagePaginator {
       final operation = source[index];
       final insert = operation['insert'];
       final operationLength = insert is String ? insert.length : 1;
-      if (insert is Map && _isHardPageBreak(insert)) {
+      if (insert is Map && richDocumentIsPageBreak(insert)) {
         var end = position + 1;
         if (index + 1 < source.length) {
           final nextInsert = source[index + 1]['insert'];
@@ -126,18 +126,6 @@ abstract final class BookPagePaginator {
       position += operationLength;
     }
     return null;
-  }
-
-  static bool _isHardPageBreak(Map insert) {
-    if (insert['bookPageBreak'] != null) return true;
-    final custom = insert['custom'];
-    if (custom is! String) return false;
-    try {
-      final decoded = jsonDecode(custom);
-      return decoded is Map && decoded['bookPageBreak'] != null;
-    } on FormatException {
-      return false;
-    }
   }
 
   static RichDocument _slice(RichDocument source, int start, int end) {

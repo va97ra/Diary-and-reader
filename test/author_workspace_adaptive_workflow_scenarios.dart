@@ -218,9 +218,9 @@ void registerAdaptiveWorkflowScenarios() {
     final replacedOperation = controller.activeSection!.content.firstWhere(
       (operation) => operation['insert'] is Map,
     );
-    final placement = BookImagePlacement.decode(
-      BookImageDocumentEditing.imageData(replacedOperation['insert'] as Map)!,
-    );
+    final placement = BookImagePlacement.fromEmbed(
+      replacedOperation['insert'] as Map,
+    )!;
     final replacedId = placement.assetId;
     expect(replacedId, isNot(assetId));
     expect(placement.alignment, BookImageAlignment.right);
@@ -249,9 +249,9 @@ void registerAdaptiveWorkflowScenarios() {
     final movedImageOperation = controller.activeSection!.content.firstWhere(
       (operation) => operation['insert'] is Map,
     );
-    final replacementId = BookImagePlacement.decode(
-      BookImageDocumentEditing.imageData(movedImageOperation['insert'] as Map)!,
-    ).assetId;
+    final replacementId = BookImagePlacement.fromEmbed(
+      movedImageOperation['insert'] as Map,
+    )!.assetId;
     expect(replacementId, replacedId);
     await tester.tap(find.byKey(ValueKey('book-image-action-$replacementId')));
     await tester.pumpAndSettle();

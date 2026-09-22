@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:dnevnik/features/books/domain/book_image_placement.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 
@@ -228,7 +226,7 @@ abstract final class BookReaderDocumentParser {
   }
 
   static BookReaderBlock _embedBlock(Map insert, int sourceOffset) {
-    if (_isPageBreak(insert)) {
+    if (richDocumentIsPageBreak(insert)) {
       return BookReaderBlock(
         type: BookReaderBlockType.pageBreak,
         runs: const [],
@@ -236,7 +234,7 @@ abstract final class BookReaderDocumentParser {
         sourceEnd: sourceOffset + 1,
       );
     }
-    final image = _imagePlacement(insert);
+    final image = BookImagePlacement.fromEmbed(insert);
     if (image != null) {
       return BookReaderBlock(
         type: BookReaderBlockType.image,
@@ -312,36 +310,5 @@ abstract final class BookReaderDocumentParser {
     return uri != null &&
         (uri.scheme.isEmpty ||
             const {'http', 'https', 'mailto'}.contains(uri.scheme));
-  }
-
-  static BookImagePlacement? _imagePlacement(Map insert) {
-    final direct = insert['bookImage']?.toString();
-    if (direct != null && direct.isNotEmpty) {
-      return BookImagePlacement.decode(direct);
-    }
-    final custom = insert['custom'];
-    if (custom is! String) return null;
-    try {
-      final decoded = jsonDecode(custom);
-      if (decoded is! Map) return null;
-      final value = decoded['bookImage']?.toString();
-      return value == null || value.isEmpty
-          ? null
-          : BookImagePlacement.decode(value);
-    } on FormatException {
-      return null;
-    }
-  }
-
-  static bool _isPageBreak(Map insert) {
-    if (insert['bookPageBreak'] != null) return true;
-    final custom = insert['custom'];
-    if (custom is! String) return false;
-    try {
-      final decoded = jsonDecode(custom);
-      return decoded is Map && decoded['bookPageBreak'] != null;
-    } on FormatException {
-      return false;
-    }
   }
 }
