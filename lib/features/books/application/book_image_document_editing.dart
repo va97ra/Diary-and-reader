@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:dnevnik/features/books/domain/book_image_placement.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 import 'package:flutter/services.dart';
@@ -16,13 +14,11 @@ import 'package:flutter_quill/quill_delta.dart';
 /// builders a detached copy of `custom`-wrapped embeds, so their document
 /// offset would be unknown to the on-page controls.
 abstract final class BookImageDocumentEditing {
-  static const embedType = 'bookImage';
-
   static BlockEmbed _embed(BookImagePlacement placement) =>
-      BlockEmbed(embedType, placement.encode());
+      BlockEmbed(BookImagePlacement.embedType, placement.encode());
 
   static Map<String, dynamic> _embedJson(BookImagePlacement placement) => {
-    embedType: placement.encode(),
+    BookImagePlacement.embedType: placement.encode(),
   };
 
   /// Rewrites legacy `custom`-wrapped illustrations as direct embeds so the
@@ -34,10 +30,11 @@ abstract final class BookImageDocumentEditing {
     return [
       for (final operation in document)
         if (operation['insert'] case final Map insert
-            when insert[embedType] == null && imageData(insert) != null)
+            when insert[BookImagePlacement.embedType] == null &&
+                BookImagePlacement.fromEmbed(insert) != null)
           {
             ...operation,
-            'insert': {embedType: imageData(insert)},
+            'insert': _embedJson(BookImagePlacement.fromEmbed(insert)!),
           }
         else
           operation,
@@ -54,28 +51,11 @@ abstract final class BookImageDocumentEditing {
       final data = operation.data;
       final length = data is String ? data.length : 1;
       if (offset < position + length) {
-        if (data is! Map) return null;
-        final raw = imageData(data);
-        return raw == null ? null : BookImagePlacement.decode(raw);
+        return data is Map ? BookImagePlacement.fromEmbed(data) : null;
       }
       position += length;
     }
     return null;
-  }
-
-  /// Extracts the placement payload from both authored (`bookImage`) and
-  /// legacy (`custom`) embed maps.
-  static String? imageData(Map<dynamic, dynamic> insert) {
-    final direct = insert[embedType]?.toString();
-    if (direct != null && direct.isNotEmpty) return direct;
-    final custom = insert['custom'];
-    if (custom is! String) return null;
-    try {
-      final decoded = jsonDecode(custom);
-      return decoded is Map ? decoded[embedType]?.toString() : null;
-    } on FormatException {
-      return null;
-    }
   }
 
   /// Inserts [placement] on its own line at [requestedOffset] and places the

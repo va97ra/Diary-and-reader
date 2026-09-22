@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:dnevnik/features/books/domain/book_image_placement.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 
@@ -98,7 +96,7 @@ abstract final class BookExportContentParser {
     for (final operation in document) {
       final insert = operation['insert'];
       if (insert is Map) {
-        if (_isPageBreak(insert)) {
+        if (richDocumentIsPageBreak(insert)) {
           if (runs.isNotEmpty) finish(const {});
           blocks.add(
             const BookExportBlock(
@@ -109,7 +107,7 @@ abstract final class BookExportContentParser {
           skipEmbedNewline = true;
           continue;
         }
-        final image = _imagePlacement(insert);
+        final image = BookImagePlacement.fromEmbed(insert);
         if (image != null) {
           if (runs.isNotEmpty) finish(const {});
           blocks.add(
@@ -217,35 +215,4 @@ abstract final class BookExportContentParser {
 
   static int? _integer(Object? value) =>
       value is num ? value.toInt() : int.tryParse(value?.toString() ?? '');
-
-  static BookImagePlacement? _imagePlacement(Map insert) {
-    final direct = insert['bookImage']?.toString();
-    if (direct != null && direct.isNotEmpty) {
-      return BookImagePlacement.decode(direct);
-    }
-    final custom = insert['custom'];
-    if (custom is! String) return null;
-    try {
-      final decoded = jsonDecode(custom);
-      if (decoded is! Map) return null;
-      final value = decoded['bookImage']?.toString();
-      return value == null || value.isEmpty
-          ? null
-          : BookImagePlacement.decode(value);
-    } on FormatException {
-      return null;
-    }
-  }
-
-  static bool _isPageBreak(Map insert) {
-    if (insert['bookPageBreak'] != null) return true;
-    final custom = insert['custom'];
-    if (custom is! String) return false;
-    try {
-      final decoded = jsonDecode(custom);
-      return decoded is Map && decoded['bookPageBreak'] != null;
-    } on FormatException {
-      return false;
-    }
-  }
 }

@@ -1180,9 +1180,7 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
     for (final operation in controller.document.toDelta().toJson()) {
       final insert = operation['insert'];
       if (insert is Map) {
-        final data = BookImageDocumentEditing.imageData(insert);
-        if (data != null &&
-            BookImagePlacement.decode(data).assetId == assetId) {
+        if (BookImagePlacement.fromEmbed(insert)?.assetId == assetId) {
           if (documentOffset == requestedOffset) return documentOffset;
           final distance = (documentOffset - requestedOffset).abs();
           if (distance < nearestDistance) {

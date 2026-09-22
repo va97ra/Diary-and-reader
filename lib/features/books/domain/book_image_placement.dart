@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:dnevnik/features/books/domain/rich_document.dart';
+
 enum BookImageAlignment { left, center, right }
 
 class BookImagePlacement {
@@ -33,6 +35,16 @@ class BookImagePlacement {
       // Legacy embeds stored only the asset id.
     }
     return BookImagePlacement(assetId: data);
+  }
+
+  static const embedType = 'bookImage';
+
+  /// Reads an illustration from a document insert in either embed form.
+  static BookImagePlacement? fromEmbed(Map<dynamic, dynamic> insert) {
+    final data = richDocumentEmbedData(insert, embedType)?.toString();
+    return data == null || data.isEmpty
+        ? null
+        : BookImagePlacement.decode(data);
   }
 
   final String assetId;
