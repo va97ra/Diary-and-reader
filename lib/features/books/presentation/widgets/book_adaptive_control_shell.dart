@@ -354,6 +354,24 @@ class BookPanelAction extends StatelessWidget {
   final bool compact;
   final int compactLabelLines;
 
+  Widget _buildLabel(Color color) {
+    final text = Text(
+      label,
+      maxLines: compact ? compactLabelLines : 2,
+      overflow: TextOverflow.ellipsis,
+      textAlign: TextAlign.center,
+      style: TextStyle(
+        color: color,
+        fontSize: compact ? 9 : 10.5,
+        fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+        height: 1.08,
+      ),
+    );
+    // A single long word would otherwise break mid-word on narrow phones.
+    if (!compact || label.contains(' ')) return text;
+    return FittedBox(fit: BoxFit.scaleDown, child: text);
+  }
+
   @override
   Widget build(BuildContext context) {
     final enabled = onPressed != null;
@@ -392,18 +410,7 @@ class BookPanelAction extends StatelessWidget {
               child: icon,
             ),
             const SizedBox(height: 2),
-            Text(
-              label,
-              maxLines: compact ? compactLabelLines : 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: color,
-                fontSize: compact ? 9 : 10.5,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                height: 1.08,
-              ),
-            ),
+            _buildLabel(color),
           ],
         ),
       ),
