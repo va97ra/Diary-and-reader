@@ -4,6 +4,7 @@ import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_page_format.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/presentation/book_typography.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_image_editing_scope.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_image_embed_builder.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_page_break_embed_builder.dart';
 import 'package:flutter/material.dart';
@@ -49,6 +50,9 @@ class BookPageCanvas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final imageScope = isMeasurement
+        ? null
+        : BookImageEditingScope.maybeOf(context);
     final page = MediaQuery(
       data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
       child: Container(
@@ -124,6 +128,10 @@ class BookPageCanvas extends StatelessWidget {
                           ],
                           scrollable: false,
                           autoFocus: false,
+                          contextMenuBuilder: imageScope?.contextMenuBuilder,
+                          onTapUp: imageScope?.handleEditorTapUp,
+                          contentInsertionConfiguration: imageScope
+                              ?.contentInsertionFor(controller),
                         ),
                       ),
                     ),
