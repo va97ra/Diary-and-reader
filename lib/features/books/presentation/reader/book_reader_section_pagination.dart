@@ -1,5 +1,11 @@
 part of 'book_reader_section_view.dart';
 
+/// Layout time allowed inside a frame when a page must appear right away.
+const _foregroundPaginationBudget = Duration(milliseconds: 12);
+
+/// Layout time per background slice; frames still render between slices.
+const _backgroundPaginationBudget = Duration(milliseconds: 8);
+
 extension _BookReaderPaginationFlow on _BookReaderSectionViewState {
   Widget _buildPagedView(
     BuildContext context,
@@ -12,16 +18,27 @@ extension _BookReaderPaginationFlow on _BookReaderSectionViewState {
           : 'reader-single-page-view',
     ),
     color: widget.palette.background,
-    child: BookReaderPageStage(
-      activePage: _activePage,
-      pageCount: _pages.length,
-      viewMode: mode,
-      pageBuilder: (index) => _buildPage(index, geometry),
-      onSelectPage: _selectPage,
-      onPreviousSection: widget.onPreviousSectionRequested,
-      onNextSection: widget.onNextSectionRequested,
-      isPaginating: false,
-    ),
+    child: _awaitingPage
+        ? Center(
+            child: SizedBox(
+              key: const ValueKey('reader-page-loading'),
+              width: geometry.width,
+              height: geometry.height,
+              child: const Center(
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          )
+        : BookReaderPageStage(
+            activePage: _activePage,
+            pageCount: _pages.length,
+            viewMode: mode,
+            pageBuilder: (index) => _buildPage(index, geometry),
+            onSelectPage: _selectPage,
+            onPreviousSection: widget.onPreviousSectionRequested,
+            onNextSection: widget.onNextSectionRequested,
+            isPaginating: !(_pagination?.isComplete ?? true),
+          ),
   );
 
   Widget _buildPage(int index, _ReaderPageGeometry geometry) =>
@@ -29,7 +46,7 @@ extension _BookReaderPaginationFlow on _BookReaderSectionViewState {
         width: geometry.width,
         height: geometry.height,
         pageNumber: index + 1,
-        pageCount: _pages.length,
+        pageCount: (_pagination?.isComplete ?? false) ? _pages.length : null,
         settings: widget.settings,
         palette: widget.palette,
         layout: _pages[index],
@@ -46,27 +63,69 @@ extension _BookReaderPaginationFlow on _BookReaderSectionViewState {
       );
 
   void _ensurePagination(BuildContext context, _ReaderPageGeometry geometry) {
-    if (_pages.isNotEmpty && _completedGeometry == geometry) {
+    if (_pagination == null || _completedGeometry != geometry) {
+      _pagination = _layoutEngine.paginate(
+        document: _readerDocument,
+        settings: widget.settings,
+        palette: widget.palette,
+        metrics: BookReaderPageMetrics.resolve(
+          width: geometry.width,
+          height: geometry.height,
+          settings: widget.settings,
+        ),
+        locale: Locale(widget.languageCode),
+      );
+      _completedGeometry = geometry;
+      _awaitingPage = true;
+    }
+    if (_awaitingPage) _advanceToPendingPage(_foregroundPaginationBudget);
+    _schedulePaginationSlice();
+  }
+
+  /// Lays out pages up to the reading position and shows it once ready.
+  void _advanceToPendingPage(Duration budget) {
+    final pagination = _pagination;
+    if (pagination == null) return;
+    final clock = Stopwatch()..start();
+    final target = _displayOffsetFor(_pendingProgress);
+    pagination.advance(budget: budget, targetOffset: target);
+    if (!pagination.covers(target)) return;
+    _awaitingPage = false;
+    _selectPageForProgress(_pendingProgress, rebuild: false);
+    // The facing and the next page too, so the first turn is instant.
+    final remaining = budget - clock.elapsed;
+    if (remaining > Duration.zero) {
+      pagination.advance(budget: remaining, minPageCount: _activePage + 3);
+    }
+  }
+
+  void _schedulePaginationSlice() {
+    final pagination = _pagination;
+    if (pagination == null ||
+        pagination.isComplete ||
+        _paginationSliceTimer != null) {
       return;
     }
-    final metrics = BookReaderPageMetrics.resolve(
-      width: geometry.width,
-      height: geometry.height,
-      settings: widget.settings,
-    );
-    _pages = _layoutEngine.paginate(
-      document: _readerDocument,
-      settings: widget.settings,
-      palette: widget.palette,
-      metrics: metrics,
-      locale: Locale(widget.languageCode),
-    );
-    _completedGeometry = geometry;
-    _selectPageForProgress(_pendingProgress, rebuild: false);
+    _paginationSliceTimer = Timer(Duration.zero, () {
+      _paginationSliceTimer = null;
+      if (!mounted || !identical(pagination, _pagination)) return;
+      final wasAwaiting = _awaitingPage;
+      if (wasAwaiting) {
+        _advanceToPendingPage(_backgroundPaginationBudget);
+      } else {
+        pagination.advance(budget: _backgroundPaginationBudget);
+      }
+      // Rebuild only to show the awaited page or the final page count.
+      if (pagination.isComplete || wasAwaiting && !_awaitingPage) {
+        _mutate(() {});
+      }
+      _schedulePaginationSlice();
+    });
   }
 
   void _selectPage(int page) {
     if (page < 0 || page >= _pages.length || page == _activePage) return;
+    widget.onUserNavigation();
     _mutate(() => _activePage = page);
     final totalLength = _displayDocument.originalLength;
     final originalOffset = _displayDocument.displayToOriginal(
@@ -80,10 +139,18 @@ extension _BookReaderPaginationFlow on _BookReaderSectionViewState {
   }
 
   void _selectPageForProgress(double progress, {required bool rebuild}) {
-    if (_pages.isEmpty) return;
-    final targetOriginal =
-        (_displayDocument.originalLength * progress.clamp(0, 1)).round();
-    final targetDisplay = _displayDocument.originalToDisplay(targetOriginal);
+    final pagination = _pagination;
+    if (pagination == null) return;
+    final targetDisplay = _displayOffsetFor(progress);
+    if (!pagination.covers(targetDisplay)) {
+      if (rebuild && mounted) {
+        _mutate(() => _awaitingPage = true);
+      } else {
+        _awaitingPage = true;
+      }
+      _schedulePaginationSlice();
+      return;
+    }
     var targetPage = _pages.length - 1;
     for (var index = 0; index < _pages.length; index++) {
       final nextStart = index + 1 < _pages.length
@@ -102,14 +169,27 @@ extension _BookReaderPaginationFlow on _BookReaderSectionViewState {
     }
   }
 
+  /// Makes sure [page] is laid out; the turn is skipped while it is not.
+  bool _hasPage(int page) {
+    final pagination = _pagination;
+    if (pagination == null) return false;
+    if (page >= pagination.pages.length && !pagination.isComplete) {
+      pagination.advance(
+        budget: _foregroundPaginationBudget,
+        minPageCount: page + 1,
+      );
+    }
+    return page < pagination.pages.length;
+  }
+
   void _invalidatePagination() {
     _completedGeometry = null;
-    _pages = const [];
+    _pagination = null;
+    _awaitingPage = false;
   }
 
   void _clearVisiblePages() {
-    _pages = const [];
-    _completedGeometry = null;
+    _invalidatePagination();
     _activePage = 0;
   }
 }
@@ -151,8 +231,8 @@ class _ReaderPageGeometry {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is _ReaderPageGeometry &&
-          (width - other.width).abs() < 0.5 &&
-          (height - other.height).abs() < 0.5;
+          width.round() == other.width.round() &&
+          height.round() == other.height.round();
 
   @override
   int get hashCode => Object.hash(width.round(), height.round());

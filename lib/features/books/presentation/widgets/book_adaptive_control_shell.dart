@@ -20,6 +20,7 @@ class BookAdaptiveControlShell extends StatelessWidget {
     required this.wideStartPanel,
     required this.wideEndPanel,
     this.panelsVisible = true,
+    this.overlayPanels = false,
     super.key,
   });
 
@@ -30,8 +31,13 @@ class BookAdaptiveControlShell extends StatelessWidget {
   final Widget wideEndPanel;
   final bool panelsVisible;
 
+  /// Lays the panels over the content instead of shrinking it, so showing or
+  /// hiding them never reflows what is underneath. The reader relies on it.
+  final bool overlayPanels;
+
   @override
   Widget build(BuildContext context) {
+    if (overlayPanels) return _buildOverlay(context);
     if (!panelsVisible) return Scaffold(body: content);
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -80,6 +86,158 @@ class BookAdaptiveControlShell extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildOverlay(BuildContext context) => Scaffold(
+    body: LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < bookControlBreakpoint;
+        final panelWidth = constraints.maxWidth >= 1200 ? 176.0 : 128.0;
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: Padding(
+                // Wide screens keep the side gutters free for the panels;
+                // on phones the panels float above the text.
+                padding: EdgeInsets.symmetric(
+                  horizontal: compact ? 0 : panelWidth,
+                ),
+                child: SafeArea(child: content),
+              ),
+            ),
+            if (compact) ...[
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: _RevealedPanel(
+                  visible: panelsVisible,
+                  offset: const Offset(0, -1),
+                  child: BookLeatherPanel(
+                    key: const ValueKey('book-compact-top-panel'),
+                    safeArea: const EdgeInsets.only(top: 1, left: 1, right: 1),
+                    child: compactTopPanel,
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: _RevealedPanel(
+                  visible: panelsVisible,
+                  offset: const Offset(0, 1),
+                  child: BookLeatherPanel(
+                    key: const ValueKey('book-compact-bottom-panel'),
+                    safeArea: const EdgeInsets.only(
+                      bottom: 1,
+                      left: 1,
+                      right: 1,
+                    ),
+                    child: compactBottomPanel,
+                  ),
+                ),
+              ),
+            ] else ...[
+              Positioned(
+                top: 0,
+                bottom: 0,
+                left: 0,
+                width: panelWidth,
+                child: _RevealedPanel(
+                  visible: panelsVisible,
+                  offset: const Offset(-1, 0),
+                  child: BookLeatherPanel(
+                    key: const ValueKey('book-wide-start-panel'),
+                    safeArea: const EdgeInsets.only(top: 1, bottom: 1, left: 1),
+                    child: wideStartPanel,
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 0,
+                bottom: 0,
+                right: 0,
+                width: panelWidth,
+                child: _RevealedPanel(
+                  visible: panelsVisible,
+                  offset: const Offset(1, 0),
+                  child: BookLeatherPanel(
+                    key: const ValueKey('book-wide-end-panel'),
+                    safeArea: const EdgeInsets.only(
+                      top: 1,
+                      right: 1,
+                      bottom: 1,
+                    ),
+                    child: wideEndPanel,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    ),
+  );
+}
+
+/// Slides a panel in and out and leaves the tree once it is hidden, so a
+/// hidden panel neither takes taps nor reaches screen readers.
+class _RevealedPanel extends StatefulWidget {
+  const _RevealedPanel({
+    required this.visible,
+    required this.offset,
+    required this.child,
+  });
+
+  final bool visible;
+
+  /// Direction the panel leaves towards, in fractions of its own size.
+  final Offset offset;
+  final Widget child;
+
+  @override
+  State<_RevealedPanel> createState() => _RevealedPanelState();
+}
+
+class _RevealedPanelState extends State<_RevealedPanel>
+    with SingleTickerProviderStateMixin {
+  static const _duration = Duration(milliseconds: 180);
+
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: _duration,
+    value: widget.visible ? 1 : 0,
+  )..addStatusListener((_) => setState(() {}));
+
+  @override
+  void didUpdateWidget(covariant _RevealedPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.visible == widget.visible) return;
+    if (widget.visible) {
+      _controller.forward();
+    } else {
+      _controller.reverse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.visible && !_controller.isAnimating) {
+      return const SizedBox.shrink();
+    }
+    return SlideTransition(
+      position: Tween(begin: widget.offset, end: Offset.zero).animate(
+        CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+      ),
+      child: FadeTransition(opacity: _controller, child: widget.child),
     );
   }
 }

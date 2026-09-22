@@ -5,6 +5,21 @@ import 'package:dnevnik/features/books/domain/rich_document.dart';
 double bookReadingProgress(
   List<BookSection> sections,
   BookReaderProgress progress,
+) => bookReadingProgressForLengths(
+  sections,
+  bookSectionReadableLengths(sections),
+  progress,
+);
+
+/// Measuring a chapter walks its whole text, so readers that ask for progress
+/// repeatedly measure once and pass the lengths back in.
+List<int> bookSectionReadableLengths(List<BookSection> sections) =>
+    sections.map(_readableLength).toList(growable: false);
+
+double bookReadingProgressForLengths(
+  List<BookSection> sections,
+  List<int> lengths,
+  BookReaderProgress progress,
 ) {
   if (sections.isEmpty) return 0;
 
@@ -12,8 +27,6 @@ double bookReadingProgress(
     (section) => section.id == progress.sectionId,
   );
   if (activeIndex < 0) return 0;
-
-  final lengths = sections.map(_readableLength).toList(growable: false);
   final totalLength = lengths.fold<int>(0, (total, length) => total + length);
   final sectionProgress = progress.sectionProgress.clamp(0, 1).toDouble();
 

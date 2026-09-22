@@ -8,6 +8,9 @@ extension _BookReaderContinuousFlow on _BookReaderSectionViewState {
     palette: widget.palette,
     assets: widget.assets,
     scrollController: _continuousScrollController,
+    controller: _continuousController,
+    initialDisplayOffset: _displayOffsetFor(_pendingProgress),
+    edgeInsets: widget.readingInsets,
     highlights: _renderHighlights,
     selectionGeneration: _selectionGeneration,
     onSelectionChanged: _handleDisplaySelection,
@@ -16,6 +19,7 @@ extension _BookReaderContinuousFlow on _BookReaderSectionViewState {
     onPointerMove: _handleContinuousPointerMove,
     onPointerSignal: _handleContinuousPointerSignal,
     onPointerCancel: (_) => _resetContinuousPointer(),
+    onUserScroll: widget.onUserNavigation,
     speechTargetMode: widget.speechTargetMode,
     speechRange: _renderSpeechRange,
     onSpeechTargetSelected: widget.speechTargetMode
@@ -28,19 +32,40 @@ extension _BookReaderContinuousFlow on _BookReaderSectionViewState {
         _effectiveMode != BookReaderViewMode.continuous) {
       return;
     }
-    final max = _continuousScrollController.position.maxScrollExtent;
-    final next = max <= 0
-        ? 0.0
-        : (_continuousScrollController.offset / max).clamp(0, 1).toDouble();
     _maybeNavigateAtContinuousBoundary();
-    if ((next - _progress).abs() < 0.004) return;
-    _progress = next;
-    _pendingProgress = next;
     _progressTimer?.cancel();
     _progressTimer = Timer(
       const Duration(milliseconds: 350),
-      () => widget.onProgressChanged(_progress),
+      _reportContinuousProgress,
     );
+  }
+
+  /// Progress is the share of the chapter text above the viewport, the same
+  /// measure the paged view uses, so switching modes keeps the place.
+  void _reportContinuousProgress() {
+    if (!mounted ||
+        !_continuousScrollController.hasClients ||
+        _effectiveMode != BookReaderViewMode.continuous) {
+      return;
+    }
+    final position = _continuousScrollController.position;
+    final double next;
+    if (position.extentAfter <= 1 && position.extentBefore > 1) {
+      next = 1;
+    } else {
+      final top = _continuousController.topOffset;
+      if (top == null) return;
+      final total = _displayDocument.originalLength;
+      next = total <= 0
+          ? 0
+          : (_displayDocument.displayToOriginal(top) / total)
+                .clamp(0, 1)
+                .toDouble();
+    }
+    if ((next - _progress).abs() < 0.001) return;
+    _progress = next;
+    _pendingProgress = next;
+    widget.onProgressChanged(next);
   }
 
   void _handleContinuousPointerMove(PointerMoveEvent event) {
@@ -116,15 +141,6 @@ extension _BookReaderContinuousFlow on _BookReaderSectionViewState {
     _continuousBackwardInput = false;
   }
 
-  void _restoreContinuousPosition() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future<void>.delayed(const Duration(milliseconds: 80), () {
-        if (!mounted || !_continuousScrollController.hasClients) return;
-        _continuousScrollController.jumpTo(
-          _pendingProgress *
-              _continuousScrollController.position.maxScrollExtent,
-        );
-      });
-    });
-  }
+  void _restoreContinuousPosition() =>
+      _continuousController.reveal(_displayOffsetFor(_pendingProgress));
 }

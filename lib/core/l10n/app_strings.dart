@@ -472,8 +472,10 @@ class AppStrings {
   String get projectRestoreFailed => _text('projectRestoreFailed');
   String get confirmProjectRestore => _text('confirmProjectRestore');
   String get webVersionLimit => _text('webVersionLimit');
-  String readerPageOf(int current, int count) =>
-      '${_text('readerPage')} $current ${_text('ofPages')} $count';
+
+  /// A null [count] means the rest of the chapter is still being laid out.
+  String readerPageOf(int current, int? count) =>
+      '${_text('readerPage')} $current ${_text('ofPages')} ${count ?? '…'}';
   String sectionOf(int current, int count) =>
       '${_text('section')} $current ${_text('ofPages')} $count';
   String sectionTitle(int number) => '${_text('section')} $number';
