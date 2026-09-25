@@ -5,14 +5,16 @@ import 'package:flutter/widgets.dart';
 class AppStrings {
   const AppStrings._(this._languageCode);
 
+  /// For text shown outside the widget tree, such as the tray menu.
+  factory AppStrings.forLanguage(String languageCode) =>
+      AppStrings._(languageCode == 'en' ? 'en' : 'ru');
+
   final String _languageCode;
 
   static const supportedLocales = [Locale('ru'), Locale('en')];
 
-  static AppStrings of(BuildContext context) {
-    final code = Localizations.localeOf(context).languageCode;
-    return AppStrings._(code == 'en' ? 'en' : 'ru');
-  }
+  static AppStrings of(BuildContext context) =>
+      AppStrings.forLanguage(Localizations.localeOf(context).languageCode);
 
   String _text(String key) => _values[_languageCode]![key]!;
 
@@ -483,6 +485,12 @@ class AppStrings {
   String get textColor => _text('textColor');
   String get noTextColor => _text('noTextColor');
   String textColorName(String id) => _text('textColor_$id');
+
+  String get trayPanel => _text('trayPanel');
+  String get trayWindow => _text('trayWindow');
+  String get trayQuit => _text('trayQuit');
+  String get expandToWindow => _text('expandToWindow');
+  String get hideToTray => _text('hideToTray');
 
   static const _values = <String, Map<String, String>>{
     'ru': appStringValuesRu,

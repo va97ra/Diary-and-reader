@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:dnevnik/app/desktop/literia_desktop_panel_frame.dart';
+import 'package:dnevnik/app/desktop/literia_desktop_shell.dart';
 import 'package:dnevnik/app/literia_home_shell.dart';
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/core/theme/app_theme.dart';
@@ -30,6 +32,7 @@ class AuthorStudioApp extends StatelessWidget {
     this.clipboardImageGateway = const BookClipboardImageService(),
     this.sourceStorage = const EphemeralBookSourceStorage(),
     this.deviceCatalog = const UnsupportedBookDeviceCatalog(),
+    this.desktopShell,
     super.key,
   });
 
@@ -42,6 +45,9 @@ class AuthorStudioApp extends StatelessWidget {
   final BookClipboardImageGateway clipboardImageGateway;
   final BookSourceStorage sourceStorage;
   final BookDeviceCatalogGateway deviceCatalog;
+
+  /// The tray and the panel beside the clock, on Windows only.
+  final LiteriaDesktopShell? desktopShell;
 
   @override
   Widget build(BuildContext context) => _WorkspaceSaveLifecycle(
@@ -66,6 +72,13 @@ class AuthorStudioApp extends StatelessWidget {
         },
         theme: AppTheme.light,
         darkTheme: AppTheme.dark,
+        builder: switch (desktopShell) {
+          final shell? => (context, app) => LiteriaDesktopPanelFrame(
+            shell: shell,
+            child: app ?? const SizedBox.shrink(),
+          ),
+          null => null,
+        },
         home: LiteriaHomeShell(
           controller: controller,
           exportFileSaver: exportFileSaver,

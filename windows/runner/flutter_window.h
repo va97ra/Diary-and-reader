@@ -2,7 +2,9 @@
 #define RUNNER_FLUTTER_WINDOW_H_
 
 #include <flutter/dart_project.h>
+#include <flutter/encodable_value.h>
 #include <flutter/flutter_view_controller.h>
+#include <flutter/method_channel.h>
 
 #include <memory>
 
@@ -12,7 +14,8 @@
 class FlutterWindow : public Win32Window {
  public:
   // Creates a new FlutterWindow hosting a Flutter view running |project|.
-  explicit FlutterWindow(const flutter::DartProject& project);
+  // A window that |start_hidden| waits for Dart to show it.
+  FlutterWindow(const flutter::DartProject& project, bool start_hidden);
   virtual ~FlutterWindow();
 
  protected:
@@ -26,8 +29,15 @@ class FlutterWindow : public Win32Window {
   // The project to run.
   flutter::DartProject project_;
 
+  // Whether the window stays hidden until Dart shows it, as in the tray.
+  bool start_hidden_;
+
   // The Flutter instance hosted by this window.
   std::unique_ptr<flutter::FlutterViewController> flutter_controller_;
+
+  // Passes requests from other processes, such as the installer, to Dart.
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
+      desktop_channel_;
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_

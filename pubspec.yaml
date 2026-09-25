@@ -30,6 +30,9 @@ dependencies:
   url_launcher: ^6.3.2
   image_picker: ^1.2.3
   quill_native_bridge: 11.2.0
+  window_manager: 0.5.2
+  tray_manager: 0.5.3
+  screen_retriever: 0.2.2
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.4
@@ -68,6 +71,7 @@ flutter:
           weight: 700
           style: italic
   assets:
+    - assets/branding/tray_icon.ico
     - assets/home/desk-background.webp
     - assets/home/notebook.webp
     - assets/home/open-book.webp

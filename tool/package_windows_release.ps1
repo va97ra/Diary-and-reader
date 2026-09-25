@@ -1,7 +1,8 @@
 param(
     [string]$Flutter = "flutter",
     [string]$Version,
-    [string]$NuGetUrl = "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe"
+    [string]$NuGetUrl = "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe",
+    [string]$InnoSetupCompiler
 )
 
 $ErrorActionPreference = "Stop"
@@ -22,6 +23,30 @@ $distributionDirectory = Join-Path $projectRoot "dist"
 $packageName = "Literia-$Version-windows-x64"
 $stagingDirectory = Join-Path $distributionDirectory $packageName
 $archivePath = Join-Path $distributionDirectory "$packageName.zip"
+$installerScript = Join-Path $projectRoot "windows\installer\literia.iss"
+$installerName = "$packageName-setup"
+$installerPath = Join-Path $distributionDirectory "$installerName.exe"
+
+function Find-InnoSetupCompiler {
+    if (-not [string]::IsNullOrWhiteSpace($InnoSetupCompiler)) {
+        return $InnoSetupCompiler
+    }
+    $command = Get-Command "ISCC.exe" -ErrorAction SilentlyContinue
+    if ($command) {
+        return $command.Source
+    }
+    $candidates = @(
+        (Join-Path $env:LOCALAPPDATA "Programs\Inno Setup 6\ISCC.exe"),
+        (Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"),
+        (Join-Path $env:ProgramFiles "Inno Setup 6\ISCC.exe")
+    )
+    foreach ($candidate in $candidates) {
+        if (Test-Path -LiteralPath $candidate) {
+            return $candidate
+        }
+    }
+    throw "Inno Setup 6 is required for the installer: https://jrsoftware.org/isdl.php"
+}
 
 function Initialize-NuGet {
     if (Get-Command "nuget" -ErrorAction SilentlyContinue) {
@@ -66,13 +91,26 @@ try {
     if (Test-Path -LiteralPath $archivePath) {
         Remove-Item -Force -LiteralPath $archivePath
     }
+    if (Test-Path -LiteralPath $installerPath) {
+        Remove-Item -Force -LiteralPath $installerPath
+    }
 
     Copy-Item -Recurse -LiteralPath $releaseDirectory -Destination $stagingDirectory
     Compress-Archive -Path (Join-Path $stagingDirectory "*") -DestinationPath $archivePath
 
-    $hash = Get-FileHash -Algorithm SHA256 -LiteralPath $archivePath
-    Write-Output "Windows release package: $archivePath"
-    Write-Output "SHA256: $($hash.Hash)"
+    $compiler = Find-InnoSetupCompiler
+    & $compiler /Q "/DAppVersion=$Version" "/DBuildDir=$releaseDirectory" `
+        "/DOutputDir=$resolvedDistribution" "/DOutputBaseFilename=$installerName" `
+        $installerScript
+    if ($LASTEXITCODE -ne 0) {
+        throw "Inno Setup failed to compile the Windows installer."
+    }
+
+    foreach ($artifact in @($archivePath, $installerPath)) {
+        $hash = Get-FileHash -Algorithm SHA256 -LiteralPath $artifact
+        Write-Output "Windows release file: $artifact"
+        Write-Output "SHA256: $($hash.Hash)"
+    }
 }
 finally {
     Pop-Location

@@ -496,4 +496,9 @@ const appStringValuesRu = <String, String>{
   'textColor_blue': 'Синий',
   'textColor_purple': 'Фиолетовый',
   'textColor_gray': 'Серый',
+  'trayPanel': 'Открыть панель',
+  'trayWindow': 'Открыть окно',
+  'trayQuit': 'Выйти',
+  'expandToWindow': 'Развернуть',
+  'hideToTray': 'Скрыть',
 };

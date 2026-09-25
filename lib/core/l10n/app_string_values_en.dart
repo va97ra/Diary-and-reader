@@ -495,4 +495,9 @@ const appStringValuesEn = <String, String>{
   'textColor_blue': 'Blue',
   'textColor_purple': 'Purple',
   'textColor_gray': 'Gray',
+  'trayPanel': 'Open panel',
+  'trayWindow': 'Open window',
+  'trayQuit': 'Quit',
+  'expandToWindow': 'Expand',
+  'hideToTray': 'Hide',
 };

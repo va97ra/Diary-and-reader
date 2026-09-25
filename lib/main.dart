@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:dnevnik/app/author_studio_app.dart';
+import 'package:dnevnik/app/desktop/literia_desktop_shell.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/data/book_device_catalog_factory.dart';
 import 'package:dnevnik/features/books/data/book_source_storage_factory.dart';
@@ -10,7 +11,7 @@ import 'package:dnevnik/features/books/data/workspace_repository_factory.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Future<void> main() async {
+Future<void> main(List<String> arguments) async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final preferences = await SharedPreferences.getInstance();
@@ -25,12 +26,26 @@ Future<void> main() async {
   final sourceStorage = await createBookSourceStorage();
   final deviceCatalog = createBookDeviceCatalog();
   await controller.compactImportedCatalogs(sourceStorage);
+  final desktopShell = await startLiteriaDesktopShell(
+    arguments: arguments,
+    languageCode: controller.languageCode,
+    beforeQuit: controller.flush,
+  );
+  if (desktopShell != null) {
+    var trayLanguage = controller.languageCode;
+    controller.addListener(() {
+      if (controller.languageCode == trayLanguage) return;
+      trayLanguage = controller.languageCode;
+      unawaited(desktopShell.updateLanguage(trayLanguage));
+    });
+  }
 
   runApp(
     AuthorStudioApp(
       controller: controller,
       sourceStorage: sourceStorage,
       deviceCatalog: deviceCatalog,
+      desktopShell: desktopShell,
     ),
   );
   unawaited(sourceStorage.cleanup(controller.projects));
