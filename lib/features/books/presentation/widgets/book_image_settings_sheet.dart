@@ -113,7 +113,7 @@ class _BookImageSettingsSheetState extends State<BookImageSettingsSheet> {
                       ],
                       selected: {_placement.alignment},
                       onSelectionChanged: (selection) => _updateFromControl(
-                        _placement.copyWith(alignment: selection.first),
+                        _placement.alignedTo(selection.first),
                       ),
                       style: _segmentStyle(),
                     ),
@@ -183,31 +183,30 @@ class _BookImageSettingsSheetState extends State<BookImageSettingsSheet> {
               label: Text(strings.moveImageToCursor),
             ),
             const SizedBox(height: 8),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              childAspectRatio: 3.15,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
+            Row(
               children: [
-                OutlinedButton.icon(
-                  key: const ValueKey('replace-book-image'),
-                  onPressed: _replacing ? null : _replace,
-                  icon: _replacing
-                      ? const SizedBox.square(
-                          dimension: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.swap_horiz, size: 19),
-                  label: Text(strings.replaceImage),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    key: const ValueKey('replace-book-image'),
+                    onPressed: _replacing ? null : _replace,
+                    icon: _replacing
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.swap_horiz, size: 19),
+                    label: Text(strings.replaceImage),
+                  ),
                 ),
-                OutlinedButton.icon(
-                  key: const ValueKey('delete-book-image'),
-                  onPressed: () =>
-                      Navigator.pop(context, BookImageSettingsAction.delete),
-                  icon: const Icon(Icons.delete_outline, size: 19),
-                  label: Text(strings.deleteImage),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    key: const ValueKey('delete-book-image'),
+                    onPressed: () =>
+                        Navigator.pop(context, BookImageSettingsAction.delete),
+                    icon: const Icon(Icons.delete_outline, size: 19),
+                    label: Text(strings.deleteImage),
+                  ),
                 ),
               ],
             ),

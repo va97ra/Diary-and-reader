@@ -155,8 +155,15 @@ class _BookImageEmbedViewState extends State<BookImageEmbedView> {
               },
               child: SizedBox(
                 width: constraints.maxWidth * percent / 100,
+                // A tall picture is narrower than its width when its height
+                // is capped; it still keeps to its side.
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: switch (widget.placement.alignment) {
+                    BookImageAlignment.left => CrossAxisAlignment.start,
+                    BookImageAlignment.center => CrossAxisAlignment.center,
+                    BookImageAlignment.right => CrossAxisAlignment.end,
+                  },
                   children: [
                     if (widget.scope == null)
                       _buildImage()
@@ -166,7 +173,11 @@ class _BookImageEmbedViewState extends State<BookImageEmbedView> {
                       const SizedBox(height: 6),
                       Text(
                         widget.placement.caption,
-                        textAlign: TextAlign.center,
+                        textAlign: switch (widget.placement.alignment) {
+                          BookImageAlignment.left => TextAlign.left,
+                          BookImageAlignment.center => TextAlign.center,
+                          BookImageAlignment.right => TextAlign.right,
+                        },
                         style: widget.textStyle.copyWith(
                           fontSize: widget.textStyle.fontSize == null
                               ? 12
@@ -331,7 +342,7 @@ class _BookImageEmbedViewState extends State<BookImageEmbedView> {
           child: _ImageToolbar(
             placement: widget.placement,
             onAlign: (alignment) =>
-                _apply(widget.placement.copyWith(alignment: alignment)),
+                _apply(widget.placement.alignedTo(alignment)),
             onResize: (percent) =>
                 _apply(widget.placement.copyWith(widthPercent: percent)),
             onOpenSettings: _openSettings,

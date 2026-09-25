@@ -33,7 +33,7 @@ import 'package:dnevnik/features/books/presentation/reader/book_reader_page.dart
 import 'package:dnevnik/features/books/presentation/widgets/book_adaptive_control_shell.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_editor_metrics.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_focus_mode_bar.dart';
-import 'package:dnevnik/features/books/presentation/widgets/book_formatting_toolbar.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_formatting_sheet.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_image_settings_sheet.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_navigator.dart';
@@ -163,16 +163,13 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
                     pageFormat: project.layoutSettings.pageFormat,
                     paragraphSettings: project.paragraphSettings,
                     assets: project.assets,
-                    showToolbar: false,
                     usePagedLayout: isTablet || _isA4Preview,
                     compactA4Preview: !isTablet && _isA4Preview,
                     onExitCompactPreview: _toggleA4Preview,
-                    onInsertImage: _insertImage,
                     onImageTap: _showImageSettings,
                     onPasteImage: _pasteClipboardImageInto,
                     onInsertImageFile: _insertImageFile,
                     clipboardHasImage: widget.clipboardImageGateway.hasImage,
-                    onInsertPageBreak: _insertPageBreak,
                     showPageNavigation: !_isFocusMode,
                     viewMode: project.layoutSettings.viewMode,
                     onMetricsChanged: (metrics) =>
@@ -868,13 +865,10 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
             controller: controller,
             paragraphSettings:
                 widget.controller.activeProject!.paragraphSettings,
+            // The same choice of gallery or clipboard as the Picture button.
             onInsertImage: () {
               Navigator.pop(sheetContext);
-              _insertImage();
-            },
-            onPasteImage: () {
-              Navigator.pop(sheetContext);
-              _pasteClipboardImage();
+              _showAddPicture();
             },
             onInsertPageBreak: () {
               Navigator.pop(sheetContext);

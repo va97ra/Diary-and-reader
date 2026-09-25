@@ -151,6 +151,8 @@ void registerAdaptiveWorkflowScenarios() {
     expect(tester.takeException(), isNull);
     await tester.tap(find.byKey(const ValueKey('insert-book-image-button')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('add-picture-from-device')));
+    await tester.pumpAndSettle();
 
     expect(imageGateway.openCount, 1);
     expect(controller.activeProject!.assets, hasLength(1));
@@ -307,6 +309,8 @@ void registerAdaptiveWorkflowScenarios() {
       await tester.tap(find.byKey(const ValueKey('writer-formatting-action')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('insert-book-image-button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('add-picture-from-device')));
       await tester.pumpAndSettle();
     }
 

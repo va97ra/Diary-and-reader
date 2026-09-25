@@ -1,178 +1,123 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
-import 'package:dnevnik/features/books/presentation/widgets/book_setting_number_field.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_compact_dropdown.dart';
 import 'package:flutter/material.dart';
 
+/// The text settings of the whole manuscript: every value is a compact
+/// drop-down, and the three paragraph spacings share one line.
 class BookParagraphSettingsSection extends StatelessWidget {
-  const BookParagraphSettingsSection({
-    required this.controller,
-    this.showHeading = true,
-    super.key,
-  });
+  const BookParagraphSettingsSection({required this.controller, super.key});
 
   final AuthorWorkspaceController controller;
-  final bool showHeading;
+
+  static const _lineHeights = <double>[1, 1.15, 1.35, 1.5, 2];
+  static const _indentsMm = <double>[0, 5, 7.5, 10, 12.7, 15, 20];
+  static const _spacingsPt = <double>[0, 3, 6, 8, 10, 12, 18, 24];
 
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
     final project = controller.activeProject!;
     final settings = project.paragraphSettings;
+    String points(double value) =>
+        '${bookSettingNumber(value)} ${strings.points}';
+    String millimeters(double value) =>
+        '${bookSettingNumber(value)} ${strings.millimeters}';
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (showHeading) ...[
-          Text(
-            strings.paragraphStyle,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 10),
-        ],
-        Row(
+        _Row(
           children: [
-            Expanded(
-              child: DropdownButtonFormField<BookParagraphPreset>(
-                key: ValueKey(
-                  '${project.id}-paragraph-preset-${settings.preset.name}',
-                ),
-                initialValue: settings.preset,
-                isExpanded: true,
-                decoration: InputDecoration(
-                  labelText: strings.stylePreset,
-                  border: const OutlineInputBorder(),
-                ),
-                items: BookParagraphPreset.values
-                    .map(
-                      (preset) => DropdownMenuItem(
-                        value: preset,
-                        child: Text(
-                          _presetLabel(strings, preset),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (preset) {
-                  if (preset != null) {
-                    controller.updateParagraphSettings(
-                      BookParagraphSettings.forPreset(preset),
-                    );
-                  }
-                },
+            BookCompactDropdown<BookParagraphPreset>(
+              key: ValueKey('${project.id}-paragraph-preset'),
+              label: strings.stylePreset,
+              value: settings.preset,
+              items: {
+                for (final preset in BookParagraphPreset.values)
+                  preset: _presetLabel(strings, preset),
+              },
+              onChanged: (preset) => controller.updateParagraphSettings(
+                BookParagraphSettings.forPreset(preset),
               ),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                key: ValueKey(
-                  '${project.id}-default-font-${settings.fontFamily}',
-                ),
-                initialValue: settings.fontFamily,
-                isExpanded: true,
-                decoration: InputDecoration(
-                  labelText: strings.defaultFont,
-                  border: const OutlineInputBorder(),
-                ),
-                items: bookFontFamilies
-                    .map(
-                      (font) => DropdownMenuItem(
-                        value: font,
-                        child: Text(
-                          font,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontFamily: font),
-                        ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (font) {
-                  if (font != null) {
-                    _update(settings.copyWith(fontFamily: font));
-                  }
-                },
-              ),
+            BookCompactDropdown<String>(
+              key: ValueKey('${project.id}-default-font'),
+              label: strings.defaultFont,
+              value: settings.fontFamily,
+              items: {for (final font in bookFontFamilies) font: font},
+              itemStyle: (font) => TextStyle(fontFamily: font),
+              onChanged: (font) => _update(settings.copyWith(fontFamily: font)),
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        Row(
+        const SizedBox(height: 14),
+        _Row(
           children: [
-            Expanded(
-              child: BookSettingNumberField(
-                key: ValueKey('${project.id}-default-font-size'),
-                label: strings.fontSize,
-                value: settings.fontSizePt,
-                minimum: 8,
-                maximum: 36,
-                suffix: strings.points,
-                onChanged: (value) =>
-                    _update(settings.copyWith(fontSizePt: value)),
+            BookCompactDropdown<double>(
+              key: ValueKey('${project.id}-default-font-size'),
+              label: strings.fontSize,
+              value: settings.fontSizePt,
+              items: bookNumberChoices(
+                bookFontSizesPt,
+                settings.fontSizePt,
+                points,
               ),
+              onChanged: (value) =>
+                  _update(settings.copyWith(fontSizePt: value)),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: BookSettingNumberField(
-                key: ValueKey('${project.id}-paragraph-indent'),
-                label: strings.paragraphIndent,
-                value: settings.paragraphIndentMm,
-                minimum: 0,
-                maximum: 30,
-                suffix: strings.millimeters,
-                onChanged: (value) =>
-                    _update(settings.copyWith(paragraphIndentMm: value)),
+            BookCompactDropdown<double>(
+              key: ValueKey('${project.id}-line-spacing'),
+              label: strings.lineSpacing,
+              value: settings.lineHeight,
+              items: bookNumberChoices(
+                _lineHeights,
+                settings.lineHeight,
+                bookSettingNumber,
               ),
+              onChanged: (value) =>
+                  _update(settings.copyWith(lineHeight: value)),
             ),
           ],
         ),
-        const SizedBox(height: 10),
-        Text(
-          strings.lineSpacing,
-          style: Theme.of(context).textTheme.labelLarge,
-        ),
-        const SizedBox(height: 4),
-        Wrap(
-          spacing: 6,
-          children: [1.0, 1.15, 1.35, 1.5, 2.0]
-              .map(
-                (height) => ChoiceChip(
-                  label: Text(_number(height)),
-                  selected: (settings.lineHeight - height).abs() < 0.01,
-                  onSelected: (_) =>
-                      _update(settings.copyWith(lineHeight: height)),
-                ),
-              )
-              .toList(),
-        ),
-        const SizedBox(height: 8),
-        Row(
+        const SizedBox(height: 14),
+        _Row(
           children: [
-            Expanded(
-              child: BookSettingNumberField(
-                key: ValueKey('${project.id}-spacing-before'),
-                label: strings.spacingBefore,
-                value: settings.spacingBeforePt,
-                minimum: 0,
-                maximum: 72,
-                suffix: strings.points,
-                onChanged: (value) =>
-                    _update(settings.copyWith(spacingBeforePt: value)),
+            BookCompactDropdown<double>(
+              key: ValueKey('${project.id}-paragraph-indent'),
+              label: strings.paragraphIndent,
+              value: settings.paragraphIndentMm,
+              items: bookNumberChoices(
+                _indentsMm,
+                settings.paragraphIndentMm,
+                millimeters,
               ),
+              onChanged: (value) =>
+                  _update(settings.copyWith(paragraphIndentMm: value)),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: BookSettingNumberField(
-                key: ValueKey('${project.id}-spacing-after'),
-                label: strings.spacingAfter,
-                value: settings.spacingAfterPt,
-                minimum: 0,
-                maximum: 72,
-                suffix: strings.points,
-                onChanged: (value) =>
-                    _update(settings.copyWith(spacingAfterPt: value)),
+            BookCompactDropdown<double>(
+              key: ValueKey('${project.id}-spacing-before'),
+              label: strings.spacingBefore,
+              value: settings.spacingBeforePt,
+              items: bookNumberChoices(
+                _spacingsPt,
+                settings.spacingBeforePt,
+                points,
               ),
+              onChanged: (value) =>
+                  _update(settings.copyWith(spacingBeforePt: value)),
+            ),
+            BookCompactDropdown<double>(
+              key: ValueKey('${project.id}-spacing-after'),
+              label: strings.spacingAfter,
+              value: settings.spacingAfterPt,
+              items: bookNumberChoices(
+                _spacingsPt,
+                settings.spacingAfterPt,
+                points,
+              ),
+              onChanged: (value) =>
+                  _update(settings.copyWith(spacingAfterPt: value)),
             ),
           ],
         ),
@@ -190,8 +135,21 @@ class BookParagraphSettingsSection extends StatelessWidget {
         BookParagraphPreset.manuscript => strings.manuscriptStyle,
         BookParagraphPreset.custom => strings.customStyle,
       };
+}
 
-  String _number(double value) => value == value.roundToDouble()
-      ? value.toInt().toString()
-      : value.toStringAsFixed(2).replaceFirst(RegExp(r'0+$'), '');
+/// Settings side by side, equally wide.
+class _Row extends StatelessWidget {
+  const _Row({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      for (final (index, child) in children.indexed) ...[
+        if (index > 0) const SizedBox(width: 8),
+        Expanded(child: child),
+      ],
+    ],
+  );
 }

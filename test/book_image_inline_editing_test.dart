@@ -22,6 +22,7 @@ const _toolbar = ValueKey('image-inline-toolbar');
 
 Future<AuthorWorkspaceController> _projectWithImage({
   BookImageAlignment alignment = BookImageAlignment.center,
+  int widthPercent = 50,
 }) async {
   final controller = AuthorWorkspaceController(
     MemoryAuthorWorkspaceRepository(),
@@ -36,7 +37,7 @@ Future<AuthorWorkspaceController> _projectWithImage({
       'insert': {
         'bookImage': BookImagePlacement(
           assetId: 'image-1',
-          widthPercent: 50,
+          widthPercent: widthPercent,
           alignment: alignment,
         ).encode(),
       },
@@ -107,6 +108,31 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byKey(_toolbar), findsNothing);
+  });
+
+  testWidgets('a full-width picture moves to the side it is aligned to', (
+    tester,
+  ) async {
+    final controller = await _projectWithImage(widthPercent: 100);
+    await _open(tester, controller);
+    await tester.tap(find.byKey(_image));
+    await tester.pumpAndSettle();
+    final page = tester.getRect(find.byKey(_image));
+
+    await tester.tap(find.byKey(const ValueKey('image-align-left')));
+    await tester.pumpAndSettle();
+    expect(_placements(controller).single.alignment, BookImageAlignment.left);
+    expect(_placements(controller).single.widthPercent, 75);
+    final left = tester.getRect(find.byKey(_image));
+    expect(left.left, moreOrLessEquals(page.left));
+    expect(left.width, moreOrLessEquals(page.width * 0.75));
+
+    await tester.tap(find.byKey(const ValueKey('image-align-right')));
+    await tester.pumpAndSettle();
+    expect(
+      tester.getRect(find.byKey(_image)).right,
+      moreOrLessEquals(page.right),
+    );
   });
 
   testWidgets('inline tools align, resize, and delete into the trash', (
@@ -237,9 +263,9 @@ void main() {
     final controller = await _projectWithImage();
     await _open(tester, controller);
 
-    await tester.tap(find.byKey(const ValueKey('writer-formatting-action')));
+    await tester.tap(find.byKey(const ValueKey('writer-picture-action')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('paste-book-image-button')));
+    await tester.tap(find.byKey(const ValueKey('add-picture-from-clipboard')));
     await tester.pumpAndSettle();
 
     expect(_placements(controller), hasLength(1));

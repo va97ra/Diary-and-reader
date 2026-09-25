@@ -99,8 +99,14 @@ abstract final class BookPdfContentRenderer {
         },
         child: pw.SizedBox(
           width: maxImageWidth * block.imageWidthPercent / 100,
+          // A tall picture narrower than its width keeps to its side too.
           child: pw.Column(
             mainAxisSize: pw.MainAxisSize.min,
+            crossAxisAlignment: switch (block.imageAlignment) {
+              BookImageAlignment.left => pw.CrossAxisAlignment.start,
+              BookImageAlignment.center => pw.CrossAxisAlignment.center,
+              BookImageAlignment.right => pw.CrossAxisAlignment.end,
+            },
             children: [
               pw.Image(
                 pw.MemoryImage(asset.bytes),
@@ -111,7 +117,11 @@ abstract final class BookPdfContentRenderer {
                 pw.SizedBox(height: 4),
                 pw.Text(
                   block.imageCaption,
-                  textAlign: pw.TextAlign.center,
+                  textAlign: switch (block.imageAlignment) {
+                    BookImageAlignment.left => pw.TextAlign.left,
+                    BookImageAlignment.center => pw.TextAlign.center,
+                    BookImageAlignment.right => pw.TextAlign.right,
+                  },
                   style: const pw.TextStyle(
                     fontSize: 9,
                     fontStyle: pw.FontStyle.italic,

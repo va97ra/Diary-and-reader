@@ -312,7 +312,10 @@ class _BookReaderImageFragment extends StatelessWidget {
           alignment: alignment,
           child: FractionallySizedBox(
             widthFactor: block.imageWidthPercent.clamp(20, 100) / 100,
+            // Stretched, a tall picture narrower than its box is drawn at the
+            // box's side rather than in its middle.
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(
                   child: asset == null || !asset.isRenderableImage
@@ -326,6 +329,7 @@ class _BookReaderImageFragment extends StatelessWidget {
                           asset.bytes,
                           key: ValueKey('book-image-${asset.id}'),
                           fit: BoxFit.contain,
+                          alignment: alignment,
                           gaplessPlayback: true,
                           cacheWidth: 1200,
                           errorBuilder: (_, _, _) => Center(
@@ -342,7 +346,11 @@ class _BookReaderImageFragment extends StatelessWidget {
                     block.imageCaption,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
+                    textAlign: switch (block.imageAlignment) {
+                      BookImageAlignment.left => TextAlign.left,
+                      BookImageAlignment.center => TextAlign.center,
+                      BookImageAlignment.right => TextAlign.right,
+                    },
                     style: TextStyle(
                       color: palette.mutedInk,
                       fontSize: 12,

@@ -124,6 +124,23 @@ const bookFontFamilies = <String>[
   'Courier New',
 ];
 
+/// Text sizes offered by the formatting controls, in points.
+const bookFontSizesPt = <double>[
+  8,
+  9,
+  10,
+  11,
+  12,
+  14,
+  16,
+  18,
+  20,
+  24,
+  28,
+  32,
+  36,
+];
+
 T _enumValue<T extends Enum>(List<T> values, String? name, T fallback) =>
     values.where((value) => value.name == name).firstOrNull ?? fallback;
 

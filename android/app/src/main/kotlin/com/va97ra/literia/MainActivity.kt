@@ -44,7 +44,7 @@ class MainActivity : AudioServiceActivity() {
                     } else {
                         saveTextFile(
                             fileName = fileName,
-                            mimeType = mimeType ?: "application/octet-stream",
+                            mimeType = mimeType ?: GENERIC_MIME_TYPE,
                             bytes = bytes,
                             result = result,
                         )
@@ -85,7 +85,7 @@ class MainActivity : AudioServiceActivity() {
         if (!clipboard.hasPrimaryClip()) return false
         val description = clipboard.primaryClipDescription ?: return false
         return (0 until description.mimeTypeCount).any {
-            description.getMimeType(it).startsWith("image/")
+            mayBeImage(description.getMimeType(it))
         }
     }
 
@@ -95,11 +95,22 @@ class MainActivity : AudioServiceActivity() {
             result.success(null)
             return
         }
+        val description = clip.description
+        val clipMayBeImage = (0 until description.mimeTypeCount).any {
+            mayBeImage(description.getMimeType(it))
+        }
         val uris = (0 until clip.itemCount).mapNotNull { clip.getItemAt(it).uri }
         runInBackground(result) {
-            val uri = uris.firstOrNull {
-                contentResolver.getType(it)?.startsWith("image/") == true
-            } ?: return@runInBackground null
+            val types = uris.associateWith { contentResolver.getType(it) }
+            // A typed picture first, then a file of no telling type: Chrome
+            // copies a picture from an address without an extension as
+            // application/octet-stream. Dart checks the bytes themselves.
+            val uri = uris.firstOrNull { types[it]?.startsWith("image/") == true }
+                ?: uris.firstOrNull {
+                    val type = types[it]
+                    type == null || mayBeImage(type) || clipMayBeImage
+                }
+                ?: return@runInBackground null
             val bytes = contentResolver.openInputStream(uri)?.use { input ->
                 val output = java.io.ByteArrayOutputStream()
                 val buffer = ByteArray(64 * 1024)
@@ -118,6 +129,9 @@ class MainActivity : AudioServiceActivity() {
             mapOf("name" to displayName(uri).ifBlank { "clipboard-image" }, "bytes" to bytes)
         }
     }
+
+    private fun mayBeImage(mimeType: String): Boolean =
+        mimeType.startsWith("image/") || mimeType == GENERIC_MIME_TYPE
 
     private fun hasDownloadsAccess(): Boolean =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -478,6 +492,7 @@ class MainActivity : AudioServiceActivity() {
         private const val REQUEST_SAVE_FILE = 7014
         private const val MAX_DOCUMENTS = 10_000
         private const val MAX_CLIPBOARD_IMAGE_BYTES = 20L * 1024 * 1024
+        private const val GENERIC_MIME_TYPE = "application/octet-stream"
         private const val STORAGE_ROOT_URI =
             "content://com.android.externalstorage.documents/root/primary"
         private const val DOWNLOADS_URI =

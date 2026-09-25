@@ -11,9 +11,9 @@ import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/manuscript_statistics.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
+import 'package:dnevnik/features/books/presentation/book_paragraph_style_actions.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_editor_metrics.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_editor_page_stage.dart';
-import 'package:dnevnik/features/books/presentation/widgets/book_formatting_toolbar.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_image_editing_scope.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_mobile_editor.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_page_canvas.dart';
@@ -28,12 +28,9 @@ class BookSectionEditor extends StatefulWidget {
     required this.assets,
     required this.onTitleChanged,
     required this.onContentChanged,
-    required this.showToolbar,
     required this.usePagedLayout,
     required this.compactA4Preview,
     required this.onExitCompactPreview,
-    required this.onInsertImage,
-    required this.onInsertPageBreak,
     required this.showPageNavigation,
     required this.viewMode,
     required this.onMetricsChanged,
@@ -52,12 +49,9 @@ class BookSectionEditor extends StatefulWidget {
   final Iterable<BookAsset> assets;
   final ValueChanged<String> onTitleChanged;
   final ValueChanged<RichDocument> onContentChanged;
-  final bool showToolbar;
   final bool usePagedLayout;
   final bool compactA4Preview;
   final VoidCallback onExitCompactPreview;
-  final VoidCallback onInsertImage;
-  final VoidCallback onInsertPageBreak;
   final bool showPageNavigation;
   final BookPageViewMode viewMode;
   final ValueChanged<BookEditorMetrics> onMetricsChanged;
@@ -191,8 +185,10 @@ class BookSectionEditorState extends State<BookSectionEditor> {
       late final QuillController controller;
       controller = QuillController(
         document: Document.fromJson(
-          BookImageDocumentEditing.normalizeEmbeds(document),
-        ),
+          BookParagraphStyleActions.repairQuoteBlocks(
+            BookImageDocumentEditing.normalizeEmbeds(document),
+          ),
+        )..setCustomRules(const [BookQuoteBlockExitRule()]),
         selection: TextSelection.collapsed(
           offset: index == selectionPage
               ? selectionOffset.clamp(0, documentLength - 1)
@@ -524,44 +520,26 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     );
   }
 
-  Widget _buildEditors() {
-    return Column(
-      children: [
-        if (widget.showToolbar)
-          BookFormattingToolbar(
-            controller: controller,
-            paragraphSettings: widget.paragraphSettings,
-            onInsertImage: widget.onInsertImage,
-            onInsertPageBreak: widget.onInsertPageBreak,
-            onPasteImage: widget.onPasteImage == null
-                ? null
-                : () => widget.onPasteImage!(controller),
-          ),
-        Expanded(
-          child: widget.usePagedLayout
-              ? _buildPagedEditorWithMeasurement()
-              : BookMobileEditor(
-                  controller: controller,
-                  focusNode: _focusNodes[_activePage],
-                  scrollController: _scrollControllers[_activePage],
-                  pageNumber: _activePage + 1,
-                  pageCount: _controllers.length,
-                  pageFormat: widget.pageFormat,
-                  paragraphSettings: widget.paragraphSettings,
-                  assets: widget.assets,
-                  onPreviousPage: _activePage > 0
-                      ? () => _selectPage(_activePage - 1)
-                      : null,
-                  onNextPage: _activePage < _controllers.length - 1
-                      ? () => _selectPage(_activePage + 1)
-                      : null,
-                  showPageNavigation: widget.showPageNavigation,
-                  onImageTap: widget.onImageTap,
-                ),
-        ),
-      ],
-    );
-  }
+  Widget _buildEditors() => widget.usePagedLayout
+      ? _buildPagedEditorWithMeasurement()
+      : BookMobileEditor(
+          controller: controller,
+          focusNode: _focusNodes[_activePage],
+          scrollController: _scrollControllers[_activePage],
+          pageNumber: _activePage + 1,
+          pageCount: _controllers.length,
+          pageFormat: widget.pageFormat,
+          paragraphSettings: widget.paragraphSettings,
+          assets: widget.assets,
+          onPreviousPage: _activePage > 0
+              ? () => _selectPage(_activePage - 1)
+              : null,
+          onNextPage: _activePage < _controllers.length - 1
+              ? () => _selectPage(_activePage + 1)
+              : null,
+          showPageNavigation: widget.showPageNavigation,
+          onImageTap: widget.onImageTap,
+        );
 
   void _scheduleMetricsNotification() {
     final metrics = BookEditorMetrics(

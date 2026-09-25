@@ -71,6 +71,18 @@ class BookImagePlacement {
     caption: caption ?? this.caption,
   );
 
+  /// Moves the illustration to a side of the page. A picture as wide as the
+  /// page has nowhere to move, so it narrows to let the move show.
+  BookImagePlacement alignedTo(BookImageAlignment next) => copyWith(
+    alignment: next,
+    widthPercent: next != BookImageAlignment.center && widthPercent == 100
+        ? sideWidthPercent
+        : widthPercent,
+  );
+
+  /// The width a full-width picture takes when moved to a side.
+  static const sideWidthPercent = 75;
+
   static int? _int(Object? value) =>
       value is num ? value.toInt() : int.tryParse(value?.toString() ?? '');
 

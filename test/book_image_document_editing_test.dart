@@ -17,6 +17,19 @@ void main() {
       .toPlainText()
       .replaceAll(Embed.kObjectReplacementCharacter, '[I]');
 
+  test('moving a full-width picture aside narrows it so the move shows', () {
+    final left = image.alignedTo(BookImageAlignment.left);
+    expect(left.alignment, BookImageAlignment.left);
+    expect(left.widthPercent, BookImagePlacement.sideWidthPercent);
+
+    // Back in the middle it keeps the width it has now.
+    expect(left.alignedTo(BookImageAlignment.center).widthPercent, 75);
+    expect(image.alignedTo(BookImageAlignment.center).widthPercent, 100);
+    // A picture that already leaves room keeps its width.
+    final narrow = image.copyWith(widthPercent: 40);
+    expect(narrow.alignedTo(BookImageAlignment.right).widthPercent, 40);
+  });
+
   test('inserts an illustration on its own line in the middle of text', () {
     final controller = controllerFor([
       {'insert': 'Hello\n'},

@@ -40,9 +40,12 @@ abstract final class EpubRichTextRenderer {
             : imageSource?.call(block.assetId!);
         if (source != null) {
           final alignment = switch (block.imageAlignment) {
-            BookImageAlignment.left => 'margin-left:0;margin-right:auto',
-            BookImageAlignment.center => 'margin-left:auto;margin-right:auto',
-            BookImageAlignment.right => 'margin-left:auto;margin-right:0',
+            BookImageAlignment.left =>
+              'margin-left:0;margin-right:auto;text-align:left',
+            BookImageAlignment.center =>
+              'margin-left:auto;margin-right:auto;text-align:center',
+            BookImageAlignment.right =>
+              'margin-left:auto;margin-right:0;text-align:right',
           };
           final caption = block.imageCaption.isEmpty
               ? ''

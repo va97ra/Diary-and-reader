@@ -271,10 +271,13 @@ class AppStrings {
   String get nextPage => _text('nextPage');
   String get paragraphType => _text('paragraphType');
   String get insertIntoText => _text('insertIntoText');
-  String get image => _text('image');
   String get characterFormatting => _text('characterFormatting');
   String get paragraphFormatting => _text('paragraphFormatting');
   String get wholeManuscriptFormatting => _text('wholeManuscriptFormatting');
+  String get wholeBookHint => _text('wholeBookHint');
+  String get formattingHint => _text('formattingHint');
+  String get font => _text('font');
+  String get paragraphSpacing => _text('paragraphSpacing');
   String get bodyText => _text('bodyText');
   String get heading1 => _text('heading1');
   String get heading2 => _text('heading2');
