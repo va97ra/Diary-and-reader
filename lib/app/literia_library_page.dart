@@ -15,6 +15,9 @@ part 'literia_library_items.dart';
 
 enum LiteriaLibraryMode { manuscripts, reading }
 
+/// Room below the last book, so the floating action never covers it.
+const double _floatingActionClearance = 96;
+
 class LiteriaLibraryPage extends StatefulWidget {
   const LiteriaLibraryPage({
     required this.mode,
@@ -88,6 +91,30 @@ class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
         title: Text(
           _writing ? strings.manuscriptLibrary : strings.readingLibrary,
         ),
+        actions: [
+          if (widget.onScanDeviceBooks != null)
+            IconButton(
+              key: const ValueKey('scan-device-books-button'),
+              tooltip: _scanningDeviceBooks
+                  ? strings.scanningBooks
+                  : strings.scanBooks,
+              onPressed: _scanningDeviceBooks ? null : _scanDeviceBooks,
+              icon: _scanningDeviceBooks
+                  ? const SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: BookLeatherColors.accent,
+                      ),
+                    )
+                  : const Icon(Icons.manage_search_outlined),
+            ),
+          const SizedBox(width: 4),
+        ],
+      ),
+      floatingActionButton: _LibraryPrimaryAction(
+        writing: _writing,
+        onPressed: _scanningDeviceBooks ? null : widget.onPrimaryAction,
       ),
       body: LiteriaParchmentBackground(
         child: SafeArea(
@@ -101,40 +128,22 @@ class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
                   safeArea: const EdgeInsets.only(left: 1, right: 1),
                   child: Theme(
                     data: bookLeatherModalTheme(context),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _LibraryControls(
-                          writing: _writing,
-                          filter: _filter,
-                          collectionName: _collectionName,
-                          collections: collections,
-                          showGrid: _showGrid,
-                          sort: _sort,
-                          onSearchChanged: (value) =>
-                              setState(() => _search = value),
-                          onLayoutChanged: () =>
-                              setState(() => _showGrid = !_showGrid),
-                          onSortChanged: (value) =>
-                              setState(() => _sort = value),
-                          onFilterChanged: (value) =>
-                              setState(() => _filter = value),
-                          onCollectionChanged: (value) =>
-                              setState(() => _collectionName = value),
-                        ),
-                        _LibraryPrimaryActions(
-                          writing: _writing,
-                          scanning: _scanningDeviceBooks,
-                          showScanAction: widget.onScanDeviceBooks != null,
-                          onPrimaryAction: _scanningDeviceBooks
-                              ? null
-                              : widget.onPrimaryAction,
-                          onScan: _scanningDeviceBooks
-                              ? null
-                              : _scanDeviceBooks,
-                        ),
-                      ],
+                    child: _LibraryControls(
+                      writing: _writing,
+                      filter: _filter,
+                      collectionName: _collectionName,
+                      collections: collections,
+                      showGrid: _showGrid,
+                      sort: _sort,
+                      onSearchChanged: (value) =>
+                          setState(() => _search = value),
+                      onLayoutChanged: () =>
+                          setState(() => _showGrid = !_showGrid),
+                      onSortChanged: (value) => setState(() => _sort = value),
+                      onFilterChanged: (value) =>
+                          setState(() => _filter = value),
+                      onCollectionChanged: (value) =>
+                          setState(() => _collectionName = value),
                     ),
                   ),
                 ),
@@ -153,7 +162,12 @@ class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
               else if (_showGrid && projects.length == 1)
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                    padding: const EdgeInsets.fromLTRB(
+                      16,
+                      8,
+                      16,
+                      _floatingActionClearance,
+                    ),
                     child: Center(
                       child: ConstrainedBox(
                         constraints: BoxConstraints.tightFor(
@@ -179,7 +193,12 @@ class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
                 )
               else if (_showGrid)
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                  padding: const EdgeInsets.fromLTRB(
+                    16,
+                    8,
+                    16,
+                    _floatingActionClearance,
+                  ),
                   sliver: SliverGrid.builder(
                     gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
                       maxCrossAxisExtent: 230,
@@ -207,7 +226,12 @@ class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
                 ),
               if (projects.isNotEmpty && !_showGrid)
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 28),
+                  padding: const EdgeInsets.fromLTRB(
+                    12,
+                    8,
+                    12,
+                    _floatingActionClearance,
+                  ),
                   sliver: SliverList.separated(
                     itemCount: projects.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 8),

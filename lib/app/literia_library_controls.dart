@@ -1,5 +1,23 @@
 part of 'literia_library_page.dart';
 
+/// A square icon control that lines up with the search bar. An [active] one
+/// is tinted, so a non-default sort or filter stays visible when closed.
+ButtonStyle _libraryIconButtonStyle({bool active = false}) {
+  final color = active
+      ? BookLeatherColors.accent
+      : BookLeatherColors.foreground;
+  return IconButton.styleFrom(
+    fixedSize: const Size.square(44),
+    foregroundColor: color,
+    side: BorderSide(
+      color: active
+          ? BookLeatherColors.accent
+          : BookLeatherColors.stitch.withValues(alpha: 0.55),
+    ),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+  );
+}
+
 class _LibraryControls extends StatelessWidget {
   const _LibraryControls({
     required this.writing,
@@ -31,29 +49,35 @@ class _LibraryControls extends StatelessWidget {
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SearchBar(
-            key: const ValueKey('library-search'),
-            constraints: const BoxConstraints(minHeight: 44),
-            elevation: const WidgetStatePropertyAll(0),
-            hintText: writing
-                ? strings.manuscriptLibrarySearchHint
-                : strings.librarySearchHint,
-            leading: const Icon(Icons.search),
-            onChanged: onSearchChanged,
-          ),
-          const SizedBox(height: 8),
-          _LibraryDisplayControls(
-            writing: writing,
-            showGrid: showGrid,
-            sort: sort,
-            filter: filter,
-            onLayoutChanged: onLayoutChanged,
-            onSortChanged: onSortChanged,
-            onFilterChanged: onFilterChanged,
+          Row(
+            children: [
+              Expanded(
+                child: SearchBar(
+                  key: const ValueKey('library-search'),
+                  constraints: const BoxConstraints(minHeight: 44),
+                  elevation: const WidgetStatePropertyAll(0),
+                  hintText: writing
+                      ? strings.manuscriptLibrarySearchHint
+                      : strings.librarySearchHint,
+                  leading: const Icon(Icons.search),
+                  onChanged: onSearchChanged,
+                ),
+              ),
+              const SizedBox(width: 4),
+              _LibraryDisplayControls(
+                writing: writing,
+                showGrid: showGrid,
+                sort: sort,
+                filter: filter,
+                onLayoutChanged: onLayoutChanged,
+                onSortChanged: onSortChanged,
+                onFilterChanged: onFilterChanged,
+              ),
+            ],
           ),
           if (collections.isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -108,66 +132,54 @@ class _LibraryDisplayControls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
-    final buttonStyle = OutlinedButton.styleFrom(
-      minimumSize: const Size(0, 52),
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
-      textStyle: const TextStyle(fontSize: 10.5, height: 1.08),
-    );
-    final layoutButton = OutlinedButton.icon(
-      key: const ValueKey('library-layout-toggle'),
-      onPressed: onLayoutChanged,
-      style: buttonStyle,
-      icon: Icon(showGrid ? Icons.grid_view : Icons.view_list, size: 17),
-      label: _LibraryControlLabel(
-        showGrid ? strings.gridView : strings.listView,
-      ),
-    );
-    final sortButton = _LibraryMenuButton(
-      key: const ValueKey('library-sort-menu'),
-      style: buttonStyle,
-      icon: const Icon(Icons.sort, size: 17),
-      label: _sortLabel(strings, sort),
-      values: [
-        BookLibrarySort.recentlyUpdated,
-        if (!writing) BookLibrarySort.lastRead,
-        BookLibrarySort.title,
-        BookLibrarySort.author,
-        if (!writing) BookLibrarySort.progress,
-      ],
-      selected: sort,
-      labelOf: (value) => _sortLabel(strings, value),
-      onSelected: onSortChanged,
-    );
-    final filterButton = _LibraryMenuButton(
-      key: const ValueKey('library-filter-menu'),
-      style: buttonStyle,
-      icon: Icon(
-        filter == BookLibraryFilter.all
-            ? Icons.filter_alt_outlined
-            : Icons.filter_alt,
-        size: 17,
-      ),
-      label: strings.filterBooks,
-      values: const [
-        BookLibraryFilter.all,
-        BookLibraryFilter.unread,
-        BookLibraryFilter.inProgress,
-        BookLibraryFilter.finished,
-        BookLibraryFilter.favorites,
-      ],
-      selected: filter,
-      labelOf: (value) => _filterLabel(strings, value),
-      onSelected: onFilterChanged,
-    );
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Expanded(child: layoutButton),
-        const SizedBox(width: 8),
-        Expanded(child: sortButton),
-        if (!writing) ...[
-          const SizedBox(width: 8),
-          Expanded(child: filterButton),
-        ],
+        // Shows the layout a tap switches to.
+        IconButton(
+          key: const ValueKey('library-layout-toggle'),
+          tooltip: showGrid ? strings.listView : strings.gridView,
+          style: _libraryIconButtonStyle(),
+          onPressed: onLayoutChanged,
+          icon: Icon(showGrid ? Icons.view_list : Icons.grid_view),
+        ),
+        _LibraryMenuButton(
+          key: const ValueKey('library-sort-menu'),
+          icon: const Icon(Icons.sort),
+          tooltip: '${strings.sortBy}: ${_sortLabel(strings, sort)}',
+          active: sort != BookLibrarySort.recentlyUpdated,
+          values: [
+            BookLibrarySort.recentlyUpdated,
+            if (!writing) BookLibrarySort.lastRead,
+            BookLibrarySort.title,
+            BookLibrarySort.author,
+            if (!writing) BookLibrarySort.progress,
+          ],
+          selected: sort,
+          labelOf: (value) => _sortLabel(strings, value),
+          onSelected: onSortChanged,
+        ),
+        if (!writing)
+          _LibraryMenuButton(
+            key: const ValueKey('library-filter-menu'),
+            icon: Icon(
+              filter == BookLibraryFilter.all
+                  ? Icons.filter_alt_outlined
+                  : Icons.filter_alt,
+            ),
+            tooltip: '${strings.filterBooks}: ${_filterLabel(strings, filter)}',
+            active: filter != BookLibraryFilter.all,
+            values: const [
+              BookLibraryFilter.all,
+              BookLibraryFilter.unread,
+              BookLibraryFilter.inProgress,
+              BookLibraryFilter.finished,
+              BookLibraryFilter.favorites,
+            ],
+            selected: filter,
+            labelOf: (value) => _filterLabel(strings, value),
+            onSelected: onFilterChanged,
+          ),
       ],
     );
   }
@@ -193,28 +205,13 @@ class _LibraryDisplayControls extends StatelessWidget {
       };
 }
 
-class _LibraryControlLabel extends StatelessWidget {
-  const _LibraryControlLabel(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Text(
-    text,
-    maxLines: 2,
-    softWrap: true,
-    textAlign: TextAlign.center,
-    overflow: TextOverflow.visible,
-  );
-}
-
-/// An outlined control that drops a menu of [values] below itself. The menu
-/// is a route, so the system back gesture closes it and not the library.
+/// An icon control that drops a menu of [values] below itself. The menu is a
+/// route, so the system back gesture closes it and not the library.
 class _LibraryMenuButton<T> extends StatelessWidget {
   const _LibraryMenuButton({
-    required this.style,
     required this.icon,
-    required this.label,
+    required this.tooltip,
+    required this.active,
     required this.values,
     required this.selected,
     required this.labelOf,
@@ -222,9 +219,9 @@ class _LibraryMenuButton<T> extends StatelessWidget {
     super.key,
   });
 
-  final ButtonStyle style;
   final Widget icon;
-  final String label;
+  final String tooltip;
+  final bool active;
   final List<T> values;
   final T selected;
   final String Function(T value) labelOf;
@@ -262,82 +259,34 @@ class _LibraryMenuButton<T> extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => OutlinedButton.icon(
+  Widget build(BuildContext context) => IconButton(
+    tooltip: tooltip,
+    style: _libraryIconButtonStyle(active: active),
     onPressed: () => _openMenu(context),
-    style: style,
     icon: icon,
-    label: _LibraryControlLabel(label),
   );
 }
 
-class _LibraryPrimaryActions extends StatelessWidget {
-  const _LibraryPrimaryActions({
-    required this.writing,
-    required this.scanning,
-    required this.showScanAction,
-    required this.onPrimaryAction,
-    required this.onScan,
-  });
+/// The library's main action, floating above the books.
+class _LibraryPrimaryAction extends StatelessWidget {
+  const _LibraryPrimaryAction({required this.writing, required this.onPressed});
 
   final bool writing;
-  final bool scanning;
-  final bool showScanAction;
-  final VoidCallback? onPrimaryAction;
-  final VoidCallback? onScan;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: writing
-          ? BookPanelAction(
-              key: const ValueKey('create-manuscript-button'),
-              icon: const Icon(Icons.note_add_outlined),
-              label: strings.createBook,
-              selected: true,
-              onPressed: onPrimaryAction,
-            )
-          : SizedBox(
-              height: 64,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: BookPanelAction(
-                      key: const ValueKey('import-book-button'),
-                      icon: const Icon(Icons.download),
-                      label: strings.importBooks,
-                      semanticLabel:
-                          '${strings.importBooks}. '
-                          '${strings.supportedBookFormats}',
-                      selected: true,
-                      onPressed: onPrimaryAction,
-                    ),
-                  ),
-                  if (showScanAction) ...[
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: BookPanelAction(
-                        key: const ValueKey('scan-device-books-button'),
-                        icon: scanning
-                            ? const SizedBox.square(
-                                dimension: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.manage_search_outlined),
-                        label: scanning
-                            ? strings.scanningBooks
-                            : strings.scanBooks,
-                        onPressed: onScan,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
+    return FloatingActionButton.extended(
+      key: ValueKey(
+        writing ? 'create-manuscript-button' : 'import-book-button',
+      ),
+      tooltip: writing ? null : strings.supportedBookFormats,
+      onPressed: onPressed,
+      backgroundColor: BookLeatherColors.accent,
+      foregroundColor: BookLeatherColors.backgroundDark,
+      icon: Icon(writing ? Icons.note_add_outlined : Icons.download),
+      label: Text(writing ? strings.createBook : strings.importBooks),
     );
   }
 }

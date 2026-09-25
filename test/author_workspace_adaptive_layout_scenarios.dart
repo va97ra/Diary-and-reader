@@ -123,18 +123,32 @@ void registerAdaptiveLayoutScenarios() {
     await openLastManuscript(tester, controller);
     expect(find.byKey(const ValueKey('writer-context-bar')), findsOneWidget);
     expect(find.text('Оформление'), findsOneWidget);
-    expect(find.text('Свернуть интерфейс'), findsOneWidget);
-    expect(find.byIcon(Icons.more_horiz), findsNothing);
-    expect(find.text('Другие действия'), findsOneWidget);
+    expect(find.text('Ещё'), findsOneWidget);
+    expect(find.text('Другие действия'), findsNothing);
     expect(find.byKey(const ValueKey('writer-undo-action')), findsNothing);
     expect(find.byKey(const ValueKey('writer-redo-action')), findsNothing);
+    // Collapsing the interface sits in the header, as in the reader.
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('writer-top-panel')),
+        matching: find.byKey(const ValueKey('writer-hide-panels-button')),
+      ),
+      findsOneWidget,
+    );
     final compactActions = [
       find.byKey(const ValueKey('writer-structure-action')),
       find.byKey(const ValueKey('writer-formatting-action')),
-      find.byKey(const ValueKey('writer-hide-panels-button')),
+      find.byKey(const ValueKey('writer-picture-action')),
       find.byKey(const ValueKey('writer-settings-action')),
       find.byKey(const ValueKey('writer-more-menu')),
     ];
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('writer-context-bar')),
+        matching: find.byType(BookPanelAction),
+      ),
+      findsNWidgets(compactActions.length),
+    );
     for (var index = 1; index < compactActions.length; index++) {
       expect(
         tester.getCenter(compactActions[index - 1]).dx,
@@ -152,9 +166,11 @@ void registerAdaptiveLayoutScenarios() {
       find.byKey(const ValueKey('writer-header-metrics')),
     );
     expect(headerMetrics.data, 'Слов: 4 · Страница 1/1');
-    expect(headerMetrics.style?.fontSize, 9.5);
+    expect(headerMetrics.style?.fontSize, 10);
     expect(find.byKey(const ValueKey('writer-save-status')), findsOneWidget);
-    expect(find.text('Сохранено'), findsOneWidget);
+    // The compact status is an icon; its label stays for screen readers.
+    expect(find.text('Сохранено'), findsNothing);
+    expect(find.bySemanticsLabel('Сохранено'), findsOneWidget);
     expect(find.byKey(const ValueKey('writer-app-bar')), findsNothing);
     expect(
       find.byKey(const ValueKey('book-compact-top-panel')),
@@ -211,17 +227,21 @@ void registerAdaptiveLayoutScenarios() {
       const ValueKey('writer-panel-backup'),
       const ValueKey('writer-panel-restore'),
     ];
-    final first = tester.getCenter(find.byKey(toolKeys[0]));
-    final second = tester.getCenter(find.byKey(toolKeys[1]));
-    final third = tester.getCenter(find.byKey(toolKeys[2]));
-    expect(first.dy, second.dy);
-    expect(first.dx, lessThan(second.dx));
-    expect(third.dx, first.dx);
-    expect(third.dy, greaterThan(first.dy));
+    final toolRects = [
+      for (final key in toolKeys) tester.getRect(find.byKey(key)),
+    ];
+    for (var index = 1; index < toolRects.length; index++) {
+      expect(toolRects[index].left, toolRects.first.left);
+      expect(toolRects[index].top, greaterThan(toolRects[index - 1].bottom));
+    }
+    // Versions and backups start a second group.
+    expect(
+      toolRects[4].top - toolRects[3].bottom,
+      greaterThan(toolRects[1].top - toolRects[0].bottom),
+    );
     final surfaceRect = tester.getRect(find.byType(BookLeatherModalSurface));
-    final lastToolRect = tester.getRect(find.byKey(toolKeys.last));
-    expect(surfaceRect.height, lessThan(700));
-    expect(surfaceRect.bottom - lastToolRect.bottom, lessThanOrEqualTo(24));
+    expect(surfaceRect.height, lessThan(560));
+    expect(surfaceRect.bottom - toolRects.last.bottom, lessThanOrEqualTo(24));
     await tester.tap(find.byIcon(Icons.close).last);
     await tester.pumpAndSettle();
 

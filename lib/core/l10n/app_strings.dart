@@ -56,11 +56,8 @@ class AppStrings {
   String get read => _text('read');
   String get readSubtitle => _text('readSubtitle');
   String get settings => _text('settings');
-  String get settingsSubtitle => _text('settingsSubtitle');
   String get continueWriting => _text('continueWriting');
   String get continueReading => _text('continueReading');
-  String get createFirstManuscript => _text('createFirstManuscript');
-  String get importFirstBook => _text('importFirstBook');
   String get manuscriptLibrary => _text('manuscriptLibrary');
   String get readingLibrary => _text('readingLibrary');
   String get createBook => _text('createBook');

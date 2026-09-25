@@ -20,7 +20,10 @@ void main() {
 
     expect(find.byKey(const ValueKey('home-write-tile')), findsOneWidget);
     expect(find.byKey(const ValueKey('home-read-tile')), findsOneWidget);
-    expect(find.byKey(const ValueKey('home-settings-tile')), findsOneWidget);
+    expect(find.byKey(const ValueKey('home-settings-button')), findsOneWidget);
+    // Nothing to continue yet, so no empty "continue" cards.
+    expect(find.text('Продолжить писать'), findsNothing);
+    expect(find.text('Продолжить чтение'), findsNothing);
     expect(find.text('Новая книга'), findsNothing);
     expect(controller.projects, isEmpty);
   });

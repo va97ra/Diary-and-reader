@@ -134,7 +134,7 @@ void main() {
 
     await tester.tap(find.text('Читать').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Сканировать'));
+    await tester.tap(find.byTooltip('Сканировать'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Разрешить доступ'), findsOneWidget);

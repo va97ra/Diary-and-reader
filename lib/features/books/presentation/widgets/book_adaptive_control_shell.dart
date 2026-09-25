@@ -525,7 +525,6 @@ class BookPanelAction extends StatelessWidget {
     this.semanticLabel,
     this.selected = false,
     this.compact = false,
-    this.compactLabelLines = 1,
     super.key,
   });
 
@@ -535,17 +534,16 @@ class BookPanelAction extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool selected;
   final bool compact;
-  final int compactLabelLines;
 
   Widget _buildLabel(Color color) {
     final text = Text(
       label,
-      maxLines: compact ? compactLabelLines : 2,
+      maxLines: compact ? 1 : 2,
       overflow: TextOverflow.ellipsis,
       textAlign: TextAlign.center,
       style: TextStyle(
         color: color,
-        fontSize: compact ? 9 : 10.5,
+        fontSize: 10.5,
         fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
         height: 1.08,
       ),
@@ -669,7 +667,8 @@ class BookPanelTitleAction extends StatelessWidget {
   Widget build(BuildContext context) {
     final titleWidget = Row(
       children: [
-        Expanded(
+        // Flexible keeps the pencil right after the title, not at the edge.
+        Flexible(
           child: Text(
             title,
             maxLines: 1,
@@ -684,10 +683,10 @@ class BookPanelTitleAction extends StatelessWidget {
           ),
         ),
         if (onPressed != null) ...[
-          const SizedBox(width: 3),
+          const SizedBox(width: 5),
           Icon(
             Icons.edit_outlined,
-            size: 12,
+            size: primary ? 14 : 12,
             color: BookLeatherColors.mutedForeground.withValues(alpha: 0.9),
           ),
         ],

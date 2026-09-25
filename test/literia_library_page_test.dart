@@ -116,8 +116,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    // Search and every display control share one slim row.
     final controls = find.byKey(const ValueKey('library-control-panel'));
-    expect(tester.getSize(controls).height, lessThan(320));
+    expect(tester.getSize(controls).height, lessThan(90));
+    expect(
+      tester.getCenter(find.byKey(const ValueKey('library-search'))).dy,
+      tester.getCenter(find.byKey(const ValueKey('library-sort-menu'))).dy,
+    );
     expect(
       tester.getCenter(find.byKey(const ValueKey('library-layout-toggle'))).dy,
       tester.getCenter(find.byKey(const ValueKey('library-sort-menu'))).dy,
@@ -137,7 +142,7 @@ void main() {
     );
     expect(layoutSize, sortSize);
     expect(sortSize, filterSize);
-    expect(find.text('Недавно открытые'), findsOneWidget);
+    expect(find.byTooltip('Сортировка: Недавно открытые'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('library-filter-menu')));
     await tester.pumpAndSettle();
     expect(find.text('Избранное'), findsOneWidget);
@@ -146,11 +151,18 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.filter_alt), findsOneWidget);
+    expect(find.byTooltip('Фильтр: Избранное'), findsOneWidget);
+    // Import floats above the books; scanning sits in the app bar.
     expect(
-      tester.getCenter(find.byKey(const ValueKey('import-book-button'))).dy,
-      tester
-          .getCenter(find.byKey(const ValueKey('scan-device-books-button')))
-          .dy,
+      tester.widget(find.byKey(const ValueKey('import-book-button'))),
+      isA<FloatingActionButton>(),
+    );
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.byKey(const ValueKey('scan-device-books-button')),
+      ),
+      findsOneWidget,
     );
 
     await tester.binding.setSurfaceSize(null);
@@ -238,12 +250,16 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Название рукописи или главы'), findsOneWidget);
+    expect(find.text('Название или глава'), findsOneWidget);
     expect(find.textContaining('Глав: 1'), findsOneWidget);
     expect(find.textContaining('Слов: 0'), findsOneWidget);
     expect(find.textContaining('Изменено:'), findsOneWidget);
-    expect(find.text('Плитки'), findsOneWidget);
-    expect(find.text('Недавно открытые'), findsOneWidget);
+    expect(find.byTooltip('Список'), findsOneWidget);
+    expect(find.byTooltip('Сортировка: Недавно открытые'), findsOneWidget);
+    expect(
+      tester.widget(find.byKey(const ValueKey('create-manuscript-button'))),
+      isA<FloatingActionButton>(),
+    );
     expect(find.byKey(const ValueKey('library-filter-menu')), findsNothing);
     await tester.tap(find.byTooltip('Ещё'));
     await tester.pumpAndSettle();

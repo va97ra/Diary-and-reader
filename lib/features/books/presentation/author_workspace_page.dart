@@ -42,7 +42,7 @@ import 'package:dnevnik/features/books/presentation/widgets/book_rename_title_di
 import 'package:dnevnik/features/books/presentation/widgets/book_save_status.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_section_editor.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_sheet_keyboard_dismiss.dart';
-import 'package:dnevnik/features/books/presentation/widgets/book_workspace_app_bar.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_workspace_action.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -230,30 +230,40 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
                     label: strings.chapterTitle,
                     onPressed: _renameSection,
                   ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          '${strings.words}: ${metrics.words} · '
-                          '${strings.page} ${metrics.activePage}/${metrics.pageCount}',
-                          key: const ValueKey('writer-header-metrics'),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: BookLeatherColors.mutedForeground,
-                            fontSize: 9.5,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            '${strings.words}: ${metrics.words} · '
+                            '${strings.page} ${metrics.activePage}/${metrics.pageCount}',
+                            key: const ValueKey('writer-header-metrics'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: BookLeatherColors.mutedForeground,
+                              fontSize: 10,
+                            ),
                           ),
                         ),
-                      ),
-                      BookSaveStatus(
-                        state: widget.controller.saveState,
-                        compact: true,
-                        onRetry: widget.controller.flush,
-                      ),
-                    ],
+                        const SizedBox(width: 6),
+                        BookSaveStatus(
+                          state: widget.controller.saveState,
+                          compact: true,
+                          onRetry: widget.controller.flush,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
+            ),
+            BookPanelIconAction(
+              key: const ValueKey('writer-hide-panels-button'),
+              icon: Icons.fullscreen,
+              tooltip: strings.focusWriting,
+              onPressed: _toggleFocusMode,
             ),
           ],
         ),
@@ -282,19 +292,12 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
               icon: Icons.text_format,
               label: strings.writerFormatting,
               onPressed: _showFormatting,
-              selected: true,
             ),
             _compactWriterAction(
               key: const ValueKey('writer-picture-action'),
               icon: Icons.add_photo_alternate_outlined,
               label: strings.picture,
               onPressed: _showAddPicture,
-            ),
-            _compactWriterAction(
-              key: const ValueKey('writer-hide-panels-button'),
-              icon: Icons.fullscreen,
-              label: strings.focusWriting,
-              onPressed: _toggleFocusMode,
             ),
             _compactWriterAction(
               key: const ValueKey('writer-settings-action'),
@@ -304,8 +307,9 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
             ),
             _compactWriterAction(
               key: const ValueKey('writer-more-menu'),
-              icon: Icons.grid_view_rounded,
-              label: strings.moreActions,
+              icon: Icons.more_horiz,
+              label: strings.more,
+              semanticLabel: strings.moreActions,
               onPressed: _showWorkspaceTools,
             ),
           ],
@@ -319,7 +323,7 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
     required IconData icon,
     required String label,
     required VoidCallback? onPressed,
-    bool selected = false,
+    String? semanticLabel,
   }) => Expanded(
     child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -327,10 +331,9 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
         key: key,
         icon: Icon(icon),
         label: label,
+        semanticLabel: semanticLabel,
         onPressed: onPressed,
-        selected: selected,
         compact: true,
-        compactLabelLines: 2,
       ),
     ),
   );
@@ -433,7 +436,6 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
           icon: Icons.text_format,
           label: strings.writerFormatting,
           onPressed: _showFormatting,
-          selected: true,
         ),
         _wideWriterAction(
           key: const ValueKey('writer-picture-action'),
@@ -532,30 +534,29 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
               onClose: () => Navigator.of(sheetContext).pop(),
             ),
             Flexible(
-              child: GridView.count(
+              child: ListView.separated(
                 shrinkWrap: true,
-                padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
-                crossAxisCount: 2,
-                childAspectRatio: 1.75,
-                mainAxisSpacing: bookModalGrid,
-                crossAxisSpacing: bookModalGrid,
-                children: [
-                  for (final action in BookWorkspaceAction.values)
-                    Builder(
-                      builder: (_) {
-                        final (icon, label) = _workspaceActionPresentation(
-                          action,
-                        );
-                        return BookPanelAction(
-                          key: ValueKey('writer-panel-${action.name}'),
-                          icon: Icon(icon),
-                          label: label,
-                          onPressed: () =>
-                              Navigator.of(sheetContext).pop(action),
-                        );
-                      },
-                    ),
-                ],
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                itemCount: BookWorkspaceAction.values.length,
+                // Book tools first, then versions and backups.
+                separatorBuilder: (_, index) => SizedBox(
+                  height:
+                      BookWorkspaceAction.values[index] ==
+                          BookWorkspaceAction.preview
+                      ? 2 * bookModalGrid
+                      : 6,
+                ),
+                itemBuilder: (_, index) {
+                  final action = BookWorkspaceAction.values[index];
+                  final (icon, label) = _workspaceActionPresentation(action);
+                  return LiteriaCompactActionTile(
+                    key: ValueKey('writer-panel-${action.name}'),
+                    icon: icon,
+                    title: label,
+                    trailing: null,
+                    onTap: () => Navigator.of(sheetContext).pop(action),
+                  );
+                },
               ),
             ),
           ],

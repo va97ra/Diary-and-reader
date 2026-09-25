@@ -422,13 +422,9 @@ class _BookReaderPageState extends State<BookReaderPage> {
             ),
             _compactReaderAction(
               key: const ValueKey('reader-settings-action'),
-              icon: const Text(
-                'Aa',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-              ),
+              icon: const _TypefaceIcon(),
               label: strings.settings,
               onPressed: () => _showSettings(themedContext),
-              selected: true,
             ),
             _compactReaderAction(
               key: const ValueKey('reader-tts-action'),
@@ -568,13 +564,9 @@ class _BookReaderPageState extends State<BookReaderPage> {
         ),
         _wideReaderAction(
           key: const ValueKey('reader-settings-action'),
-          icon: const Text(
-            'Aa',
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-          ),
+          icon: const _TypefaceIcon(),
           label: strings.settings,
           onPressed: () => _showSettings(themedContext),
-          selected: true,
         ),
         _wideReaderAction(
           key: const ValueKey('reader-tts-action'),
@@ -1303,4 +1295,27 @@ class _BookReaderPageState extends State<BookReaderPage> {
     context: themedContext,
     builder: (_) => BookReaderNoteDialog(initialText: note?.text ?? ''),
   );
+}
+
+/// "Aa" drawn in an icon's box, so its label lines up with the other actions.
+class _TypefaceIcon extends StatelessWidget {
+  const _TypefaceIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = IconTheme.of(context);
+    return SizedBox.square(
+      dimension: icon.size ?? 24,
+      child: FittedBox(
+        child: Text(
+          'Aa',
+          style: TextStyle(
+            color: icon.color,
+            fontWeight: FontWeight.w700,
+            height: 1,
+          ),
+        ),
+      ),
+    );
+  }
 }

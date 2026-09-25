@@ -34,6 +34,9 @@ class BookSaveStatus extends StatelessWidget {
         const Color(0xFFFCA5A5),
       ),
     };
+    final failed = state == WorkspaceSaveState.error;
+    // A compact status is just its icon until saving fails.
+    final showLabel = !compact || failed;
     final status = AnimatedSwitcher(
       duration: const Duration(milliseconds: 160),
       child: FittedBox(
@@ -43,16 +46,17 @@ class BookSaveStatus extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: compact ? 10 : 11, color: color),
-            const SizedBox(width: 3),
-            Text(
-              label,
-              maxLines: 1,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontSize: compact ? 8.5 : 9.5,
-                color: color,
+            Icon(icon, size: compact ? 13 : 11, color: color),
+            if (showLabel) ...[
+              const SizedBox(width: 3),
+              Text(
+                label,
+                maxLines: 1,
+                style: Theme.of(
+                  context,
+                ).textTheme.labelSmall?.copyWith(fontSize: 9.5, color: color),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -60,18 +64,19 @@ class BookSaveStatus extends StatelessWidget {
     return Semantics(
       key: const ValueKey('writer-save-status'),
       liveRegion: true,
-      button: state == WorkspaceSaveState.error,
+      button: failed,
       label: label,
-      child: state == WorkspaceSaveState.error
-          ? Tooltip(
-              message: strings.saveError,
-              child: InkWell(
+      child: Tooltip(
+        message: label,
+        excludeFromSemantics: true,
+        child: failed
+            ? InkWell(
                 borderRadius: BorderRadius.circular(6),
                 onTap: onRetry,
                 child: status,
-              ),
-            )
-          : status,
+              )
+            : status,
+      ),
     );
   }
 }

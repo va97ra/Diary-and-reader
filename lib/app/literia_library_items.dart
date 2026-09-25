@@ -1,5 +1,15 @@
 part of 'literia_library_page.dart';
 
+/// A small dark disc that stays visible on light and dark covers alike.
+final _coverActionStyle = IconButton.styleFrom(
+  fixedSize: const Size.square(34),
+  minimumSize: const Size.square(34),
+  padding: EdgeInsets.zero,
+  iconSize: 20,
+  backgroundColor: const Color(0x99160B07),
+  foregroundColor: BookLeatherColors.foreground,
+);
+
 class _LibraryCard extends StatelessWidget {
   const _LibraryCard({
     required this.project,
@@ -67,23 +77,27 @@ class _LibraryCard extends StatelessWidget {
                           borderRadius: 0,
                         ),
                       Positioned(
-                        top: 8,
-                        left: 8,
-                        child: IconButton.filledTonal(
+                        top: 6,
+                        left: 6,
+                        child: IconButton(
                           tooltip: strings.favoriteBooks,
+                          style: _coverActionStyle,
                           onPressed: onToggleFavorite,
-                          icon: Icon(
-                            project.libraryState.isFavorite
-                                ? Icons.star
-                                : Icons.star_border,
-                          ),
+                          icon: project.libraryState.isFavorite
+                              ? const Icon(
+                                  Icons.star,
+                                  color: BookLeatherColors.accent,
+                                )
+                              : const Icon(Icons.star_border),
                         ),
                       ),
                       Positioned(
-                        top: 8,
-                        right: 8,
+                        top: 6,
+                        right: 6,
                         child: PopupMenuButton<_LibraryCardAction>(
                           tooltip: strings.more,
+                          style: _coverActionStyle,
+                          icon: const Icon(Icons.more_vert),
                           onSelected: (action) {
                             switch (action) {
                               case _LibraryCardAction.collection:
