@@ -8,6 +8,7 @@ import 'package:dnevnik/features/books/presentation/reader/book_reader_progress_
 import 'package:dnevnik/features/books/presentation/widgets/book_adaptive_control_shell.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -273,6 +274,8 @@ void main() {
       ),
       findsOneWidget,
     );
+    // The dark leather panel lies under the status bar.
+    expect(SystemChrome.latestStyle?.statusBarIconBrightness, Brightness.light);
 
     await tester.tap(find.byKey(const ValueKey('reader-hide-panels-button')));
     await tester.pumpAndSettle();
@@ -284,6 +287,8 @@ void main() {
     expect(find.byKey(const ValueKey('reader-next-section')), findsNothing);
     expect(find.byKey(const ValueKey('reader-contents-action')), findsNothing);
     expect(find.byKey(const ValueKey('reader-progress-rail')), findsOneWidget);
+    // Now the light sepia page does.
+    expect(SystemChrome.latestStyle?.statusBarIconBrightness, Brightness.dark);
 
     await tester.tap(find.byKey(const ValueKey('reader-exit-focus-mode')));
     await tester.pumpAndSettle();
@@ -303,10 +308,23 @@ void main() {
       find.descendant(of: contentsTabs, matching: find.text('Закладки')),
       findsOneWidget,
     );
-    expect(
-      find.descendant(of: contentsTabs, matching: find.text('Выделения')),
-      findsOneWidget,
+    final highlightsLabel = find.descendant(
+      of: contentsTabs,
+      matching: find.text('Выделения'),
     );
+    expect(highlightsLabel, findsOneWidget);
+    // The longest label shrinks into its tab instead of being cut off.
+    final label = tester.renderObject<RenderParagraph>(highlightsLabel);
+    expect(
+      label.size.width,
+      greaterThanOrEqualTo(label.getMaxIntrinsicWidth(double.infinity) - 0.5),
+    );
+    final tabRect = tester.getRect(
+      find.ancestor(of: highlightsLabel, matching: find.byType(Tab)),
+    );
+    final labelRect = tester.getRect(highlightsLabel);
+    expect(labelRect.left, greaterThanOrEqualTo(tabRect.left));
+    expect(labelRect.right, lessThanOrEqualTo(tabRect.right));
     expect(
       find.descendant(of: contentsTabs, matching: find.text('Заметки')),
       findsOneWidget,

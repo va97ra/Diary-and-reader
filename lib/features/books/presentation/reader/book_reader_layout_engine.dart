@@ -7,6 +7,14 @@ import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.d
 import 'package:dnevnik/features/books/presentation/reader/book_reader_typography.dart';
 import 'package:flutter/material.dart';
 
+/// Caret width of the selectable reader text.
+const double bookReaderCursorWidth = 2;
+
+/// Room [SelectableText] keeps free at the end of every line for its caret:
+/// the cursor plus a fixed 1 px gap. Pages measure text that much narrower,
+/// so a paragraph never wraps into more lines than its slot on the page holds.
+const double bookReaderCaretReserve = bookReaderCursorWidth + 1;
+
 class BookReaderPageMetrics {
   const BookReaderPageMetrics({
     required this.width,
@@ -246,7 +254,10 @@ class BookReaderPagination {
     final availableWidth = math
         .max(
           24,
-          metrics.contentWidth - typography.leftInset - typography.rightInset,
+          metrics.contentWidth -
+              typography.leftInset -
+              typography.rightInset -
+              bookReaderCaretReserve,
         )
         .toDouble();
     final blockPainter = _textPainter(

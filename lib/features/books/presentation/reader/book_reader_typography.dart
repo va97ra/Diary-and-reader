@@ -111,6 +111,9 @@ abstract final class BookReaderTypography {
         : requestedAlignment;
     return BookReaderBlockTypography(
       textStyle: TextStyle(
+        // Pages are measured without an ambient style, so the rendered text
+        // must not pick up one either, such as the theme's letter spacing.
+        inherit: false,
         color: color,
         fontFamily: family,
         fontSize: size,

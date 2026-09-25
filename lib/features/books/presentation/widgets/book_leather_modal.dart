@@ -278,5 +278,11 @@ ThemeData bookLeatherModalTheme(BuildContext context) {
       ),
     ),
     dividerTheme: DividerThemeData(color: outline, thickness: 1, space: 1),
+    // The scheme has no secondaryContainer, so the default track would take
+    // the accent colour and an empty bar would look full.
+    progressIndicatorTheme: const ProgressIndicatorThemeData(
+      color: BookLeatherColors.accent,
+      linearTrackColor: BookLeatherColors.progressTrack,
+    ),
   );
 }

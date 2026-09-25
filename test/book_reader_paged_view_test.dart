@@ -4,6 +4,7 @@ import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -64,6 +65,50 @@ void main() {
       find.byKey(const ValueKey('reader-continuous-view')),
       findsOneWidget,
     );
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('a page slot holds every line its paragraph renders', (
+    tester,
+  ) async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(),
+    );
+    await controller.load(preferredLanguage: 'ru');
+    // Fifteen glyphs of the test font fill exactly the 300 px left beside
+    // the caret in a 303 px column, so any extra width wraps the second word.
+    controller.updateSectionContent([
+      {'insert': 'aaaaaaa aaaaaaa\n'},
+    ]);
+    controller.updateReaderSettings(
+      const BookReaderSettings(
+        viewMode: BookReaderViewMode.singlePage,
+        fontSize: 20,
+        contentWidth: 303,
+        horizontalPadding: 20,
+      ),
+    );
+
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pumpWidget(AuthorStudioApp(controller: controller));
+    await tester.pumpAndSettle();
+    await openReaderPreview(tester, controller);
+    await _pumpUntil(tester, find.byKey(const ValueKey('reader-page-1')));
+
+    final texts = <RenderEditable>[];
+    void collect(RenderObject node) {
+      if (node is RenderEditable) texts.add(node);
+      node.visitChildren(collect);
+    }
+
+    collect(tester.renderObject(find.byKey(const ValueKey('reader-page-1'))));
+    expect(texts, isNotEmpty);
+    for (final text in texts) {
+      expect(
+        text.getMaxIntrinsicHeight(text.size.width),
+        lessThanOrEqualTo(text.size.height + 0.5),
+      );
+    }
     await tester.binding.setSurfaceSize(null);
   });
 

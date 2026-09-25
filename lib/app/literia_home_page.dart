@@ -4,6 +4,7 @@ import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_adaptive_control_shell.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_cover_view.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class LiteriaHomePage extends StatelessWidget {
   const LiteriaHomePage({
@@ -28,63 +29,68 @@ class LiteriaHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
-    return Scaffold(
-      backgroundColor: const Color(0xFF160B07),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset(
-            'assets/home/desk-background.webp',
-            fit: BoxFit.cover,
-            semanticLabel: '',
-          ),
-          const ColoredBox(color: Color(0x66160B07)),
-          SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) => SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(12, 14, 12, 20),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 920),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _HomeHeader(strings: strings),
-                        const SizedBox(height: 14),
-                        _PrimaryTiles(
-                          availableWidth: constraints.maxWidth - 24,
-                          textScale: MediaQuery.textScalerOf(context).scale(1),
-                          onWrite: onWrite,
-                          onRead: onRead,
-                        ),
-                        const SizedBox(height: 10),
-                        _LiteriaActionTile(
-                          key: const ValueKey('home-settings-tile'),
-                          title: strings.settings,
-                          subtitle: strings.settingsSubtitle,
-                          asset: 'assets/home/organizer.webp',
-                          onTap: onSettings,
-                          horizontal: true,
-                        ),
-                        const SizedBox(height: 14),
-                        _ContinueGrid(
-                          lastManuscript: lastManuscript,
-                          lastReading: lastReading,
-                          onWrite: lastManuscript == null
-                              ? onWrite
-                              : onContinueWriting,
-                          onRead: lastReading == null
-                              ? onRead
-                              : onContinueReading,
-                        ),
-                      ],
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: bookStatusBarStyle(Brightness.dark),
+      child: Scaffold(
+        backgroundColor: const Color(0xFF160B07),
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              'assets/home/desk-background.webp',
+              fit: BoxFit.cover,
+              semanticLabel: '',
+            ),
+            const ColoredBox(color: Color(0x66160B07)),
+            SafeArea(
+              child: LayoutBuilder(
+                builder: (context, constraints) => SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(12, 14, 12, 20),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 920),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _HomeHeader(strings: strings),
+                          const SizedBox(height: 14),
+                          _PrimaryTiles(
+                            availableWidth: constraints.maxWidth - 24,
+                            textScale: MediaQuery.textScalerOf(
+                              context,
+                            ).scale(1),
+                            onWrite: onWrite,
+                            onRead: onRead,
+                          ),
+                          const SizedBox(height: 10),
+                          _LiteriaActionTile(
+                            key: const ValueKey('home-settings-tile'),
+                            title: strings.settings,
+                            subtitle: strings.settingsSubtitle,
+                            asset: 'assets/home/organizer.webp',
+                            onTap: onSettings,
+                            horizontal: true,
+                          ),
+                          const SizedBox(height: 14),
+                          _ContinueGrid(
+                            lastManuscript: lastManuscript,
+                            lastReading: lastReading,
+                            onWrite: lastManuscript == null
+                                ? onWrite
+                                : onContinueWriting,
+                            onRead: lastReading == null
+                                ? onRead
+                                : onContinueReading,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -372,9 +378,7 @@ class _ContinueCard extends StatelessWidget {
                     value: progress,
                     minHeight: 3,
                     color: BookLeatherColors.accent,
-                    backgroundColor: BookLeatherColors.stitch.withValues(
-                      alpha: 0.25,
-                    ),
+                    backgroundColor: BookLeatherColors.progressTrack,
                   ),
                 ],
               ],

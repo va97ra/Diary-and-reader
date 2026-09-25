@@ -71,6 +71,11 @@ class BookReaderNavigationPanel extends StatelessWidget {
                   TabBar(
                     isScrollable: !compact,
                     tabAlignment: compact ? null : TabAlignment.start,
+                    // Four tabs share a phone's width; slim padding leaves
+                    // their labels room.
+                    labelPadding: compact
+                        ? const EdgeInsets.symmetric(horizontal: 4)
+                        : null,
                     labelColor: colors.primary,
                     unselectedLabelColor: colors.onSurfaceVariant,
                     indicatorColor: colors.primary,
@@ -139,9 +144,10 @@ class BookReaderNavigationPanel extends StatelessWidget {
 
 Tab _readerTab(String label, IconData icon, bool compact) => Tab(
   height: compact ? 58 : null,
-  text: label,
   icon: Icon(icon, semanticLabel: label),
   iconMargin: const EdgeInsets.only(bottom: 2),
+  // A long single word shrinks to fit instead of being cut off.
+  child: FittedBox(fit: BoxFit.scaleDown, child: Text(label, maxLines: 1)),
 );
 
 class _BookmarksList extends StatelessWidget {

@@ -244,6 +244,7 @@ class _BookReaderPageState extends State<BookReaderPage> {
                   child: BookAdaptiveControlShell(
                     overlayPanels: true,
                     panelsVisible: !_isFocusMode,
+                    contentBrightness: palette.brightness,
                     compactTopPanel: _buildCompactReaderTop(context),
                     compactBottomPanel: _buildCompactReaderBottom(context),
                     wideStartPanel: _buildWideReaderStart(context),

@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:dnevnik/app/literia_library_page.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
+import 'package:dnevnik/features/books/application/book_library_query.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_adaptive_control_shell.dart';
@@ -58,6 +61,12 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(ValueKey('literia-project-${seed.id}')), findsOneWidget);
+    // An unread book shows an empty track, not a bar filled with the accent.
+    final progressTheme = ProgressIndicatorTheme.of(
+      tester.element(find.byType(LinearProgressIndicator)),
+    );
+    expect(progressTheme.linearTrackColor, isNotNull);
+    expect(progressTheme.linearTrackColor, isNot(progressTheme.color));
     await tester.tap(find.byIcon(Icons.star_border));
     await tester.pump();
     expect(controller.projects.single.libraryState.isFavorite, isTrue);
@@ -132,14 +141,71 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('library-filter-menu')));
     await tester.pumpAndSettle();
     expect(find.text('Избранное'), findsOneWidget);
-    await tester.tap(find.text('Избранное'));
+    await tester.tap(
+      find.widgetWithText(CheckedPopupMenuItem<BookLibraryFilter>, 'Избранное'),
+    );
     await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.filter_alt), findsOneWidget);
     expect(
       tester.getCenter(find.byKey(const ValueKey('import-book-button'))).dy,
       tester
           .getCenter(find.byKey(const ValueKey('scan-device-books-button')))
           .dy,
     );
+
+    await tester.binding.setSurfaceSize(null);
+    controller.dispose();
+  });
+
+  testWidgets('system back closes an open library menu, not the library', (
+    tester,
+  ) async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(seedManuscript: false),
+    );
+    await controller.load(preferredLanguage: 'ru');
+    final navigator = GlobalKey<NavigatorState>();
+
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorKey: navigator,
+        locale: const Locale('ru'),
+        supportedLocales: const [Locale('ru'), Locale('en')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        home: const SizedBox.shrink(),
+      ),
+    );
+    unawaited(
+      navigator.currentState!.push(
+        MaterialPageRoute<void>(
+          builder: (_) => LiteriaLibraryPage(
+            mode: LiteriaLibraryMode.reading,
+            controller: controller,
+            onPrimaryAction: () async {},
+            onOpen: (_) async {},
+            onDelete: (_) async {},
+            onAbout: (_) async {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    const menuItems = {
+      'library-sort-menu': 'По названию',
+      'library-filter-menu': 'Прочитаны',
+    };
+    for (final MapEntry(key: menu, value: item) in menuItems.entries) {
+      await tester.tap(find.byKey(ValueKey(menu)));
+      await tester.pumpAndSettle();
+      expect(find.text(item), findsOneWidget);
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text(item), findsNothing);
+      expect(find.byKey(ValueKey(menu)), findsOneWidget);
+    }
 
     await tester.binding.setSurfaceSize(null);
     controller.dispose();

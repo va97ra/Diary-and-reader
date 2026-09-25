@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 const double bookControlBreakpoint = 700;
 
@@ -10,7 +11,20 @@ abstract final class BookLeatherColors {
   static const accent = Color(0xFFFBBF24);
   static const disabled = Color(0xFF927D6B);
   static const stitch = Color(0xFFB58A5A);
+  static const progressTrack = Color(0x40B58A5A);
 }
+
+/// Status bar icons that stay readable over a [background] of this
+/// brightness. Only the status bar is styled; the navigation bar is left as is.
+SystemUiOverlayStyle bookStatusBarStyle(Brightness background) =>
+    SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: background == Brightness.dark
+          ? Brightness.light
+          : Brightness.dark,
+      // iOS names the brightness of the background instead of the icons.
+      statusBarBrightness: background,
+    );
 
 class BookAdaptiveControlShell extends StatelessWidget {
   const BookAdaptiveControlShell({
@@ -21,6 +35,7 @@ class BookAdaptiveControlShell extends StatelessWidget {
     required this.wideEndPanel,
     this.panelsVisible = true,
     this.overlayPanels = false,
+    this.contentBrightness = Brightness.dark,
     super.key,
   });
 
@@ -35,9 +50,19 @@ class BookAdaptiveControlShell extends StatelessWidget {
   /// hiding them never reflows what is underneath. The reader relies on it.
   final bool overlayPanels;
 
+  /// Brightness of the content under the status bar once the panels are
+  /// hidden. The leather panels themselves are always dark.
+  final Brightness contentBrightness;
+
   @override
-  Widget build(BuildContext context) {
-    if (overlayPanels) return _buildOverlay(context);
+  Widget build(BuildContext context) => AnnotatedRegion<SystemUiOverlayStyle>(
+    value: bookStatusBarStyle(
+      panelsVisible ? Brightness.dark : contentBrightness,
+    ),
+    child: overlayPanels ? _buildOverlay(context) : _buildInline(context),
+  );
+
+  Widget _buildInline(BuildContext context) {
     if (!panelsVisible) return Scaffold(body: content);
     return LayoutBuilder(
       builder: (context, constraints) {

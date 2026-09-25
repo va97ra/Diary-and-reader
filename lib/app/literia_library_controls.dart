@@ -122,66 +122,42 @@ class _LibraryDisplayControls extends StatelessWidget {
         showGrid ? strings.gridView : strings.listView,
       ),
     );
-    final sortButton = MenuAnchor(
-      menuChildren: [
-        MenuItemButton(
-          onPressed: () => onSortChanged(BookLibrarySort.recentlyUpdated),
-          child: Text(strings.recentlyUpdated),
-        ),
-        if (!writing)
-          MenuItemButton(
-            onPressed: () => onSortChanged(BookLibrarySort.lastRead),
-            child: Text(strings.byLastRead),
-          ),
-        MenuItemButton(
-          onPressed: () => onSortChanged(BookLibrarySort.title),
-          child: Text(strings.byTitle),
-        ),
-        MenuItemButton(
-          onPressed: () => onSortChanged(BookLibrarySort.author),
-          child: Text(strings.byAuthor),
-        ),
-        if (!writing)
-          MenuItemButton(
-            onPressed: () => onSortChanged(BookLibrarySort.progress),
-            child: Text(strings.byProgress),
-          ),
+    final sortButton = _LibraryMenuButton(
+      key: const ValueKey('library-sort-menu'),
+      style: buttonStyle,
+      icon: const Icon(Icons.sort, size: 17),
+      label: _sortLabel(strings, sort),
+      values: [
+        BookLibrarySort.recentlyUpdated,
+        if (!writing) BookLibrarySort.lastRead,
+        BookLibrarySort.title,
+        BookLibrarySort.author,
+        if (!writing) BookLibrarySort.progress,
       ],
-      builder: (context, controller, _) => OutlinedButton.icon(
-        key: const ValueKey('library-sort-menu'),
-        onPressed: controller.isOpen ? controller.close : controller.open,
-        style: buttonStyle,
-        icon: const Icon(Icons.sort, size: 17),
-        label: _LibraryControlLabel(_sortLabel(strings, sort)),
-      ),
+      selected: sort,
+      labelOf: (value) => _sortLabel(strings, value),
+      onSelected: onSortChanged,
     );
-    final filterButton = MenuAnchor(
-      menuChildren: [
-        for (final value in const [
-          BookLibraryFilter.all,
-          BookLibraryFilter.unread,
-          BookLibraryFilter.inProgress,
-          BookLibraryFilter.finished,
-          BookLibraryFilter.favorites,
-        ])
-          MenuItemButton(
-            onPressed: () => onFilterChanged(value),
-            leadingIcon: Icon(filter == value ? Icons.check : null, size: 18),
-            child: Text(_filterLabel(strings, value)),
-          ),
-      ],
-      builder: (context, controller, _) => OutlinedButton.icon(
-        key: const ValueKey('library-filter-menu'),
-        onPressed: controller.isOpen ? controller.close : controller.open,
-        style: buttonStyle,
-        icon: Icon(
-          filter == BookLibraryFilter.all
-              ? Icons.filter_alt_outlined
-              : Icons.filter_alt,
-          size: 17,
-        ),
-        label: _LibraryControlLabel(strings.filterBooks),
+    final filterButton = _LibraryMenuButton(
+      key: const ValueKey('library-filter-menu'),
+      style: buttonStyle,
+      icon: Icon(
+        filter == BookLibraryFilter.all
+            ? Icons.filter_alt_outlined
+            : Icons.filter_alt,
+        size: 17,
       ),
+      label: strings.filterBooks,
+      values: const [
+        BookLibraryFilter.all,
+        BookLibraryFilter.unread,
+        BookLibraryFilter.inProgress,
+        BookLibraryFilter.finished,
+        BookLibraryFilter.favorites,
+      ],
+      selected: filter,
+      labelOf: (value) => _filterLabel(strings, value),
+      onSelected: onFilterChanged,
     );
     return Row(
       children: [
@@ -229,6 +205,68 @@ class _LibraryControlLabel extends StatelessWidget {
     softWrap: true,
     textAlign: TextAlign.center,
     overflow: TextOverflow.visible,
+  );
+}
+
+/// An outlined control that drops a menu of [values] below itself. The menu
+/// is a route, so the system back gesture closes it and not the library.
+class _LibraryMenuButton<T> extends StatelessWidget {
+  const _LibraryMenuButton({
+    required this.style,
+    required this.icon,
+    required this.label,
+    required this.values,
+    required this.selected,
+    required this.labelOf,
+    required this.onSelected,
+    super.key,
+  });
+
+  final ButtonStyle style;
+  final Widget icon;
+  final String label;
+  final List<T> values;
+  final T selected;
+  final String Function(T value) labelOf;
+  final ValueChanged<T> onSelected;
+
+  Future<void> _openMenu(BuildContext context) async {
+    final button = context.findRenderObject()! as RenderBox;
+    final overlay =
+        Navigator.of(context).overlay!.context.findRenderObject()! as RenderBox;
+    final value = await showMenu<T>(
+      context: context,
+      position: RelativeRect.fromRect(
+        Rect.fromPoints(
+          button.localToGlobal(
+            button.size.bottomLeft(Offset.zero),
+            ancestor: overlay,
+          ),
+          button.localToGlobal(
+            button.size.bottomRight(Offset.zero),
+            ancestor: overlay,
+          ),
+        ),
+        Offset.zero & overlay.size,
+      ),
+      items: [
+        for (final value in values)
+          CheckedPopupMenuItem(
+            value: value,
+            checked: value == selected,
+            child: Text(labelOf(value)),
+          ),
+      ],
+    );
+    if (value != null) onSelected(value);
+  }
+
+  @override
+  Widget build(BuildContext context) => OutlinedButton.icon(
+    onPressed: () => _openMenu(context),
+    style: style,
+    icon: icon,
+    label: _LibraryControlLabel(label),
   );
 }
 

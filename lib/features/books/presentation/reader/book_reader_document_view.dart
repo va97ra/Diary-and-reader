@@ -231,6 +231,7 @@ class BookReaderTextFragment extends StatelessWidget {
       textAlign: typography.textAlign,
       textDirection: typography.textDirection,
       textScaler: TextScaler.noScaling,
+      cursorWidth: bookReaderCursorWidth,
       enableInteractiveSelection: true,
       onSelectionChanged: (selection, _) => selectRange(selection),
     );
@@ -267,12 +268,16 @@ class _SpeechTargetTextState extends State<_SpeechTargetText> {
             .toInt();
         fragment.selectSpeechOffset(localOffset);
       },
-      child: RichText(
-        key: _textKey,
-        text: fragment.span,
-        textAlign: fragment.typography.textAlign,
-        textDirection: fragment.typography.textDirection,
-        textScaler: TextScaler.noScaling,
+      // Wraps lines exactly like the selectable text it temporarily replaces.
+      child: Padding(
+        padding: const EdgeInsets.only(right: bookReaderCaretReserve),
+        child: RichText(
+          key: _textKey,
+          text: fragment.span,
+          textAlign: fragment.typography.textAlign,
+          textDirection: fragment.typography.textDirection,
+          textScaler: TextScaler.noScaling,
+        ),
       ),
     );
   }
