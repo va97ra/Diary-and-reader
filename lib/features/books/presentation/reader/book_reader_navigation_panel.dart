@@ -144,7 +144,7 @@ class BookReaderNavigationPanel extends StatelessWidget {
 
 Tab _readerTab(String label, IconData icon, bool compact) => Tab(
   height: compact ? 58 : null,
-  icon: Icon(icon, semanticLabel: label),
+  icon: Icon(icon),
   iconMargin: const EdgeInsets.only(bottom: 2),
   // A long single word shrinks to fit instead of being cut off.
   child: FittedBox(fit: BoxFit.scaleDown, child: Text(label, maxLines: 1)),

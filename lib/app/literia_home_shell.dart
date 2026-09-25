@@ -57,7 +57,10 @@ class LiteriaHomeShell extends StatefulWidget {
 
 class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
   bool _isImporting = false;
-  bool _isImportProgressVisible = false;
+
+  /// The progress dialog on screen, closed by identity so that a route
+  /// opened above it in the meantime is never popped in its place.
+  DialogRoute<void>? _importProgressRoute;
 
   @override
   Widget build(BuildContext context) => LiteriaHomePage(
@@ -157,37 +160,45 @@ class _LiteriaHomeShellState extends State<LiteriaHomeShell> {
   }
 
   void _showImportProgress({String? message}) {
-    _isImportProgressVisible = true;
+    _hideImportProgress();
     final strings = AppStrings.of(context);
-    unawaited(
-      showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) => PopScope(
-          canPop: false,
-          child: BookLeatherDialog(
-            title: const SizedBox.shrink(),
-            content: Row(
-              children: [
-                const SizedBox.square(
-                  dimension: 28,
-                  child: CircularProgressIndicator(strokeWidth: 3),
-                ),
-                const SizedBox(width: 20),
-                Expanded(child: Text(message ?? strings.importingBooks)),
-              ],
-            ),
+    final navigator = Navigator.of(context);
+    final route = DialogRoute<void>(
+      context: context,
+      barrierDismissible: false,
+      themes: InheritedTheme.capture(from: context, to: navigator.context),
+      builder: (dialogContext) => PopScope(
+        canPop: false,
+        child: BookLeatherDialog(
+          title: const SizedBox.shrink(),
+          content: Row(
+            children: [
+              const SizedBox.square(
+                dimension: 28,
+                child: CircularProgressIndicator(strokeWidth: 3),
+              ),
+              const SizedBox(width: 20),
+              Expanded(child: Text(message ?? strings.importingBooks)),
+            ],
           ),
         ),
       ),
     );
+    _importProgressRoute = route;
+    unawaited(navigator.push(route));
   }
 
   void _hideImportProgress() {
-    if (!_isImportProgressVisible) return;
-    _isImportProgressVisible = false;
+    final route = _importProgressRoute;
+    if (route == null) return;
+    _importProgressRoute = null;
+    if (!route.isActive) return;
     final navigator = Navigator.of(context);
-    if (navigator.canPop()) navigator.pop();
+    if (route.isCurrent) {
+      navigator.pop();
+    } else {
+      navigator.removeRoute(route);
+    }
   }
 
   Future<BookImportBatchResult> _importFiles(List<BookImportFile> files) async {

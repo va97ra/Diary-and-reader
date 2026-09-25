@@ -410,7 +410,11 @@ class LiteriaLeatherCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = Padding(padding: padding, child: child);
+    // A labelled card speaks its label once instead of repeating its texts.
+    final content = ExcludeSemantics(
+      excluding: semanticLabel != null,
+      child: Padding(padding: padding, child: child),
+    );
     return Semantics(
       button: onTap != null,
       label: semanticLabel,
@@ -469,47 +473,49 @@ class LiteriaCompactActionTile extends StatelessWidget {
               color: BookLeatherColors.stitch.withValues(alpha: 0.38),
             ),
           ),
-          child: Row(
-            children: [
-              Icon(icon, size: 19, color: foreground),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: foreground,
-                        fontWeight: FontWeight.w600,
-                        height: 1.1,
-                      ),
-                    ),
-                    if (subtitle case final value?)
+          child: ExcludeSemantics(
+            child: Row(
+              children: [
+                Icon(icon, size: 19, color: foreground),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        value,
+                        title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: BookLeatherColors.mutedForeground,
-                          fontSize: 11,
-                          height: 1.15,
+                        style: TextStyle(
+                          color: foreground,
+                          fontWeight: FontWeight.w600,
+                          height: 1.1,
                         ),
                       ),
-                  ],
+                      if (subtitle case final value?)
+                        Text(
+                          value,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: BookLeatherColors.mutedForeground,
+                            fontSize: 11,
+                            height: 1.15,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-              if (trailing != null) ...[
-                const SizedBox(width: 6),
-                IconTheme(
-                  data: IconThemeData(size: 18, color: foreground),
-                  child: trailing!,
-                ),
+                if (trailing != null) ...[
+                  const SizedBox(width: 6),
+                  IconTheme(
+                    data: IconThemeData(size: 18, color: foreground),
+                    child: trailing!,
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -582,17 +588,19 @@ class BookPanelAction extends StatelessWidget {
                 : BookLeatherColors.stitch.withValues(alpha: 0.28),
           ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconTheme(
-              data: IconThemeData(size: compact ? 18 : 21, color: color),
-              child: icon,
-            ),
-            const SizedBox(height: 2),
-            _buildLabel(color),
-          ],
+        child: ExcludeSemantics(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconTheme(
+                data: IconThemeData(size: compact ? 18 : 21, color: color),
+                child: icon,
+              ),
+              const SizedBox(height: 2),
+              _buildLabel(color),
+            ],
+          ),
         ),
       ),
     );
@@ -601,7 +609,11 @@ class BookPanelAction extends StatelessWidget {
       enabled: enabled,
       selected: selected,
       label: semanticLabel ?? label,
-      child: Tooltip(message: semanticLabel ?? label, child: action),
+      child: Tooltip(
+        message: semanticLabel ?? label,
+        excludeFromSemantics: true,
+        child: action,
+      ),
     );
   }
 }
@@ -695,6 +707,7 @@ class BookPanelTitleAction extends StatelessWidget {
     if (onPressed == null) return titleWidget;
     return Tooltip(
       message: label,
+      excludeFromSemantics: true,
       child: Semantics(
         button: true,
         label: '$label: $title',
@@ -703,7 +716,7 @@ class BookPanelTitleAction extends StatelessWidget {
           onTap: onPressed,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-            child: titleWidget,
+            child: ExcludeSemantics(child: titleWidget),
           ),
         ),
       ),

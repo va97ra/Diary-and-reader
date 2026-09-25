@@ -1,6 +1,7 @@
 import 'package:dnevnik/features/books/application/book_manuscript_search.dart';
 import 'package:dnevnik/features/books/application/section_tree_editor.dart';
 import 'package:dnevnik/features/books/domain/book_asset.dart';
+import 'package:dnevnik/features/books/domain/book_default_titles.dart';
 import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
@@ -17,7 +18,7 @@ abstract final class ManuscriptProjectEditor {
     required String languageCode,
   }) {
     final section = BookSection.create(
-      title: _defaultSectionTitle(type, languageCode),
+      title: BookDefaultTitles.section(type, languageCode),
       type: type,
       parentId: _parentForNewSection(project, type),
     );
@@ -57,7 +58,7 @@ abstract final class ManuscriptProjectEditor {
     if (sections.isEmpty) {
       sections = [
         BookSection.create(
-          title: languageCode == 'en' ? 'Chapter 1' : 'Глава 1',
+          title: BookDefaultTitles.firstChapter(languageCode),
           type: BookSectionType.chapter,
         ),
       ];
@@ -224,16 +225,6 @@ abstract final class ManuscriptProjectEditor {
       updatedAt: DateTime.now(),
     );
   }
-
-  static String _defaultSectionTitle(
-    BookSectionType type,
-    String languageCode,
-  ) => switch (type) {
-    BookSectionType.part => languageCode == 'en' ? 'New part' : 'Новая часть',
-    BookSectionType.chapter =>
-      languageCode == 'en' ? 'New chapter' : 'Новая глава',
-    BookSectionType.scene => languageCode == 'en' ? 'New scene' : 'Новая сцена',
-  };
 
   static String? _parentForNewSection(
     BookProject project,

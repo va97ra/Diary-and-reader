@@ -347,6 +347,59 @@ void main() {
       );
     });
 
+    test('keeps a link inside the paragraph around it', () {
+      final body = XmlDocument.parse(
+        '<body><div>Read it online at <a href="https://example.org">'
+        'example.org</a><!-- note -->. If you cannot, ask.</div></body>',
+      ).rootElement;
+
+      final content = XmlBookContentConverter.convert(body.children);
+
+      expect(
+        richDocumentPlainText(content),
+        'Read it online at example.org. If you cannot, ask.\n',
+      );
+    });
+
+    test('adds no empty paragraphs for whitespace between blocks', () {
+      final body = XmlDocument.parse(
+        '<body><div class="chapter">\n  <p>One</p>\n  <p>Two</p>\n</div></body>',
+      ).rootElement;
+
+      final content = XmlBookContentConverter.convert(body.children);
+
+      expect(richDocumentPlainText(content), 'One\nTwo\n');
+    });
+
+    test('keeps a heading with a line break in one styled block', () {
+      final body = XmlDocument.parse(
+        '<body><h2><a id="chap01"/>CHAPTER I.<br/>\n'
+        'Down the Rabbit-Hole</h2><p>Alice was tired.</p></body>',
+      ).rootElement;
+
+      final content = XmlBookContentConverter.convert(body.children);
+
+      expect(
+        richDocumentPlainText(content),
+        'CHAPTER I.\u2028Down the Rabbit-Hole\nAlice was tired.\n',
+      );
+      expect(content.firstWhere((operation) => operation['insert'] == '\n'), {
+        'insert': '\n',
+        'attributes': {'header': 2},
+      });
+    });
+
+    test('reads a link wrapped around blocks as those blocks', () {
+      final body = XmlDocument.parse(
+        '<body><a href="https://example.org"><p>First</p><p>Second</p></a>'
+        '</body>',
+      ).rootElement;
+
+      final content = XmlBookContentConverter.convert(body.children);
+
+      expect(richDocumentPlainText(content), 'First\nSecond\n');
+    });
+
     test('keeps imported verse lines compact inside one paragraph', () {
       final body = XmlDocument.parse(
         '<body><div class="poem">Первая строка<br/><span>Вторая строка</span><br/>Третья строка</div></body>',

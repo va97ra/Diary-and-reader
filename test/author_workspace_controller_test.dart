@@ -71,6 +71,48 @@ void main() {
     expect(repository.snapshot!.activeProject!.sections, hasLength(2));
   });
 
+  test('default titles follow the interface language until renamed', () async {
+    final repository = MemoryAuthorWorkspaceRepository(seedManuscript: false);
+    final controller = AuthorWorkspaceController(repository);
+    await controller.load(preferredLanguage: 'en');
+    final untouched = controller.addProject();
+    controller.addSection(BookSectionType.scene);
+    final renamed = controller.addProject();
+    controller
+      ..updateMetadata(renamed.metadata.copyWith(title: 'Untitled Stories'))
+      ..updateSectionTitle('Prologue');
+    BookProject projectOf(BookProject project) =>
+        controller.projects.singleWhere((item) => item.id == project.id);
+    final untouchedUpdatedAt = projectOf(untouched).updatedAt;
+
+    controller.setLanguage('ru');
+
+    expect(projectOf(untouched).metadata.title, 'Новая книга');
+    expect(projectOf(untouched).sections.map((section) => section.title), [
+      'Глава 1',
+      'Новая сцена',
+    ]);
+    expect(projectOf(untouched).updatedAt, untouchedUpdatedAt);
+    expect(projectOf(renamed).metadata.title, 'Untitled Stories');
+    expect(projectOf(renamed).sections.single.title, 'Prologue');
+
+    // A book saved before titles followed the language is renamed on load.
+    final stale = BookProject.create(
+      title: 'Untitled book',
+      chapterTitle: 'Chapter 1',
+      languageCode: 'en',
+    );
+    repository.snapshot = AuthorWorkspaceSnapshot(
+      projects: [stale],
+      activeProjectId: stale.id,
+      languageCode: 'ru',
+    );
+    final reloaded = AuthorWorkspaceController(repository);
+    await reloaded.load(preferredLanguage: 'ru');
+    expect(reloaded.projects.single.metadata.title, 'Новая книга');
+    expect(reloaded.projects.single.sections.single.title, 'Глава 1');
+  });
+
   test('persists the selected page orientation with the book', () async {
     final repository = MemoryAuthorWorkspaceRepository();
     final controller = AuthorWorkspaceController(repository);

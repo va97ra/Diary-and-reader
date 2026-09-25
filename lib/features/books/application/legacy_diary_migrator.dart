@@ -1,4 +1,5 @@
 import 'package:dnevnik/features/books/domain/author_workspace_snapshot.dart';
+import 'package:dnevnik/features/books/domain/book_default_titles.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
@@ -27,7 +28,7 @@ class LegacyDiaryMigrator {
       sections.add(
         BookSection.create(
           id: 'legacy-chapter-1',
-          title: snapshot.languageCode == 'en' ? 'Chapter 1' : 'Глава 1',
+          title: BookDefaultTitles.firstChapter(snapshot.languageCode),
           type: BookSectionType.chapter,
           now: now,
         ),

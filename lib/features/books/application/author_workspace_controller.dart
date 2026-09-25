@@ -13,6 +13,7 @@ import 'package:dnevnik/features/books/application/workspace_version_coordinator
 import 'package:dnevnik/features/books/domain/author_workspace_repository.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_snapshot.dart';
 import 'package:dnevnik/features/books/domain/book_asset.dart';
+import 'package:dnevnik/features/books/domain/book_default_titles.dart';
 import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
 import 'package:dnevnik/features/books/domain/book_library_state.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
@@ -96,6 +97,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
     _languageCode = snapshot.languageCode;
     _activeProjectId = snapshot.activeProjectId;
     _appPreferences = snapshot.appPreferences;
+    if (_localizeDefaultTitles()) _markDirty();
   }
 
   Future<void> compactImportedCatalogs(BookSourceStorage sourceStorage) async {
@@ -676,7 +678,22 @@ class AuthorWorkspaceController extends ChangeNotifier {
 
   void setLanguage(String languageCode) {
     _languageCode = languageCode == 'en' ? 'en' : 'ru';
+    _localizeDefaultTitles();
     _changed();
+  }
+
+  /// Renames untouched default titles into the interface language; reports
+  /// whether any changed.
+  bool _localizeDefaultTitles() {
+    var changed = false;
+    for (var index = 0; index < _projects.length; index++) {
+      final project = _projects[index];
+      final localized = BookDefaultTitles.localize(project, _languageCode);
+      if (identical(localized, project)) continue;
+      _projects[index] = localized;
+      changed = true;
+    }
+    return changed;
   }
 
   void setThemePreference(LiteriaThemePreference preference) {
@@ -769,8 +786,8 @@ class AuthorWorkspaceController extends ChangeNotifier {
   }
 
   BookProject _newProject() => BookProject.create(
-    title: _languageCode == 'en' ? 'Untitled book' : 'Новая книга',
-    chapterTitle: _languageCode == 'en' ? 'Chapter 1' : 'Глава 1',
+    title: BookDefaultTitles.book(_languageCode),
+    chapterTitle: BookDefaultTitles.firstChapter(_languageCode),
     languageCode: _languageCode,
   ).copyWith(readerSettings: _appPreferences.readerSettings);
 

@@ -112,6 +112,68 @@ void main() {
     controller.dispose();
   });
 
+  testWidgets('closes only its own progress dialog when an import ends', (
+    tester,
+  ) async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(seedManuscript: false),
+    );
+    await controller.load(preferredLanguage: 'ru');
+    controller.markOnboardingSeen();
+    final file = BookImportFile(
+      name: 'sample.fb2',
+      bytes: File('test/fixtures/import_sample.fb2').readAsBytesSync(),
+    );
+    final storage = _DeferredBookSourceStorage();
+    final navigator = GlobalKey<NavigatorState>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorKey: navigator,
+        locale: const Locale('ru'),
+        supportedLocales: const [Locale('ru'), Locale('en')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        home: LiteriaHomeShell(
+          controller: controller,
+          importFileGateway: _SingleBookGateway(file),
+          sourceStorage: storage,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Читать').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Загрузить книги'));
+    await tester.pump();
+    await pumpUntilCondition(tester, () => storage.storeStarted);
+    unawaited(
+      navigator.currentState!.push(
+        MaterialPageRoute<void>(
+          builder: (_) => const Scaffold(body: Text('Экран поверх')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    storage.complete();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('Экран поверх'), findsOneWidget);
+    // The dialog sat below that screen, so look past what is visible.
+    expect(
+      find.text(
+        'Книга обрабатывается и добавляется в библиотеку…',
+        skipOffstage: false,
+      ),
+      findsNothing,
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    controller.dispose();
+  });
+
   testWidgets('starts scanning without opening a folder picker after access', (
     tester,
   ) async {

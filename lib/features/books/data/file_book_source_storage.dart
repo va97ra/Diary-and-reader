@@ -6,7 +6,7 @@ import 'package:dnevnik/features/books/application/book_import_file.dart';
 import 'package:dnevnik/features/books/application/book_source_storage.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 
-const _processedCacheVersion = 3;
+const _processedCacheVersion = 4;
 
 class FileBookSourceStorage
     implements BookSourceStorage, BookReadingCacheStorage {

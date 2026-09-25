@@ -312,7 +312,8 @@ class EpubBookFormatParser implements BookFormatParser {
         paragraphText = '';
         continue;
       }
-      paragraphText += insert.replaceAll('\n', ' ');
+      // A heading may break its line; its chapter title stays on one.
+      paragraphText += insert.replaceAll('\n', ' ').replaceAll('\u2028', ' ');
       if (insert.contains('\n')) {
         paragraphStart = index + 1;
         paragraphText = '';
