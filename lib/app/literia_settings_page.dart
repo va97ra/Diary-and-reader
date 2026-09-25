@@ -136,7 +136,7 @@ class LiteriaSettingsPage extends StatelessWidget {
                 title: strings.about,
                 icon: Icons.info_outline,
                 child: const Text(
-                  'Литерия 1.0.2',
+                  'Литерия 1.0.3',
                   style: TextStyle(color: BookLeatherColors.mutedForeground),
                 ),
               ),
