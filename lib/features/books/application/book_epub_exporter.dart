@@ -255,6 +255,8 @@ a { color: inherit; }
 .title-page .description { margin-top: 4em; text-align: left; text-indent: 0; }
 .align-center, .scene-break { text-align: center; text-indent: 0; }
 .align-right, .epigraph { text-align: right; }
+.poem { margin: 1em 1.5em; font-style: italic; }
+.poem p { margin: 0; text-indent: 0; }
 .align-justify { text-align: justify; }
 .check { font-family: sans-serif; }
 .book-image { margin: 1.2em 0; text-align: center; }

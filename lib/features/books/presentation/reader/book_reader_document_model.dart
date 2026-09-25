@@ -7,6 +7,7 @@ enum BookReaderBlockType {
   heading2,
   heading3,
   quote,
+  verse,
   code,
   orderedListItem,
   bulletListItem,
@@ -70,6 +71,8 @@ class BookReaderBlock {
     this.imageWidthPercent = 100,
     this.imageCaption = '',
     this.listOrdinal,
+    this.joinsPrevious = false,
+    this.joinsNext = false,
   });
 
   final BookReaderBlockType type;
@@ -86,7 +89,32 @@ class BookReaderBlock {
   final String imageCaption;
   final int? listOrdinal;
 
+  /// A verse line with another verse line before it, in the same poem.
+  final bool joinsPrevious;
+
+  /// A verse line with another verse line after it, in the same poem.
+  final bool joinsNext;
+
   String get text => runs.map((run) => run.text).join();
+
+  BookReaderBlock _joined({required bool previous, required bool next}) =>
+      BookReaderBlock(
+        type: type,
+        runs: runs,
+        sourceStart: sourceStart,
+        sourceEnd: sourceEnd,
+        alignment: alignment,
+        indent: indent,
+        lineHeight: lineHeight,
+        rightToLeft: rightToLeft,
+        assetId: assetId,
+        imageAlignment: imageAlignment,
+        imageWidthPercent: imageWidthPercent,
+        imageCaption: imageCaption,
+        listOrdinal: listOrdinal,
+        joinsPrevious: previous,
+        joinsNext: next,
+      );
 
   bool get isText => switch (type) {
     BookReaderBlockType.image ||
@@ -192,6 +220,7 @@ abstract final class BookReaderDocumentParser {
         ),
       );
     }
+    _joinVerseLines(blocks);
     return BookReaderDocumentModel(
       blocks: List.unmodifiable(blocks),
       plainText: richDocumentPlainText(document),
@@ -255,6 +284,22 @@ abstract final class BookReaderDocumentParser {
     );
   }
 
+  /// Marks the lines of each poem, so they are laid out without the spacing
+  /// that separates paragraphs.
+  static void _joinVerseLines(List<BookReaderBlock> blocks) {
+    bool isVerse(int index) =>
+        index >= 0 &&
+        index < blocks.length &&
+        blocks[index].type == BookReaderBlockType.verse;
+    for (var index = 0; index < blocks.length; index++) {
+      if (!isVerse(index)) continue;
+      blocks[index] = blocks[index]._joined(
+        previous: isVerse(index - 1),
+        next: isVerse(index + 1),
+      );
+    }
+  }
+
   static BookReaderBlockType _blockType(Map<String, dynamic> attributes) {
     final list = attributes['list']?.toString();
     final header = _integer(attributes['header']);
@@ -266,6 +311,8 @@ abstract final class BookReaderDocumentParser {
       _ when header == 1 => BookReaderBlockType.heading1,
       _ when header == 2 => BookReaderBlockType.heading2,
       _ when header == 3 => BookReaderBlockType.heading3,
+      _ when attributes['bookParagraphStyle'] == 'verse' =>
+        BookReaderBlockType.verse,
       _ when attributes['blockquote'] == true => BookReaderBlockType.quote,
       _ when attributes['code-block'] == true => BookReaderBlockType.code,
       _ => BookReaderBlockType.paragraph,

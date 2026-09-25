@@ -31,6 +31,7 @@ class BookExportTextRun {
     this.link,
     this.fontFamily,
     this.fontSizePt,
+    this.colorHex,
   });
 
   final String text;
@@ -44,6 +45,9 @@ class BookExportTextRun {
   final String? link;
   final String? fontFamily;
   final double? fontSizePt;
+
+  /// Text colour as six hexadecimal digits, such as `C62828`.
+  final String? colorHex;
 }
 
 class BookExportBlock {
@@ -72,6 +76,9 @@ class BookExportBlock {
   final BookImageAlignment imageAlignment;
   final int imageWidthPercent;
   final String imageCaption;
+
+  /// A line of a poem; consecutive lines form a stanza, an empty line ends it.
+  bool get isVerse => semanticStyle == 'verse';
 
   bool get isListItem => switch (type) {
     BookExportBlockType.orderedListItem ||
@@ -152,6 +159,7 @@ abstract final class BookExportContentParser {
     final link = attributes['link']?.toString().trim();
     final size = double.tryParse(attributes['size']?.toString() ?? '');
     final font = attributes['font']?.toString().trim();
+    final color = _hexColor.firstMatch(attributes['color']?.toString() ?? '');
     return BookExportTextRun(
       text: text,
       bold: attributes['bold'] == true,
@@ -164,8 +172,11 @@ abstract final class BookExportContentParser {
       link: link != null && _safeLink(link) ? link : null,
       fontFamily: font == null || font.isEmpty ? null : font,
       fontSizePt: size != null && size >= 6 && size <= 96 ? size * 0.75 : null,
+      colorHex: color?.group(1)?.toUpperCase(),
     );
   }
+
+  static final _hexColor = RegExp(r'^#([0-9a-fA-F]{6})$');
 
   static BookExportBlock _block(
     List<BookExportTextRun> runs,

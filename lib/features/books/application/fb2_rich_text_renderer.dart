@@ -6,8 +6,42 @@ abstract final class Fb2RichTextRenderer {
   static String render(RichDocument document) {
     final output = StringBuffer();
     var orderedIndex = 0;
+    var poemOpen = false;
+    var stanzaOpen = false;
+
+    void closeStanza() {
+      if (!stanzaOpen) return;
+      output.writeln('        </stanza>');
+      stanzaOpen = false;
+    }
+
+    void closePoem() {
+      if (!poemOpen) return;
+      closeStanza();
+      output.writeln('      </poem>');
+      poemOpen = false;
+    }
+
     for (final block in BookExportContentParser.parse(document)) {
       if (block.type != BookExportBlockType.orderedListItem) orderedIndex = 0;
+      if (block.isVerse) {
+        // An empty line between verses separates stanzas.
+        if (block.runs.isEmpty) {
+          closeStanza();
+          continue;
+        }
+        if (!poemOpen) {
+          output.writeln('      <poem>');
+          poemOpen = true;
+        }
+        if (!stanzaOpen) {
+          output.writeln('        <stanza>');
+          stanzaOpen = true;
+        }
+        output.writeln('          <v>${block.runs.map(_inline).join()}</v>');
+        continue;
+      }
+      closePoem();
       if (block.type == BookExportBlockType.image) {
         if (block.assetId != null) {
           output.writeln(
@@ -68,6 +102,7 @@ abstract final class Fb2RichTextRenderer {
           break;
       }
     }
+    closePoem();
     return output.toString();
   }
 

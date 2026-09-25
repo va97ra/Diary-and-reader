@@ -15,7 +15,7 @@ abstract final class PlainTextRichRenderer {
           output.writeln(text.toUpperCase());
           break;
         case BookExportBlockType.quote:
-          output.writeln('> $text');
+          output.writeln(block.isVerse ? text : '> $text');
           break;
         case BookExportBlockType.orderedListItem:
           orderedIndex++;

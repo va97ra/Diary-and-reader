@@ -387,30 +387,12 @@ class _BookImageEmbedViewState extends State<BookImageEmbedView> {
   }
 
   void _delete() {
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    final strings = AppStrings.of(context);
-    final selection = _selection;
     final controller = widget.controller;
     final offset = _offset;
-    selection?.edit(controller, () {
+    _selection?.edit(controller, () {
       BookImageDocumentEditing.remove(controller, offset);
       return null;
     });
-    messenger
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(strings.imageDeleted),
-          action: SnackBarAction(
-            label: strings.undo,
-            onPressed: () {
-              if (selection?.isAttached(controller) ?? false) {
-                controller.undo();
-              }
-            },
-          ),
-        ),
-      );
   }
 
   // Resizing -----------------------------------------------------------------

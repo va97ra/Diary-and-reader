@@ -70,7 +70,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('writer-panel-trash')));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('section-trash-sheet')), findsOneWidget);
+    expect(find.byKey(const ValueKey('trash-sheet')), findsOneWidget);
     expect(find.byKey(ValueKey('trash-entry-$trashId')), findsOneWidget);
     expect(find.text(deletedTitle), findsWidgets);
     expect(find.textContaining('Разделов: 1'), findsOneWidget);

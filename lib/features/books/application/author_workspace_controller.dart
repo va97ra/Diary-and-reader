@@ -390,9 +390,26 @@ class AuthorWorkspaceController extends ChangeNotifier {
     _changed();
   }
 
-  void emptySectionTrash() {
+  void emptyTrash() {
     if (activeProject?.isReadOnly ?? true) return;
-    _replaceActiveProject(ManuscriptProjectEditor.emptySectionTrash);
+    _replaceActiveProject(ManuscriptProjectEditor.emptyTrash);
+    _changed();
+  }
+
+  void restoreDeletedText(String trashId) {
+    if (activeProject?.isReadOnly ?? true) return;
+    _replaceActiveProject(
+      (project) => ManuscriptProjectEditor.restoreDeletedText(project, trashId),
+    );
+    _changed();
+  }
+
+  void permanentlyDeleteText(String trashId) {
+    if (activeProject?.isReadOnly ?? true) return;
+    _replaceActiveProject(
+      (project) =>
+          ManuscriptProjectEditor.deleteTextTrashEntry(project, trashId),
+    );
     _changed();
   }
 

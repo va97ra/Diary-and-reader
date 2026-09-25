@@ -48,6 +48,8 @@ class WorkspaceVersionCoordinator {
       libraryState: current.libraryState,
       writingState: copied.writingState,
       sectionTrash: copied.sectionTrash,
+      // Going back to a version keeps the text deleted since then at hand.
+      textTrash: current.textTrash,
       assets: current.assets,
       coverAssetId: current.coverAssetId,
     );

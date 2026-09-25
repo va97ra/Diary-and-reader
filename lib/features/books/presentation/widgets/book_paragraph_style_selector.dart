@@ -59,6 +59,7 @@ class BookParagraphStyleSelector extends StatelessWidget {
         BookParagraphStyle.heading3 => strings.heading3,
         BookParagraphStyle.quote => strings.quoteStyle,
         BookParagraphStyle.epigraph => strings.epigraph,
+        BookParagraphStyle.verse => strings.verse,
         BookParagraphStyle.sceneBreak => strings.sceneBreak,
       };
 }

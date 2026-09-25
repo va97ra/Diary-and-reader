@@ -97,6 +97,9 @@ void main() {
     expect(projectOf(renamed).sections.single.title, 'Prologue');
 
     // A book saved before titles followed the language is renamed on load.
+    // Settle the pending save first, or it could overwrite that snapshot.
+    await controller.flush();
+    controller.dispose();
     final stale = BookProject.create(
       title: 'Untitled book',
       chapterTitle: 'Chapter 1',

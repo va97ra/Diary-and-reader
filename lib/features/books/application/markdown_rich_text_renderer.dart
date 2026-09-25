@@ -5,9 +5,20 @@ abstract final class MarkdownRichTextRenderer {
   static String render(RichDocument document) {
     final output = StringBuffer();
     var orderedIndex = 0;
-    for (final block in BookExportContentParser.parse(document)) {
+    final blocks = BookExportContentParser.parse(document);
+    for (var index = 0; index < blocks.length; index++) {
+      final block = blocks[index];
       if (block.type != BookExportBlockType.orderedListItem) orderedIndex = 0;
       final content = block.runs.map(_inline).join();
+      if (block.isVerse) {
+        // Lines of a stanza end in a hard break; an empty line ends it.
+        if (block.runs.isEmpty) continue;
+        final next = index + 1 < blocks.length ? blocks[index + 1] : null;
+        final stanzaGoesOn =
+            next != null && next.isVerse && next.runs.isNotEmpty;
+        output.writeln(stanzaGoesOn ? '$content  ' : '$content\n');
+        continue;
+      }
       if (block.semanticStyle == 'sceneBreak') {
         output.writeln('---\n');
         continue;

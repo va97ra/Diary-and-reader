@@ -11,8 +11,10 @@ import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/book_section_trash.dart';
+import 'package:dnevnik/features/books/domain/book_text_trash.dart';
 import 'package:dnevnik/features/books/domain/book_writing_state.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
+import 'package:dnevnik/features/books/domain/unique_timestamp.dart';
 
 enum BookProjectKind { manuscript, importedBook }
 
@@ -41,12 +43,14 @@ class BookProject {
     this.libraryState = const BookLibraryState(),
     this.writingState = const BookWritingState(),
     List<BookSectionTrashEntry> sectionTrash = const [],
+    List<BookTextTrashEntry> textTrash = const [],
     List<BookAsset> assets = const [],
     this.coverAssetId,
     BookReaderAnnotations? readerAnnotations,
   }) : readerAnnotations = readerAnnotations ?? BookReaderAnnotations(),
        _sections = List.unmodifiable(sections),
        _sectionTrash = List.unmodifiable(sectionTrash),
+       _textTrash = List.unmodifiable(textTrash),
        _assets = List.unmodifiable(assets);
 
   factory BookProject.create({
@@ -56,7 +60,7 @@ class BookProject {
     DateTime? now,
   }) {
     final timestamp = now ?? DateTime.now();
-    final projectId = 'book-${timestamp.microsecondsSinceEpoch}';
+    final projectId = 'book-${uniqueTimestamp(timestamp)}';
     final chapter = BookSection.create(
       id: '$projectId-chapter-1',
       title: chapterTitle,
@@ -214,6 +218,14 @@ class BookProject {
           )
           .where((entry) => entry.sections.isNotEmpty)
           .toList(),
+      textTrash: (json['textTrash'] as List<dynamic>? ?? const [])
+          .whereType<Map>()
+          .map(
+            (item) =>
+                BookTextTrashEntry.fromJson(Map<String, dynamic>.from(item)),
+          )
+          .where((entry) => entry.content.isNotEmpty)
+          .toList(),
       assets: (json['assets'] as List<dynamic>? ?? const [])
           .whereType<Map>()
           .map(
@@ -250,6 +262,7 @@ class BookProject {
   final BookLibraryState libraryState;
   final BookWritingState writingState;
   final List<BookSectionTrashEntry> _sectionTrash;
+  final List<BookTextTrashEntry> _textTrash;
   final List<BookAsset> _assets;
   final String? coverAssetId;
 
@@ -263,6 +276,10 @@ class BookProject {
 
   UnmodifiableListView<BookSectionTrashEntry> get sectionTrash =>
       UnmodifiableListView(_sectionTrash);
+
+  /// Deleted text and pictures, oldest first.
+  UnmodifiableListView<BookTextTrashEntry> get textTrash =>
+      UnmodifiableListView(_textTrash);
 
   BookAsset? get coverAsset => _assets
       .where((asset) => asset.id == coverAssetId && asset.isRenderableImage)
@@ -302,6 +319,7 @@ class BookProject {
     BookLibraryState? libraryState,
     BookWritingState? writingState,
     List<BookSectionTrashEntry>? sectionTrash,
+    List<BookTextTrashEntry>? textTrash,
     List<BookAsset>? assets,
     String? coverAssetId,
     bool clearCoverAsset = false,
@@ -338,6 +356,7 @@ class BookProject {
     libraryState: libraryState ?? this.libraryState,
     writingState: writingState ?? this.writingState,
     sectionTrash: sectionTrash ?? _sectionTrash,
+    textTrash: textTrash ?? _textTrash,
     assets: assets ?? _assets,
     coverAssetId: clearCoverAsset ? null : coverAssetId ?? this.coverAssetId,
   );
@@ -367,6 +386,7 @@ class BookProject {
     'libraryState': libraryState.toJson(),
     'writingState': writingState.toJson(),
     'sectionTrash': _sectionTrash.map((entry) => entry.toJson()).toList(),
+    'textTrash': _textTrash.map((entry) => entry.toJson()).toList(),
     'assets': _assets.map((asset) => asset.toJson()).toList(),
     'coverAssetId': coverAssetId,
     'documentFormatVersion': _currentDocumentFormatVersion,

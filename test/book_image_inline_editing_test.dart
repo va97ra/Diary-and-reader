@@ -109,7 +109,7 @@ void main() {
     expect(find.byKey(_toolbar), findsNothing);
   });
 
-  testWidgets('inline tools align, resize, and delete with undo', (
+  testWidgets('inline tools align, resize, and delete into the trash', (
     tester,
   ) async {
     final controller = await _projectWithImage();
@@ -138,12 +138,13 @@ void main() {
       _layout(controller),
       'Первый абзац.\nВторой абзац.\nТретий абзац.\n',
     );
-    expect(find.text('Иллюстрация удалена'), findsOneWidget);
+    // The picture waits in the trash instead of an undo bar.
+    expect(find.byType(SnackBar), findsNothing);
+    final entry = controller.activeProject!.textTrash.single;
+    expect(entry.hasEmbed, isTrue);
 
-    await tester.tap(find.text('Отменить'));
+    controller.restoreDeletedText(entry.id);
     await tester.pumpAndSettle();
-    // Quill merges edits made within 400 ms into one undo step, so only the
-    // illustration's return is asserted here.
     expect(_placements(controller), hasLength(1));
   });
 

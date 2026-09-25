@@ -1,4 +1,5 @@
 import 'package:dnevnik/features/books/domain/rich_document.dart';
+import 'package:dnevnik/features/books/domain/unique_timestamp.dart';
 
 enum BookSectionType { part, chapter, scene }
 
@@ -26,7 +27,7 @@ class BookSection {
   }) {
     final timestamp = now ?? DateTime.now();
     return BookSection(
-      id: id ?? _nextSectionId(timestamp),
+      id: id ?? uniqueTimestamp(timestamp).toString(),
       title: title,
       type: type,
       status: DraftStatus.draft,
@@ -118,14 +119,4 @@ T _enumValue<T extends Enum>(List<T> values, String? name, T fallback) =>
 int _nonNegativeInt(Object? value) {
   final parsed = value is num ? value.toInt() : int.tryParse('$value');
   return (parsed ?? 0).clamp(0, 10000000);
-}
-
-int _lastGeneratedSectionId = 0;
-
-String _nextSectionId(DateTime timestamp) {
-  final candidate = timestamp.microsecondsSinceEpoch;
-  _lastGeneratedSectionId = candidate > _lastGeneratedSectionId
-      ? candidate
-      : _lastGeneratedSectionId + 1;
-  return _lastGeneratedSectionId.toString();
 }

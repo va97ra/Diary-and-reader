@@ -68,6 +68,8 @@ ${EpubRichTextRenderer.render(entry.section.content, imageSource: (assetId) {
     pre { white-space: pre-wrap; }
     .align-center, .scene-break { text-align: center; text-indent: 0; }
     .align-right, .epigraph { text-align: right; }
+    .poem { margin: 1em 1.5rem; font-style: italic; }
+    .poem p { margin: 0; text-indent: 0; }
     .align-justify { text-align: justify; }
     .book-image { margin: 1.2rem 0; text-align: center; }
     .book-image img { max-width: 100%; height: auto; }

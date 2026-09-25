@@ -26,7 +26,7 @@ import 'package:dnevnik/features/books/domain/rich_document.dart';
 import 'package:dnevnik/features/books/presentation/book_export_sheet.dart';
 import 'package:dnevnik/features/books/presentation/book_manuscript_search_sheet.dart';
 import 'package:dnevnik/features/books/presentation/book_pdf_preview_page.dart';
-import 'package:dnevnik/features/books/presentation/book_section_trash_sheet.dart';
+import 'package:dnevnik/features/books/presentation/book_trash_sheet.dart';
 import 'package:dnevnik/features/books/presentation/book_version_history_sheet.dart';
 import 'package:dnevnik/features/books/presentation/book_writing_statistics_sheet.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_page.dart';
@@ -506,7 +506,7 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
         strings.previewBook,
       ),
       BookWorkspaceAction.history => (Icons.history, strings.versionHistory),
-      BookWorkspaceAction.trash => (Icons.delete_outline, strings.sectionTrash),
+      BookWorkspaceAction.trash => (Icons.delete_outline, strings.trash),
       BookWorkspaceAction.backup => (
         Icons.download_outlined,
         strings.backupProject,
@@ -1268,7 +1268,7 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
     builder: (_) => BookSheetKeyboardDismiss(
       child: FractionallySizedBox(
         heightFactor: 0.82,
-        child: BookSectionTrashSheet(controller: widget.controller),
+        child: BookTrashSheet(controller: widget.controller),
       ),
     ),
   );

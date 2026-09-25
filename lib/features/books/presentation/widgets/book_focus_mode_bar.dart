@@ -1,5 +1,6 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/workspace_save_state.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_adaptive_control_shell.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_save_status.dart';
 import 'package:flutter/material.dart';
 
@@ -33,6 +34,8 @@ class BookFocusModeBar extends StatelessWidget {
                 tooltip: AppStrings.of(context).exitFocusWriting,
                 visualDensity: VisualDensity.compact,
                 onPressed: onExit,
+                // The bar stays dark in every theme, so the icon stays light.
+                color: BookLeatherColors.foreground,
                 icon: const Icon(Icons.fullscreen_exit),
               ),
             ],

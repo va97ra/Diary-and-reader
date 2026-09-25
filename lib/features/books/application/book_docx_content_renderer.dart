@@ -238,9 +238,11 @@ $body  </w:body>
       BookExportBlockType.heading3 => 'Heading3',
       BookExportBlockType.quote when block.semanticStyle == 'epigraph' =>
         'BookEpigraph',
+      // Word leaves out the spacing between lines of this style.
+      BookExportBlockType.quote when block.isVerse => 'BookVerse',
       BookExportBlockType.quote => 'Quote',
       BookExportBlockType.code => 'Code',
-      BookExportBlockType.paragraph when block.semanticStyle == 'scene-break' =>
+      BookExportBlockType.paragraph when block.semanticStyle == 'sceneBreak' =>
         'SceneBreak',
       _ => 'BodyText',
     };
@@ -286,6 +288,9 @@ $body  </w:body>
     if (run.italic) properties.write('<w:i/>');
     if (run.underline) properties.write('<w:u w:val="single"/>');
     if (run.strike) properties.write('<w:strike/>');
+    if (run.colorHex != null) {
+      properties.write('<w:color w:val="${run.colorHex}"/>');
+    }
     if (run.superscript) {
       properties.write('<w:vertAlign w:val="superscript"/>');
     }

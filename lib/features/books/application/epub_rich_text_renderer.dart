@@ -9,22 +9,32 @@ abstract final class EpubRichTextRenderer {
   }) {
     final blocks = BookExportContentParser.parse(document);
     final output = StringBuffer();
-    String? openList;
+    // The list or poem that consecutive blocks are gathered into.
+    String? openContainer;
+    var closingTag = '';
 
-    void closeList() {
-      if (openList == null) return;
-      output.writeln('</$openList>');
-      openList = null;
+    void closeContainer() {
+      if (openContainer == null) return;
+      output.writeln(closingTag);
+      openContainer = null;
+    }
+
+    void openContainerFor(String container, String opening, String closing) {
+      if (openContainer == container) return;
+      closeContainer();
+      output.writeln(opening);
+      openContainer = container;
+      closingTag = closing;
     }
 
     for (final block in blocks) {
       if (block.type == BookExportBlockType.pageBreak) {
-        closeList();
+        closeContainer();
         output.writeln('<div class="page-break"></div>');
         continue;
       }
       if (block.type == BookExportBlockType.image) {
-        closeList();
+        closeContainer();
         final source = block.assetId == null
             ? null
             : imageSource?.call(block.assetId!);
@@ -56,11 +66,7 @@ abstract final class EpubRichTextRenderer {
           ? '&#160;'
           : block.runs.map(_inline).join();
       if (listTag != null) {
-        if (openList != listTag) {
-          closeList();
-          output.writeln('<$listTag>');
-          openList = listTag;
-        }
+        openContainerFor(listTag, '<$listTag>', '</$listTag>');
         final checkbox = switch (block.type) {
           BookExportBlockType.checkedListItem =>
             '<span class="check">☑</span> ',
@@ -72,7 +78,13 @@ abstract final class EpubRichTextRenderer {
         continue;
       }
 
-      closeList();
+      if (block.isVerse) {
+        openContainerFor('poem', '<div class="poem">', '</div>');
+        output.writeln('<p${_blockAttributes(block)}>$content</p>');
+        continue;
+      }
+
+      closeContainer();
       final tag = switch (block.type) {
         BookExportBlockType.heading1 => 'h2',
         BookExportBlockType.heading2 => 'h3',
@@ -84,7 +96,7 @@ abstract final class EpubRichTextRenderer {
       };
       output.writeln('<$tag${_blockAttributes(block)}>$content</$tag>');
     }
-    closeList();
+    closeContainer();
     return output.toString();
   }
 
@@ -94,6 +106,7 @@ abstract final class EpubRichTextRenderer {
       if (run.fontSizePt != null) 'font-size:${_number(run.fontSizePt!)}pt',
       if (run.fontFamily != null)
         'font-family:&quot;${escapeXml(run.fontFamily!)}&quot;',
+      if (run.colorHex != null) 'color:#${run.colorHex}',
     ];
     if (styles.isNotEmpty) {
       html = '<span style="${styles.join(';')}">$html</span>';
@@ -117,6 +130,7 @@ abstract final class EpubRichTextRenderer {
         'align-${block.alignment.name}',
       if (block.indent > 0) 'indent-${block.indent}',
       if (block.semanticStyle == 'epigraph') 'epigraph',
+      if (block.isVerse) 'verse',
       if (block.semanticStyle == 'sceneBreak') 'scene-break',
     ];
     final className = classes.isEmpty ? '' : ' class="${classes.join(' ')}"';

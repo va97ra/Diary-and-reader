@@ -16,7 +16,8 @@ abstract final class BookPdfContentRenderer {
     var orderedIndex = 0;
     BookExportBlockType? previousType;
 
-    for (final block in blocks) {
+    for (var index = 0; index < blocks.length; index++) {
+      final block = blocks[index];
       if (block.type == BookExportBlockType.pageBreak) {
         output.add(pw.NewPage());
         previousType = block.type;
@@ -34,6 +35,13 @@ abstract final class BookPdfContentRenderer {
           block,
           settings,
           _blockWidget(block, settings, orderedIndex, assets, maxImageWidth),
+          // Lines of a poem sit together; only the poem is spaced apart.
+          joinsPrevious:
+              block.isVerse && index > 0 && blocks[index - 1].isVerse,
+          joinsNext:
+              block.isVerse &&
+              index + 1 < blocks.length &&
+              blocks[index + 1].isVerse,
         ),
       );
       previousType = block.type;
@@ -44,18 +52,24 @@ abstract final class BookPdfContentRenderer {
   static List<pw.Widget> _spacing(
     BookExportBlock block,
     BookParagraphSettings settings,
-    pw.Widget child,
-  ) {
+    pw.Widget child, {
+    required bool joinsPrevious,
+    required bool joinsNext,
+  }) {
     final isHeading = switch (block.type) {
       BookExportBlockType.heading1 ||
       BookExportBlockType.heading2 ||
       BookExportBlockType.heading3 => true,
       _ => false,
     };
-    final before = isHeading
+    final before = joinsPrevious
+        ? 0.0
+        : isHeading
         ? settings.fontSizePt * 0.9
         : settings.spacingBeforePt;
-    final after = isHeading
+    final after = joinsNext
+        ? 0.0
+        : isHeading
         ? settings.fontSizePt * 0.45
         : settings.spacingAfterPt;
     return [
@@ -126,8 +140,15 @@ abstract final class BookPdfContentRenderer {
         BookExportBlockType.heading3 => true,
         _ => false,
       },
+      forceItalic: block.isVerse,
     );
 
+    if (block.isVerse) {
+      return pw.Padding(
+        padding: const pw.EdgeInsets.symmetric(horizontal: 24),
+        child: text,
+      );
+    }
     return switch (block.type) {
       BookExportBlockType.quote => pw.Container(
         padding: const pw.EdgeInsets.fromLTRB(10, 4, 4, 4),
@@ -164,6 +185,7 @@ abstract final class BookPdfContentRenderer {
     BookParagraphSettings settings, {
     required double fontSize,
     required bool forceBold,
+    bool forceItalic = false,
   }) {
     final spans = <pw.InlineSpan>[];
     final firstLineIndent = block.type == BookExportBlockType.paragraph
@@ -195,8 +217,14 @@ abstract final class BookPdfContentRenderer {
               fontWeight: forceBold || run.bold
                   ? pw.FontWeight.bold
                   : pw.FontWeight.normal,
-              fontStyle: run.italic ? pw.FontStyle.italic : pw.FontStyle.normal,
-              color: run.link == null ? PdfColors.black : PdfColors.blue700,
+              fontStyle: forceItalic || run.italic
+                  ? pw.FontStyle.italic
+                  : pw.FontStyle.normal,
+              color: run.link != null
+                  ? PdfColors.blue700
+                  : run.colorHex != null
+                  ? PdfColor.fromHex(run.colorHex!)
+                  : PdfColors.black,
               decoration: _decoration(run),
               background: run.code
                   ? const pw.BoxDecoration(color: PdfColors.grey200)

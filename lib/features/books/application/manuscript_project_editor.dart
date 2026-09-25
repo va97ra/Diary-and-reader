@@ -1,3 +1,4 @@
+import 'package:dnevnik/features/books/application/book_deleted_text.dart';
 import 'package:dnevnik/features/books/application/book_manuscript_search.dart';
 import 'package:dnevnik/features/books/application/section_tree_editor.dart';
 import 'package:dnevnik/features/books/domain/book_asset.dart';
@@ -9,7 +10,9 @@ import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/book_section_trash.dart';
+import 'package:dnevnik/features/books/domain/book_text_trash.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
+import 'package:dnevnik/features/books/domain/unique_timestamp.dart';
 
 abstract final class ManuscriptProjectEditor {
   static BookProject addSection(
@@ -124,8 +127,51 @@ abstract final class ManuscriptProjectEditor {
         updatedAt: DateTime.now(),
       );
 
-  static BookProject emptySectionTrash(BookProject project) =>
-      project.copyWith(sectionTrash: const [], updatedAt: DateTime.now());
+  static BookProject emptyTrash(BookProject project) => project.copyWith(
+    sectionTrash: const [],
+    textTrash: const [],
+    updatedAt: DateTime.now(),
+  );
+
+  /// Puts deleted text back where it was, in its chapter if that still
+  /// exists and in the active one otherwise, and opens that chapter.
+  static BookProject restoreDeletedText(BookProject project, String trashId) {
+    final entry = project.textTrash
+        .where((candidate) => candidate.id == trashId)
+        .firstOrNull;
+    if (entry == null) return project;
+    final target =
+        project.sections
+            .where((section) => section.id == entry.sectionId)
+            .firstOrNull ??
+        project.activeSection;
+    if (target == null) return project;
+    final now = DateTime.now();
+    final content = BookDeletedText.restore(
+      target.content,
+      entry.offset,
+      entry.content,
+    );
+    return project.copyWith(
+      sections: [
+        for (final section in project.sections)
+          section.id == target.id
+              ? section.copyWith(content: content, updatedAt: now)
+              : section,
+      ],
+      activeSectionId: target.id,
+      textTrash: project.textTrash.where((item) => item != entry).toList(),
+      updatedAt: now,
+    );
+  }
+
+  static BookProject deleteTextTrashEntry(
+    BookProject project,
+    String trashId,
+  ) => project.copyWith(
+    textTrash: project.textTrash.where((entry) => entry.id != trashId).toList(),
+    updatedAt: DateTime.now(),
+  );
 
   static BookProject updateSectionTitle(BookProject project, String title) =>
       _updateActiveSection(
@@ -133,13 +179,38 @@ abstract final class ManuscriptProjectEditor {
         (section) => section.copyWith(title: title),
       );
 
+  /// Deleted fragments kept in the trash; older ones make room for new.
+  static const textTrashLimit = 50;
+
+  /// Replaces the active chapter's text. A deleted word or more, or a
+  /// deleted picture, goes to the trash so it can be put back.
   static BookProject updateSectionContent(
     BookProject project,
     RichDocument content,
-  ) => _updateActiveSection(
-    project,
-    (section) => section.copyWith(content: content, updatedAt: DateTime.now()),
-  );
+  ) {
+    final section = project.activeSection;
+    final now = DateTime.now();
+    final updated = _updateActiveSection(
+      project,
+      (section) => section.copyWith(content: content, updatedAt: now),
+    );
+    final deleted = section == null
+        ? null
+        : BookDeletedText.between(section.content, content);
+    if (section == null || deleted == null) return updated;
+    return updated.copyWith(
+      textTrash: [
+        ...project.textTrash,
+        BookTextTrashEntry(
+          id: 'text-trash-${uniqueTimestamp(now)}',
+          deletedAt: now,
+          sectionId: section.id,
+          offset: deleted.offset,
+          content: deleted.content,
+        ),
+      ].takeLast(textTrashLimit).toList(),
+    );
+  }
 
   static BookProject addAsset(BookProject project, BookAsset asset) =>
       project.copyWith(

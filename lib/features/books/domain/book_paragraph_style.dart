@@ -5,5 +5,6 @@ enum BookParagraphStyle {
   heading3,
   quote,
   epigraph,
+  verse,
   sceneBreak,
 }

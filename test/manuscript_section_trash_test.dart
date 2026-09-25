@@ -60,9 +60,6 @@ void main() {
 
     final decoded = BookProject.fromJson(project.toJson());
     expect(decoded.sectionTrash, hasLength(1));
-    expect(
-      ManuscriptProjectEditor.emptySectionTrash(decoded).sectionTrash,
-      isEmpty,
-    );
+    expect(ManuscriptProjectEditor.emptyTrash(decoded).sectionTrash, isEmpty);
   });
 }

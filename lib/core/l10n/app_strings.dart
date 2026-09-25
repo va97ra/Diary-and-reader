@@ -208,8 +208,8 @@ class AppStrings {
   String get deleteSection => _text('deleteSection');
   String get deleteBook => _text('deleteBook');
   String get deleteSectionQuestion => _text('deleteSectionQuestion');
-  String get sectionTrash => _text('sectionTrash');
-  String get sectionTrashEmpty => _text('sectionTrashEmpty');
+  String get trash => _text('trash');
+  String get trashEmpty => _text('trashEmpty');
   String get emptyTrash => _text('emptyTrash');
   String get emptyTrashHint => _text('emptyTrashHint');
   String get restoreSection => _text('restoreSection');
@@ -312,7 +312,6 @@ class AppStrings {
   String get imageFromClipboard => _text('imageFromClipboard');
   String get pasteImage => _text('pasteImage');
   String get clipboardHasNoImage => _text('clipboardHasNoImage');
-  String get imageDeleted => _text('imageDeleted');
   String get imageSmaller => _text('imageSmaller');
   String get imageLarger => _text('imageLarger');
   String get imageMoreSettings => _text('imageMoreSettings');
@@ -476,6 +475,14 @@ class AppStrings {
   String sectionOf(int current, int count) =>
       '${_text('section')} $current ${_text('ofPages')} $count';
   String sectionTitle(int number) => '${_text('section')} $number';
+
+  String get restoreDeletedText => _text('restoreDeletedText');
+  String get textRestored => _text('textRestored');
+  String get deletedPicture => _text('deletedPicture');
+  String get verse => _text('verse');
+  String get textColor => _text('textColor');
+  String get noTextColor => _text('noTextColor');
+  String textColorName(String id) => _text('textColor_$id');
 
   static const _values = <String, Map<String, String>>{
     'ru': appStringValuesRu,

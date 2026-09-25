@@ -57,6 +57,38 @@ void main() {
     );
   });
 
+  test('sets every selected line of a poem as verse', () {
+    final controller = QuillController(
+      document: Document.fromJson([
+        {'insert': 'Строка один\nСтрока два\n'},
+      ]),
+      selection: const TextSelection(baseOffset: 0, extentOffset: 22),
+    );
+    addTearDown(controller.dispose);
+
+    BookParagraphStyleActions.apply(controller, BookParagraphStyle.verse);
+
+    expect(
+      BookParagraphStyleActions.current(controller),
+      BookParagraphStyle.verse,
+    );
+    final lineEnds = controller.document
+        .toDelta()
+        .toJson()
+        .where((operation) => operation['insert'] == '\n')
+        .map((operation) => operation['attributes'] as Map)
+        .toList();
+    expect(lineEnds, hasLength(2));
+    for (final attributes in lineEnds) {
+      expect(attributes['blockquote'], isTrue);
+      expect(attributes['align'], 'center');
+      expect(
+        attributes[BookParagraphStyleActions.semanticAttributeKey],
+        BookParagraphStyle.verse.name,
+      );
+    }
+  });
+
   test('inserts and marks a scene divider on an empty line', () {
     final controller = QuillController(
       document: Document.fromJson([

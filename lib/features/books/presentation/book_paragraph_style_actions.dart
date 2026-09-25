@@ -67,6 +67,12 @@ abstract final class BookParagraphStyleActions {
           Attribute.blockQuote,
           Attribute.rightAlignment,
         ],
+        // A quote block keeps the lines of a stanza together without
+        // paragraph spacing; centring sets it apart from quotes.
+        BookParagraphStyle.verse => const [
+          Attribute.blockQuote,
+          Attribute.centerAlignment,
+        ],
         BookParagraphStyle.sceneBreak => const [Attribute.centerAlignment],
       };
 

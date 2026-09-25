@@ -3,6 +3,7 @@ import 'package:dnevnik/core/theme/app_theme.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/domain/book_page_format.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
+import 'package:dnevnik/features/books/presentation/book_text_colors.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_paragraph_settings_section.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_paragraph_style_selector.dart';
@@ -263,6 +264,37 @@ class BookFormattingSheet extends StatelessWidget {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Tooltip(
+                        message: strings.textColor,
+                        excludeFromSemantics: true,
+                        child: const Icon(Icons.format_color_text, size: 20),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Semantics(
+                          label: strings.textColor,
+                          child: _FormattingDropdown<String>(
+                            key: const ValueKey('formatting-text-color'),
+                            listenable: controller,
+                            value: () => _currentTextColor(controller),
+                            values: {
+                              '': strings.noTextColor,
+                              for (final (id, color) in BookTextColors.palette)
+                                BookTextColors.hex(color): strings
+                                    .textColorName(id),
+                            },
+                            leading: (hex) => _ColorSwatch(hex: hex),
+                            onChanged: (hex) => controller.formatSelection(
+                              ColorAttribute(hex.isEmpty ? null : hex),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -447,6 +479,7 @@ class _FormattingDropdown<T> extends StatelessWidget {
     required this.value,
     required this.values,
     required this.onChanged,
+    this.leading,
     super.key,
   });
 
@@ -454,6 +487,9 @@ class _FormattingDropdown<T> extends StatelessWidget {
   final T Function() value;
   final Map<T, String> values;
   final ValueChanged<T> onChanged;
+
+  /// Drawn before each label, such as a colour swatch.
+  final Widget Function(T value)? leading;
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
@@ -469,7 +505,9 @@ class _FormattingDropdown<T> extends StatelessWidget {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<T>(
-          value: value(),
+          // A value outside the list, such as a colour from another app,
+          // shows no item, and picking any item replaces it.
+          value: values.containsKey(value()) ? value() : null,
           isExpanded: true,
           isDense: true,
           iconSize: 20,
@@ -477,10 +515,20 @@ class _FormattingDropdown<T> extends StatelessWidget {
             for (final entry in values.entries)
               DropdownMenuItem<T>(
                 value: entry.key,
-                child: Text(
-                  entry.value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                child: Row(
+                  children: [
+                    if (leading case final leading?) ...[
+                      leading(entry.key),
+                      const SizedBox(width: 8),
+                    ],
+                    Expanded(
+                      child: Text(
+                        entry.value,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ),
           ],
@@ -492,6 +540,35 @@ class _FormattingDropdown<T> extends StatelessWidget {
     ),
   );
 }
+
+class _ColorSwatch extends StatelessWidget {
+  const _ColorSwatch({required this.hex});
+
+  /// A `#rrggbb` colour, or empty for text without a colour of its own.
+  final String hex;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 16,
+    height: 16,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      color: hex.isEmpty
+          ? null
+          : Color(0xFF000000 | int.parse(hex.substring(1), radix: 16)),
+      border: Border.all(color: Theme.of(context).colorScheme.onSurface),
+    ),
+  );
+}
+
+String _currentTextColor(QuillController controller) =>
+    controller
+        .getSelectionStyle()
+        .attributes[Attribute.color.key]
+        ?.value
+        ?.toString()
+        .toLowerCase() ??
+    '';
 
 class _EvenToolbarRow extends StatelessWidget {
   const _EvenToolbarRow({required this.children});

@@ -70,6 +70,13 @@ abstract final class BookReaderTypography {
         right = 16;
         top = 10;
         bottom = 10;
+      case BookReaderBlockType.verse:
+        style = FontStyle.italic;
+        left += 24;
+        right = 24;
+        // Lines of one poem stand together; the poem is spaced apart.
+        top = block.joinsPrevious ? 0 : 10;
+        bottom = block.joinsNext ? 0 : 10;
       case BookReaderBlockType.code:
         family = 'monospace';
         size *= 0.92;
@@ -143,7 +150,7 @@ abstract final class BookReaderTypography {
     ];
     final scripted = run.superscript || run.subscript;
     return baseStyle.copyWith(
-      color: _color(run.foregroundHex) ?? baseStyle.color,
+      color: _legible(_color(run.foregroundHex), on: baseStyle.color),
       backgroundColor:
           backgroundColor ??
           _color(run.backgroundHex) ??
@@ -164,6 +171,21 @@ abstract final class BookReaderTypography {
   }
 
   static Color? color(String? value) => _color(value);
+
+  /// [color] brought closer to white on a dark page, or to black on a light
+  /// one, until it reads well; the page is judged by its [on] ink colour.
+  static Color? _legible(Color? color, {required Color? on}) {
+    if (color == null || on == null) return color ?? on;
+    final darkPage = on.computeLuminance() > 0.5;
+    final target = darkPage ? Colors.white : Colors.black;
+    var result = color;
+    for (var step = 0; step < 10; step++) {
+      final luminance = result.computeLuminance();
+      if (darkPage ? luminance >= 0.2 : luminance <= 0.15) break;
+      result = Color.lerp(result, target, 0.2)!;
+    }
+    return result;
+  }
 
   static FontWeight _fontWeight(double value) => switch (value.round()) {
     <= 300 => FontWeight.w300,
