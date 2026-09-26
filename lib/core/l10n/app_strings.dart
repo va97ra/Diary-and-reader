@@ -400,6 +400,7 @@ class AppStrings {
   String get nextShort => _text('nextShort');
   String get readingProgress => _text('readingProgress');
   String get contentsShort => _text('contentsShort');
+  String get readerNavigation => _text('readerNavigation');
   String get bookmarks => _text('bookmarks');
   String get notes => _text('notes');
   String get noBookmarks => _text('noBookmarks');

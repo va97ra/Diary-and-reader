@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/application/workspace_save_state.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_repository.dart';
 import 'package:dnevnik/features/books/domain/author_workspace_snapshot.dart';
+import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
@@ -360,6 +362,37 @@ void main() {
     expect(controller.activeProject!.id, originalId);
     expect(controller.activeProject!.metadata.title, 'Книга из файла');
     expect((await controller.listVersions()).single.label, 'Перед импортом');
+  });
+
+  test('a restored backup brings its pictures and cover', () async {
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository(),
+    );
+    await controller.load(preferredLanguage: 'ru');
+    final png = base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    );
+    controller.addAsset(
+      BookAsset(id: 'image-now', mediaType: 'image/png', bytes: png),
+    );
+    final backup = controller.activeProject!.copyWith(
+      metadata: const BookMetadata(title: 'Книга из файла'),
+      assets: [
+        BookAsset(id: 'image-backup', mediaType: 'image/png', bytes: png),
+        BookAsset(id: 'cover-backup', mediaType: 'image/png', bytes: png),
+      ],
+      coverAssetId: 'cover-backup',
+    );
+
+    await controller.importProject(backup, safetyLabel: 'Перед импортом');
+
+    final restored = controller.activeProject!;
+    expect(
+      restored.assets.map((asset) => asset.id),
+      containsAll(['image-backup', 'cover-backup', 'image-now']),
+    );
+    expect(restored.coverAssetId, 'cover-backup');
+    expect(restored.coverAsset?.id, 'cover-backup');
   });
 
   test('persists imported books but blocks authoring changes', () async {

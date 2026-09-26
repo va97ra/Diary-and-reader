@@ -52,7 +52,10 @@ class BookProjectBackupFileService implements BookProjectBackupFileGateway {
   @override
   Future<String?> open() async {
     final file = await openFile(acceptedTypeGroups: const [_archiveType]);
-    return file?.readAsString();
+    if (file == null) return null;
+    // XFile.readAsString ignores the encoding for a file it holds in memory,
+    // as on Android, and would read a Russian backup as Latin-1.
+    return decodeBackupBytes(await file.readAsBytes());
   }
 
   String _safeName(String value) {
@@ -63,3 +66,7 @@ class BookProjectBackupFileService implements BookProjectBackupFileGateway {
     return normalized.isEmpty ? 'book' : normalized;
   }
 }
+
+/// A backup as the app writes it: UTF-8, maybe behind a byte order mark.
+String decodeBackupBytes(Uint8List bytes) =>
+    utf8.decode(bytes, allowMalformed: true).replaceFirst('\ufeff', '');

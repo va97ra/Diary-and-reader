@@ -9,6 +9,7 @@ import 'package:dnevnik/features/books/presentation/reader/book_reader_document_
 import 'package:dnevnik/features/books/presentation/reader/book_reader_highlight_style.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_layout_engine.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_soft_hyphens.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_typography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -226,14 +227,19 @@ class BookReaderTextFragment extends StatelessWidget {
     if (speechTargetMode && onSpeechTargetSelected != null) {
       return _SpeechTargetText(fragment: this);
     }
-    return SelectableText.rich(
-      span,
+    return BookReaderSoftHyphens(
+      span: span,
       textAlign: typography.textAlign,
       textDirection: typography.textDirection,
-      textScaler: TextScaler.noScaling,
-      cursorWidth: bookReaderCursorWidth,
-      enableInteractiveSelection: true,
-      onSelectionChanged: (selection, _) => selectRange(selection),
+      child: SelectableText.rich(
+        span,
+        textAlign: typography.textAlign,
+        textDirection: typography.textDirection,
+        textScaler: TextScaler.noScaling,
+        cursorWidth: bookReaderCursorWidth,
+        enableInteractiveSelection: true,
+        onSelectionChanged: (selection, _) => selectRange(selection),
+      ),
     );
   }
 }
@@ -269,14 +275,19 @@ class _SpeechTargetTextState extends State<_SpeechTargetText> {
         fragment.selectSpeechOffset(localOffset);
       },
       // Wraps lines exactly like the selectable text it temporarily replaces.
-      child: Padding(
-        padding: const EdgeInsets.only(right: bookReaderCaretReserve),
-        child: RichText(
-          key: _textKey,
-          text: fragment.span,
-          textAlign: fragment.typography.textAlign,
-          textDirection: fragment.typography.textDirection,
-          textScaler: TextScaler.noScaling,
+      child: BookReaderSoftHyphens(
+        span: fragment.span,
+        textAlign: fragment.typography.textAlign,
+        textDirection: fragment.typography.textDirection,
+        child: Padding(
+          padding: const EdgeInsets.only(right: bookReaderCaretReserve),
+          child: RichText(
+            key: _textKey,
+            text: fragment.span,
+            textAlign: fragment.typography.textAlign,
+            textDirection: fragment.typography.textDirection,
+            textScaler: TextScaler.noScaling,
+          ),
         ),
       ),
     );

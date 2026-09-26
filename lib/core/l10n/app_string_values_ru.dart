@@ -403,6 +403,7 @@ const appStringValuesRu = <String, String>{
   'readingProgress': 'Прогресс чтения',
   'section': 'Раздел',
   'contentsShort': 'Главы',
+  'readerNavigation': 'Навигация',
   'bookmarks': 'Закладки',
   'notes': 'Заметки',
   'noBookmarks': 'Здесь появятся сохранённые места книги',

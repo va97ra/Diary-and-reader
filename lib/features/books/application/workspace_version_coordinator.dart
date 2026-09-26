@@ -50,8 +50,14 @@ class WorkspaceVersionCoordinator {
       sectionTrash: copied.sectionTrash,
       // Going back to a version keeps the text deleted since then at hand.
       textTrash: current.textTrash,
-      assets: current.assets,
-      coverAssetId: current.coverAssetId,
+      // The pictures of the restored text come with it; those of the book
+      // now are kept too, in case its text still needs them.
+      assets: [
+        ...copied.assets,
+        for (final asset in current.assets)
+          if (copied.assetById(asset.id) == null) asset,
+      ],
+      coverAssetId: copied.coverAssetId ?? current.coverAssetId,
     );
   }
 }

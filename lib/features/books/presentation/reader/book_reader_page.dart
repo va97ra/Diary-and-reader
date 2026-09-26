@@ -534,7 +534,7 @@ class _BookReaderPageState extends State<BookReaderPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              BookPanelSectionLabel(strings.chapters),
+              BookPanelSectionLabel(strings.readerNavigation),
               _wideReaderAction(
                 key: const ValueKey('reader-contents-action'),
                 icon: const Icon(Icons.toc),

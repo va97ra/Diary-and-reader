@@ -404,6 +404,7 @@ const appStringValuesEn = <String, String>{
   'readingProgress': 'Reading progress',
   'section': 'Section',
   'contentsShort': 'Contents',
+  'readerNavigation': 'Navigation',
   'bookmarks': 'Bookmarks',
   'notes': 'Notes',
   'noBookmarks': 'Saved places will appear here',

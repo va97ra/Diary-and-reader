@@ -1,6 +1,7 @@
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_document_model.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_soft_hyphens.dart';
 import 'package:flutter/material.dart';
 
 class BookReaderBlockTypography {
@@ -103,6 +104,9 @@ abstract final class BookReaderTypography {
       case BookReaderBlockType.unsupportedEmbed:
         break;
     }
+
+    // A word broken at the end of a line hangs its hyphen in this room.
+    if (settings.hyphenateWords) right += size * bookReaderHyphenReserve;
 
     final requestedAlignment = switch (block.alignment) {
       BookReaderTextAlignment.center => TextAlign.center,
