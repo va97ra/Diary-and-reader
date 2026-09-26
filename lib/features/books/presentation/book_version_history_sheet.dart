@@ -1,6 +1,7 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/domain/book_project_version.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_empty_state.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -67,18 +68,10 @@ class _BookVersionHistorySheetState extends State<BookVersionHistorySheet> {
                 }
                 final versions = snapshot.data ?? const [];
                 if (versions.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 420),
-                        child: Text(
-                          strings.noVersions,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodyLarge,
-                        ),
-                      ),
-                    ),
+                  return BookEmptyState(
+                    icon: Icons.history,
+                    title: strings.noVersions,
+                    hint: strings.noVersionsHint,
                   );
                 }
                 return ListView.separated(

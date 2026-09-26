@@ -220,8 +220,8 @@ void registerAdaptiveLayoutScenarios() {
     final toolKeys = [
       const ValueKey('writer-panel-search'),
       const ValueKey('writer-panel-statistics'),
-      const ValueKey('writer-panel-export'),
       const ValueKey('writer-panel-preview'),
+      const ValueKey('writer-panel-export'),
       const ValueKey('writer-panel-history'),
       const ValueKey('writer-panel-trash'),
       const ValueKey('writer-panel-backup'),
@@ -234,14 +234,19 @@ void registerAdaptiveLayoutScenarios() {
       expect(toolRects[index].left, toolRects.first.left);
       expect(toolRects[index].top, greaterThan(toolRects[index - 1].bottom));
     }
-    // Versions and backups start a second group.
+    // The book's tools and those keeping the text safe are two groups.
+    expect(find.text('КНИГА'), findsOneWidget);
+    expect(find.text('СОХРАННОСТЬ ТЕКСТА'), findsOneWidget);
     expect(
       toolRects[4].top - toolRects[3].bottom,
       greaterThan(toolRects[1].top - toolRects[0].bottom),
     );
-    final surfaceRect = tester.getRect(find.byType(BookLeatherModalSurface));
-    expect(surfaceRect.height, lessThan(560));
-    expect(surfaceRect.bottom - toolRects.last.bottom, lessThanOrEqualTo(24));
+    expect(
+      find.text('Файл со всей книгой, чтобы не потерять её'),
+      findsOneWidget,
+    );
+    await tester.ensureVisible(find.byKey(toolKeys.last));
+    await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.close).last);
     await tester.pumpAndSettle();
 
@@ -395,9 +400,6 @@ void registerAdaptiveLayoutScenarios() {
     final subtitle = find.byKey(ValueKey('${project.id}-subtitle'));
     final author = find.byKey(ValueKey('${project.id}-author'));
     expect(tester.getCenter(subtitle).dy, tester.getCenter(author).dy);
-    final status = find.byType(DropdownButtonFormField<DraftStatus>);
-    final target = find.byKey(ValueKey('${section.id}-word-target'));
-    expect(tester.getCenter(status).dy, tester.getCenter(target).dy);
 
     await tester.ensureVisible(pageLayoutSection);
     await tester.pumpAndSettle();
@@ -411,9 +413,7 @@ void registerAdaptiveLayoutScenarios() {
     for (final field in marginFields.skip(1)) {
       expect(tester.getCenter(field).dy, marginY);
     }
-    final landscapeOrientation = find.byKey(
-      const ValueKey('page-orientation-landscape'),
-    );
+    final landscapeOrientation = find.text('Альбомная');
     await tester.ensureVisible(landscapeOrientation);
     await tester.tap(landscapeOrientation);
     await tester.pumpAndSettle();
@@ -424,13 +424,32 @@ void registerAdaptiveLayoutScenarios() {
     expect(
       tester
           .widget<SegmentedButton<BookPageOrientation>>(
-            find.byKey(ValueKey('${project.id}-page-orientation')),
+            find.descendant(
+              of: find.byKey(ValueKey('${project.id}-page-orientation')),
+              matching: find.byType(SegmentedButton<BookPageOrientation>),
+            ),
           )
           .selected,
       {BookPageOrientation.landscape},
     );
     expect(controller.activeProject!.layoutSettings.pageFormat.widthMm, 297);
     expect(controller.activeProject!.layoutSettings.pageFormat.heightMm, 210);
+
+    // The chapter's own progress comes last, apart from the book.
+    final status = find.byKey(ValueKey('${section.id}-status'));
+    await tester.scrollUntilVisible(
+      status,
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(BookPropertiesPanel),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.pumpAndSettle();
+    final target = find.byKey(ValueKey('${section.id}-word-target'));
+    expect(tester.getCenter(status).dy, tester.getCenter(target).dy);
     expect(tester.takeException(), isNull);
 
     await tester.binding.setSurfaceSize(null);

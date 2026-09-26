@@ -2,10 +2,10 @@ import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/domain/book_page_format.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
-import 'package:dnevnik/features/books/presentation/widgets/book_compact_dropdown.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_paragraph_settings_section.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_paragraph_style_selector.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_settings_controls.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_text_color_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -53,7 +53,7 @@ class BookFormattingSheet extends StatelessWidget {
               closeKey: const ValueKey('writer-formatting-close'),
               padding: const EdgeInsets.fromLTRB(0, 8, 0, 4),
             ),
-            _FormattingSection(
+            BookSettingsCard(
               key: const ValueKey('formatting-text-section'),
               title: strings.characterFormatting,
               child: Column(
@@ -129,7 +129,7 @@ class BookFormattingSheet extends StatelessWidget {
                 ],
               ),
             ),
-            _FormattingSection(
+            BookSettingsCard(
               key: const ValueKey('formatting-paragraph-section'),
               title: strings.paragraphFormatting,
               child: Column(
@@ -200,7 +200,7 @@ class BookFormattingSheet extends StatelessWidget {
                 ],
               ),
             ),
-            _FormattingSection(
+            BookSettingsCard(
               key: const ValueKey('formatting-insert-section'),
               title: strings.insertIntoText,
               child: Row(
@@ -233,7 +233,7 @@ class BookFormattingSheet extends StatelessWidget {
                 ],
               ),
             ),
-            _FormattingSection(
+            BookSettingsCard(
               key: const ValueKey('formatting-manuscript-section'),
               title: strings.wholeManuscriptFormatting,
               hint: strings.wholeBookHint,
@@ -241,50 +241,6 @@ class BookFormattingSheet extends StatelessWidget {
                 controller: workspaceController,
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FormattingSection extends StatelessWidget {
-  const _FormattingSection({
-    required this.title,
-    required this.child,
-    this.hint,
-    super.key,
-  });
-
-  final String title;
-  final String? hint;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Card(
-      margin: const EdgeInsets.only(top: 8),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              title,
-              style: textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            if (hint case final hint?)
-              Text(
-                hint,
-                style: textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            const SizedBox(height: 10),
-            child,
           ],
         ),
       ),

@@ -8,7 +8,7 @@ import 'support/literia_test_navigation.dart';
 import 'support/memory_author_workspace_repository.dart';
 
 void main() {
-  testWidgets('opens writing statistics and saves daily and project goals', (
+  testWidgets('writing statistics keep goals as they are typed', (
     tester,
   ) async {
     final controller = AuthorWorkspaceController(
@@ -37,14 +37,9 @@ void main() {
       find.byKey(const ValueKey('project-writing-goal')),
       '90000',
     );
-    await tester.drag(
-      find.byKey(const ValueKey('writing-statistics-sheet')),
-      const Offset(0, -500),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('save-writing-goals')));
     await tester.pump();
 
+    // Goals are kept as they are typed, with no button to press.
     expect(controller.activeProject!.writingState.dailyTargetWords, 750);
     expect(controller.activeProject!.writingState.projectTargetWords, 90000);
     await tester.binding.setSurfaceSize(null);

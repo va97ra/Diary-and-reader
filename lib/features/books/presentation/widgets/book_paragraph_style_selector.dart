@@ -1,7 +1,7 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_style.dart';
 import 'package:dnevnik/features/books/presentation/book_paragraph_style_actions.dart';
-import 'package:dnevnik/features/books/presentation/widgets/book_compact_dropdown.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_settings_controls.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 

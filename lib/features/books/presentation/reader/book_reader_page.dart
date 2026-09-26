@@ -429,9 +429,7 @@ class _BookReaderPageState extends State<BookReaderPage> {
             _compactReaderAction(
               key: const ValueKey('reader-tts-action'),
               icon: Icon(_speechIcon),
-              label: _isSpeaking || _isChoosingSpeechStart
-                  ? _speechLabel(strings)
-                  : strings.speechShort,
+              label: _speechShortLabel(strings),
               semanticLabel: _speechLabel(strings),
               onPressed: _toggleSpeech,
               selected: _isSpeaking || _isChoosingSpeechStart,
@@ -529,21 +527,33 @@ class _BookReaderPageState extends State<BookReaderPage> {
             ],
           ),
         ),
-        BookPanelSectionLabel(strings.chapters),
-        _wideReaderAction(
-          key: const ValueKey('reader-contents-action'),
-          icon: const Icon(Icons.toc),
-          label: strings.contentsShort,
-          onPressed: () => _showContents(themedContext),
-        ),
-        _wideReaderAction(
-          key: const ValueKey('reader-bookmark-action'),
-          icon: Icon(
-            _currentBookmark == null ? Icons.bookmark_border : Icons.bookmark,
+        // Inset like the right panel, so the buttons stay inside the
+        // stitching.
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              BookPanelSectionLabel(strings.chapters),
+              _wideReaderAction(
+                key: const ValueKey('reader-contents-action'),
+                icon: const Icon(Icons.toc),
+                label: strings.contentsShort,
+                onPressed: () => _showContents(themedContext),
+              ),
+              _wideReaderAction(
+                key: const ValueKey('reader-bookmark-action'),
+                icon: Icon(
+                  _currentBookmark == null
+                      ? Icons.bookmark_border
+                      : Icons.bookmark,
+                ),
+                label: strings.bookmark,
+                onPressed: _toggleBookmark,
+                selected: _currentBookmark != null,
+              ),
+            ],
           ),
-          label: strings.bookmark,
-          onPressed: _toggleBookmark,
-          selected: _currentBookmark != null,
         ),
       ],
     );
@@ -611,6 +621,15 @@ class _BookReaderPageState extends State<BookReaderPage> {
             ? strings.resumeReadingAloud
             : strings.pauseReadingAloud
       : strings.startReadingAloud;
+
+  /// The same state in a word that fits the phone's bottom bar.
+  String _speechShortLabel(AppStrings strings) => _isChoosingSpeechStart
+      ? strings.cancel
+      : _isSpeaking
+      ? _isSpeechPaused
+            ? strings.resumeShort
+            : strings.pauseReadingAloud
+      : strings.speechShort;
 
   void _toggleFocusMode() {
     _clearTextSelection();

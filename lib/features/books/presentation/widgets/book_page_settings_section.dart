@@ -1,14 +1,28 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/domain/book_layout_settings.dart';
-import 'package:dnevnik/features/books/presentation/widgets/book_page_view_mode_selector.dart';
-import 'package:dnevnik/features/books/presentation/widgets/book_setting_number_field.dart';
+import 'package:dnevnik/features/books/domain/book_page_view_mode.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_settings_controls.dart';
 import 'package:flutter/material.dart';
 
+/// How the pages of the manuscript look: the A4 preview, how the sheets are
+/// shown, their orientation and margins.
 class BookPageSettingsSection extends StatelessWidget {
-  const BookPageSettingsSection({required this.controller, super.key});
+  const BookPageSettingsSection({
+    required this.controller,
+    required this.a4Preview,
+    required this.pagedLayout,
+    required this.onToggleA4Preview,
+    super.key,
+  });
 
   final AuthorWorkspaceController controller;
+  final bool a4Preview;
+  final bool pagedLayout;
+  final VoidCallback onToggleA4Preview;
+
+  static const _marginPresetsMm = [12.7, 20.0, 25.4];
+  static const _marginsMm = <double>[5, 10, 12.7, 15, 20, 25, 25.4, 30, 40, 50];
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
@@ -20,307 +34,147 @@ class BookPageSettingsSection extends StatelessWidget {
     final strings = AppStrings.of(context);
     final project = controller.activeProject!;
     final settings = project.layoutSettings;
-    final marginPreset = _uniformMarginPreset(settings);
-    return Card(
+    BookCompactDropdown<double> margin(
+      String key,
+      String label,
+      double value,
+      BookLayoutSettings Function(double value) change,
+    ) => BookCompactDropdown<double>(
+      key: ValueKey('${project.id}-margin-$key'),
+      label: label,
+      value: value,
+      items: bookNumberChoices(_marginsMm, value, bookSettingNumber),
+      onChanged: (next) => _update(change(next)),
+    );
+    return BookSettingsCard(
       key: const ValueKey('writer-page-layout-section'),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              strings.pageLayout,
-              style: Theme.of(
-                context,
-              ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+      title: strings.pageLayout,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          FilledButton.tonalIcon(
+            key: const ValueKey('writer-a4-preview-action'),
+            onPressed: onToggleA4Preview,
+            icon: Icon(
+              a4Preview ? Icons.edit_note_outlined : Icons.description_outlined,
             ),
-            const SizedBox(height: 8),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                SizedBox(
-                  width: 108,
-                  child: _ReadOnlySettingValue(
-                    label: strings.paperFormatShort,
-                    value: 'A4',
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        strings.orientation,
-                        style: Theme.of(context).textTheme.labelLarge,
-                      ),
-                      const SizedBox(height: 4),
-                      SizedBox(
-                        width: double.infinity,
-                        child: SegmentedButton<BookPageOrientation>(
-                          key: ValueKey('${project.id}-page-orientation'),
-                          showSelectedIcon: false,
-                          style: const ButtonStyle(
-                            visualDensity: VisualDensity.compact,
-                            padding: WidgetStatePropertyAll(
-                              EdgeInsets.symmetric(horizontal: 6),
-                            ),
-                            shape: WidgetStatePropertyAll(
-                              RoundedRectangleBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(10),
-                                ),
-                              ),
-                            ),
-                          ),
-                          segments: [
-                            ButtonSegment(
-                              value: BookPageOrientation.portrait,
-                              label: Text(
-                                strings.portrait,
-                                key: const ValueKey(
-                                  'page-orientation-portrait',
-                                ),
-                              ),
-                            ),
-                            ButtonSegment(
-                              value: BookPageOrientation.landscape,
-                              label: Text(
-                                strings.landscape,
-                                key: const ValueKey(
-                                  'page-orientation-landscape',
-                                ),
-                              ),
-                            ),
-                          ],
-                          selected: {settings.orientation},
-                          onSelectionChanged: (selection) => _update(
-                            settings.copyWith(orientation: selection.single),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            label: Text(
+              a4Preview ? strings.comfortableWriting : strings.a4Preview,
             ),
-            const SizedBox(height: 6),
-            SwitchListTile(
-              key: ValueKey('${project.id}-show-chapter-titles'),
-              contentPadding: EdgeInsets.zero,
-              visualDensity: const VisualDensity(vertical: -3),
-              title: Text(
-                strings.showChapterTitlesInBody,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              subtitle: Text(
-                strings.showChapterTitlesInBodyHint,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              value: settings.showChapterTitlesInBody,
-              onChanged: (value) =>
-                  _update(settings.copyWith(showChapterTitlesInBody: value)),
-            ),
-            const SizedBox(height: 6),
-            BookPageViewModeSelector(
+          ),
+          // How sheets are shown only matters while there are sheets.
+          if (pagedLayout) ...[
+            const SizedBox(height: 12),
+            BookCompactChoice<BookPageViewMode>(
+              key: ValueKey('${project.id}-page-view-mode'),
+              label: strings.viewMode,
               value: settings.viewMode,
-              onChanged: (viewMode) =>
-                  _update(settings.copyWith(viewMode: viewMode)),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Text(
-                  strings.margins,
-                  style: Theme.of(context).textTheme.labelLarge,
+              options: [
+                (
+                  BookPageViewMode.continuous,
+                  Icons.view_stream_outlined,
+                  strings.continuousPagesShort,
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: SegmentedButton<double>(
-                    emptySelectionAllowed: true,
-                    showSelectedIcon: false,
-                    style: const ButtonStyle(
-                      visualDensity: VisualDensity.compact,
-                      padding: WidgetStatePropertyAll(
-                        EdgeInsets.symmetric(horizontal: 5),
-                      ),
-                      shape: WidgetStatePropertyAll(
-                        RoundedRectangleBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(10)),
-                        ),
-                      ),
-                    ),
-                    segments: [
-                      ButtonSegment(value: 12.7, label: Text(strings.narrow)),
-                      ButtonSegment(value: 20, label: Text(strings.normal)),
-                      ButtonSegment(value: 25.4, label: Text(strings.wide)),
-                    ],
-                    selected: marginPreset == null ? {} : {marginPreset},
-                    onSelectionChanged: (selection) {
-                      if (selection.isNotEmpty) {
-                        _uniform(settings, selection.single);
-                      }
-                    },
-                  ),
+                (
+                  BookPageViewMode.singlePage,
+                  Icons.crop_portrait_outlined,
+                  strings.singlePageShort,
+                ),
+                (
+                  BookPageViewMode.spread,
+                  Icons.menu_book_outlined,
+                  strings.twoPageSpread,
                 ),
               ],
-            ),
-            const SizedBox(height: 8),
-            LayoutBuilder(
-              builder: (context, constraints) => _MarginFields(
-                projectId: project.id,
-                settings: settings,
-                fourColumns: constraints.maxWidth >= 330,
-                strings: strings,
-                onChanged: _update,
-              ),
+              onChanged: (mode) => _update(settings.copyWith(viewMode: mode)),
             ),
           ],
-        ),
+          const SizedBox(height: 12),
+          BookCompactChoice<BookPageOrientation>(
+            key: ValueKey('${project.id}-page-orientation'),
+            label: strings.orientation,
+            value: settings.orientation,
+            options: [
+              (
+                BookPageOrientation.portrait,
+                Icons.crop_portrait,
+                strings.portrait,
+              ),
+              (
+                BookPageOrientation.landscape,
+                Icons.crop_landscape,
+                strings.landscape,
+              ),
+            ],
+            onChanged: (orientation) =>
+                _update(settings.copyWith(orientation: orientation)),
+          ),
+          const SizedBox(height: 12),
+          BookCompactChoice<double>(
+            key: ValueKey('${project.id}-margin-preset'),
+            // The four fields below show bare numbers to fit on one line.
+            label: '${strings.margins}, ${strings.millimeters}',
+            value: _uniformMarginPreset(settings),
+            options: [
+              (_marginPresetsMm[0], null, strings.narrow),
+              (_marginPresetsMm[1], null, strings.normal),
+              (_marginPresetsMm[2], null, strings.wide),
+            ],
+            onChanged: (value) => _update(settings.withUniformMargins(value)),
+          ),
+          const SizedBox(height: 14),
+          BookSettingsRow(
+            children: [
+              margin(
+                'top',
+                strings.top,
+                settings.marginTopMm,
+                (value) => settings.copyWith(marginTopMm: value),
+              ),
+              margin(
+                'bottom',
+                strings.bottom,
+                settings.marginBottomMm,
+                (value) => settings.copyWith(marginBottomMm: value),
+              ),
+              margin(
+                'left',
+                strings.left,
+                settings.marginLeftMm,
+                (value) => settings.copyWith(marginLeftMm: value),
+              ),
+              margin(
+                'right',
+                strings.right,
+                settings.marginRightMm,
+                (value) => settings.copyWith(marginRightMm: value),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          BookSettingSwitch(
+            key: ValueKey('${project.id}-show-chapter-titles'),
+            title: strings.showChapterTitlesInBody,
+            hint: strings.showChapterTitlesInBodyHint,
+            value: settings.showChapterTitlesInBody,
+            onChanged: (value) =>
+                _update(settings.copyWith(showChapterTitlesInBody: value)),
+          ),
+        ],
       ),
     );
   }
-
-  void _uniform(BookLayoutSettings settings, double value) =>
-      _update(settings.withUniformMargins(value));
 
   void _update(BookLayoutSettings settings) =>
       controller.updateLayoutSettings(settings);
 
-  bool _allMarginsEqual(BookLayoutSettings settings, double value) =>
-      (settings.marginTopMm - value).abs() < 0.01 &&
-      (settings.marginRightMm - value).abs() < 0.01 &&
-      (settings.marginBottomMm - value).abs() < 0.01 &&
-      (settings.marginLeftMm - value).abs() < 0.01;
-
   double? _uniformMarginPreset(BookLayoutSettings settings) {
-    for (final value in const [12.7, 20.0, 25.4]) {
-      if (_allMarginsEqual(settings, value)) return value;
-    }
-    return null;
-  }
-}
-
-class _ReadOnlySettingValue extends StatelessWidget {
-  const _ReadOnlySettingValue({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    height: 48,
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-    decoration: BoxDecoration(
-      color: Theme.of(context).inputDecorationTheme.fillColor,
-      borderRadius: BorderRadius.circular(10),
-      border: Border.all(color: Theme.of(context).dividerColor),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          maxLines: 1,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(height: 1),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.1),
-        ),
-      ],
-    ),
-  );
-}
-
-class _MarginFields extends StatelessWidget {
-  const _MarginFields({
-    required this.projectId,
-    required this.settings,
-    required this.fourColumns,
-    required this.strings,
-    required this.onChanged,
-  });
-
-  final String projectId;
-  final BookLayoutSettings settings;
-  final bool fourColumns;
-  final AppStrings strings;
-  final ValueChanged<BookLayoutSettings> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final fields = [
-      BookSettingNumberField(
-        key: ValueKey('$projectId-margin-top'),
-        label: strings.top,
-        value: settings.marginTopMm,
-        minimum: 5,
-        maximum: 50,
-        suffix: strings.millimeters,
-        onChanged: (value) => onChanged(settings.copyWith(marginTopMm: value)),
-      ),
-      BookSettingNumberField(
-        key: ValueKey('$projectId-margin-bottom'),
-        label: strings.bottom,
-        value: settings.marginBottomMm,
-        minimum: 5,
-        maximum: 50,
-        suffix: strings.millimeters,
-        onChanged: (value) =>
-            onChanged(settings.copyWith(marginBottomMm: value)),
-      ),
-      BookSettingNumberField(
-        key: ValueKey('$projectId-margin-left'),
-        label: strings.left,
-        value: settings.marginLeftMm,
-        minimum: 5,
-        maximum: 50,
-        suffix: strings.millimeters,
-        onChanged: (value) => onChanged(settings.copyWith(marginLeftMm: value)),
-      ),
-      BookSettingNumberField(
-        key: ValueKey('$projectId-margin-right'),
-        label: strings.right,
-        value: settings.marginRightMm,
-        minimum: 5,
-        maximum: 50,
-        suffix: strings.millimeters,
-        onChanged: (value) =>
-            onChanged(settings.copyWith(marginRightMm: value)),
-      ),
-    ];
-    if (fourColumns) {
-      return Row(
-        children: [
-          for (var index = 0; index < fields.length; index++) ...[
-            if (index > 0) const SizedBox(width: 6),
-            Expanded(child: fields[index]),
-          ],
-        ],
-      );
-    }
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(child: fields[0]),
-            const SizedBox(width: 8),
-            Expanded(child: fields[1]),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(child: fields[2]),
-            const SizedBox(width: 8),
-            Expanded(child: fields[3]),
-          ],
-        ),
-      ],
-    );
+    bool allEqual(double value) => [
+      settings.marginTopMm,
+      settings.marginRightMm,
+      settings.marginBottomMm,
+      settings.marginLeftMm,
+    ].every((margin) => (margin - value).abs() < 0.01);
+    return _marginPresetsMm.where(allEqual).firstOrNull;
   }
 }

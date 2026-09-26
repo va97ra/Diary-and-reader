@@ -4,6 +4,7 @@ import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_section_trash.dart';
 import 'package:dnevnik/features/books/domain/book_text_trash.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_empty_state.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/material.dart';
 
@@ -48,7 +49,11 @@ class _BookTrashSheetState extends State<BookTrashSheet> {
           const Divider(height: 1),
           Expanded(
             child: entries.isEmpty
-                ? Center(child: Text(strings.trashEmpty))
+                ? BookEmptyState(
+                    icon: Icons.delete_outline,
+                    title: strings.trashEmpty,
+                    hint: strings.trashEmptyHint,
+                  )
                 : ListView.separated(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     itemCount: entries.length,

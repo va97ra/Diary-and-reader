@@ -1,7 +1,7 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
-import 'package:dnevnik/features/books/presentation/widgets/book_compact_dropdown.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_settings_controls.dart';
 import 'package:flutter/material.dart';
 
 /// The text settings of the whole manuscript: every value is a compact
@@ -27,7 +27,7 @@ class BookParagraphSettingsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _Row(
+        BookSettingsRow(
           children: [
             BookCompactDropdown<BookParagraphPreset>(
               key: ValueKey('${project.id}-paragraph-preset'),
@@ -52,7 +52,7 @@ class BookParagraphSettingsSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 14),
-        _Row(
+        BookSettingsRow(
           children: [
             BookCompactDropdown<double>(
               key: ValueKey('${project.id}-default-font-size'),
@@ -81,7 +81,7 @@ class BookParagraphSettingsSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 14),
-        _Row(
+        BookSettingsRow(
           children: [
             BookCompactDropdown<double>(
               key: ValueKey('${project.id}-paragraph-indent'),
@@ -135,21 +135,4 @@ class BookParagraphSettingsSection extends StatelessWidget {
         BookParagraphPreset.manuscript => strings.manuscriptStyle,
         BookParagraphPreset.custom => strings.customStyle,
       };
-}
-
-/// Settings side by side, equally wide.
-class _Row extends StatelessWidget {
-  const _Row({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      for (final (index, child) in children.indexed) ...[
-        if (index > 0) const SizedBox(width: 8),
-        Expanded(child: child),
-      ],
-    ],
-  );
 }

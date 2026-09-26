@@ -1,6 +1,7 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/domain/book_image_placement.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_settings_controls.dart';
 import 'package:flutter/material.dart';
 
 enum BookImageSettingsAction { save, moveToCursor, delete }
@@ -72,7 +73,6 @@ class _BookImageSettingsSheetState extends State<BookImageSettingsSheet> {
           children: [
             BookLeatherModalHeader(
               title: strings.illustrationSettings,
-              subtitle: strings.illustrationSettingsHint,
               onClose: () {
                 _releaseCaptionFocus();
                 Navigator.pop(context, BookImageSettingsAction.save);
@@ -80,92 +80,86 @@ class _BookImageSettingsSheetState extends State<BookImageSettingsSheet> {
               closeKey: const ValueKey('image-settings-close'),
               padding: const EdgeInsets.fromLTRB(0, 8, 0, 4),
             ),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      strings.imagePosition,
-                      style: Theme.of(context).textTheme.labelLarge,
-                    ),
-                    const SizedBox(height: 6),
-                    SegmentedButton<BookImageAlignment>(
-                      key: const ValueKey('image-alignment-selector'),
-                      showSelectedIcon: false,
-                      segments: [
-                        ButtonSegment(
-                          value: BookImageAlignment.left,
-                          icon: const Icon(Icons.format_align_left, size: 18),
-                          label: Text(strings.alignLeft),
-                        ),
-                        ButtonSegment(
-                          value: BookImageAlignment.center,
-                          icon: const Icon(Icons.format_align_center, size: 18),
-                          label: Text(strings.alignCenter),
-                        ),
-                        ButtonSegment(
-                          value: BookImageAlignment.right,
-                          icon: const Icon(Icons.format_align_right, size: 18),
-                          label: Text(strings.alignRight),
-                        ),
-                      ],
-                      selected: {_placement.alignment},
-                      onSelectionChanged: (selection) => _updateFromControl(
-                        _placement.alignedTo(selection.first),
+            BookSettingsCard(
+              title: strings.illustrationSettingsHint,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  BookCompactChoice<BookImageAlignment>(
+                    key: const ValueKey('image-alignment-selector'),
+                    label: strings.imagePosition,
+                    value: _placement.alignment,
+                    options: [
+                      (
+                        BookImageAlignment.left,
+                        Icons.format_align_left,
+                        strings.alignLeft,
                       ),
-                      style: _segmentStyle(),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      strings.imageSize,
-                      style: Theme.of(context).textTheme.labelLarge,
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Slider(
-                            key: const ValueKey('image-size-slider'),
-                            value: _placement.widthPercent.toDouble(),
-                            min: 20,
-                            max: 100,
-                            label: '${_placement.widthPercent}%',
-                            onChangeStart: (_) => _releaseCaptionFocus(),
-                            onChanged: (value) => _update(
-                              _placement.copyWith(widthPercent: value.round()),
-                            ),
+                      (
+                        BookImageAlignment.center,
+                        Icons.format_align_center,
+                        strings.alignCenter,
+                      ),
+                      (
+                        BookImageAlignment.right,
+                        Icons.format_align_right,
+                        strings.alignRight,
+                      ),
+                    ],
+                    onChanged: (alignment) =>
+                        _updateFromControl(_placement.alignedTo(alignment)),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    strings.imageSize,
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Slider(
+                          key: const ValueKey('image-size-slider'),
+                          value: _placement.widthPercent.toDouble(),
+                          min: 20,
+                          max: 100,
+                          label: '${_placement.widthPercent}%',
+                          onChangeStart: (_) => _releaseCaptionFocus(),
+                          onChanged: (value) => _update(
+                            _placement.copyWith(widthPercent: value.round()),
                           ),
                         ),
-                        SizedBox(
-                          width: 48,
-                          child: Text(
-                            '${_placement.widthPercent}%',
-                            key: const ValueKey('image-size-value'),
-                            textAlign: TextAlign.end,
-                            style: Theme.of(context).textTheme.labelLarge,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      key: const ValueKey('image-caption-field'),
-                      controller: _captionController,
-                      focusNode: _captionFocusNode,
-                      maxLength: 180,
-                      maxLines: 2,
-                      decoration: InputDecoration(
-                        labelText: strings.imageCaption,
-                        hintText: strings.imageCaptionHint,
-                        counterText: '',
                       ),
-                      onTapOutside: (_) => _releaseCaptionFocus(),
-                      onChanged: (value) =>
-                          _update(_placement.copyWith(caption: value)),
+                      SizedBox(
+                        width: 48,
+                        child: Text(
+                          '${_placement.widthPercent}%',
+                          key: const ValueKey('image-size-value'),
+                          textAlign: TextAlign.end,
+                          style: Theme.of(context).textTheme.labelLarge,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    key: const ValueKey('image-caption-field'),
+                    controller: _captionController,
+                    focusNode: _captionFocusNode,
+                    maxLength: 180,
+                    minLines: 1,
+                    maxLines: 2,
+                    decoration: InputDecoration(
+                      labelText: strings.imageCaption,
+                      hintText: strings.imageCaptionHint,
+                      counterText: '',
+                      isDense: true,
+                      border: const OutlineInputBorder(),
                     ),
-                  ],
-                ),
+                    onTapOutside: (_) => _releaseCaptionFocus(),
+                    onChanged: (value) =>
+                        _update(_placement.copyWith(caption: value)),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 8),
@@ -215,18 +209,6 @@ class _BookImageSettingsSheetState extends State<BookImageSettingsSheet> {
       ),
     );
   }
-
-  ButtonStyle _segmentStyle() => ButtonStyle(
-    visualDensity: VisualDensity.compact,
-    padding: const WidgetStatePropertyAll(
-      EdgeInsets.symmetric(horizontal: 8, vertical: 9),
-    ),
-    shape: const WidgetStatePropertyAll(
-      RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(10)),
-      ),
-    ),
-  );
 
   @override
   void dispose() {

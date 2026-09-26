@@ -119,7 +119,7 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
         );
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isTablet = constraints.maxWidth >= 700;
+        final isTablet = constraints.maxWidth >= _tabletWidth;
         return PopScope(
           canPop: !_isFocusMode,
           onPopInvokedWithResult: (didPop, _) {
@@ -410,12 +410,26 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
             ],
           ),
         ),
-        BookPanelSectionLabel(strings.manuscript),
-        _wideWriterAction(
-          key: const ValueKey('writer-structure-action'),
-          icon: Icons.account_tree_outlined,
-          label: strings.structure,
-          onPressed: _showManuscript,
+        // The chapters and the tools that keep the text safe share this
+        // side, the book's own tools the other, so neither has to scroll.
+        Expanded(
+          child: ListView(
+            // The same inset as the right panel keeps the buttons inside the
+            // stitching.
+            padding: const EdgeInsets.fromLTRB(8, 0, 8, 9),
+            children: [
+              BookPanelSectionLabel(strings.manuscript),
+              _wideWriterAction(
+                key: const ValueKey('writer-structure-action'),
+                icon: Icons.account_tree_outlined,
+                label: strings.structure,
+                onPressed: _showManuscript,
+              ),
+              BookPanelSectionLabel(strings.keepingTextSafe),
+              for (final action in BookWorkspaceAction.values)
+                if (action.keepsTextSafe) _workspaceActionButton(action),
+            ],
+          ),
         ),
       ],
     );
@@ -446,9 +460,9 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
           label: strings.settings,
           onPressed: _showWriterSettings,
         ),
-        BookPanelSectionLabel(strings.moreActions),
+        BookPanelSectionLabel(strings.bookTools),
         for (final action in BookWorkspaceAction.values)
-          _workspaceActionButton(action),
+          if (!action.keepsTextSafe) _workspaceActionButton(action),
       ],
     );
   }
@@ -494,13 +508,13 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
         Icons.insights_outlined,
         strings.writingStatistics,
       ),
-      BookWorkspaceAction.export => (
-        Icons.ios_share_outlined,
-        strings.exportBook,
-      ),
       BookWorkspaceAction.preview => (
         Icons.chrome_reader_mode_outlined,
         strings.previewBook,
+      ),
+      BookWorkspaceAction.export => (
+        Icons.ios_share_outlined,
+        strings.exportBook,
       ),
       BookWorkspaceAction.history => (Icons.history, strings.versionHistory),
       BookWorkspaceAction.trash => (Icons.delete_outline, strings.trash),
@@ -515,45 +529,65 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
     };
   }
 
+  /// What a tool does, in a few words for someone new to the app.
+  String _workspaceActionHint(BookWorkspaceAction action) {
+    final strings = AppStrings.of(context);
+    return switch (action) {
+      BookWorkspaceAction.search => strings.findAndReplaceHint,
+      BookWorkspaceAction.statistics => strings.writingStatisticsHint,
+      BookWorkspaceAction.preview => strings.previewBookHint,
+      BookWorkspaceAction.export => strings.exportBookHint,
+      BookWorkspaceAction.history => strings.versionHistoryHint,
+      BookWorkspaceAction.trash => strings.trashHint,
+      BookWorkspaceAction.backup => strings.backupProjectHint,
+      BookWorkspaceAction.restore => strings.restoreProjectBackupHint,
+    };
+  }
+
   Future<void> _showWorkspaceTools() async {
+    final strings = AppStrings.of(context);
+    Widget tile(BuildContext sheetContext, BookWorkspaceAction action) {
+      final (icon, label) = _workspaceActionPresentation(action);
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: LiteriaCompactActionTile(
+          key: ValueKey('writer-panel-${action.name}'),
+          icon: icon,
+          title: label,
+          subtitle: _workspaceActionHint(action),
+          trailing: null,
+          onTap: () => Navigator.of(sheetContext).pop(action),
+        ),
+      );
+    }
+
     final action = await showBookLeatherBottomSheet<BookWorkspaceAction>(
       context: context,
+      isScrollControlled: true,
       builder: (sheetContext) => ConstrainedBox(
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.78,
+          maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.82,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             BookLeatherModalHeader(
-              title: AppStrings.of(context).moreActions,
+              title: strings.moreActions,
               onClose: () => Navigator.of(sheetContext).pop(),
             ),
             Flexible(
-              child: ListView.separated(
+              child: ListView(
                 shrinkWrap: true,
                 padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-                itemCount: BookWorkspaceAction.values.length,
-                // Book tools first, then versions and backups.
-                separatorBuilder: (_, index) => SizedBox(
-                  height:
-                      BookWorkspaceAction.values[index] ==
-                          BookWorkspaceAction.preview
-                      ? 2 * bookModalGrid
-                      : 6,
-                ),
-                itemBuilder: (_, index) {
-                  final action = BookWorkspaceAction.values[index];
-                  final (icon, label) = _workspaceActionPresentation(action);
-                  return LiteriaCompactActionTile(
-                    key: ValueKey('writer-panel-${action.name}'),
-                    icon: icon,
-                    title: label,
-                    trailing: null,
-                    onTap: () => Navigator.of(sheetContext).pop(action),
-                  );
-                },
+                children: [
+                  BookPanelSectionLabel(strings.bookTools),
+                  for (final action in BookWorkspaceAction.values)
+                    if (!action.keepsTextSafe) tile(sheetContext, action),
+                  BookPanelSectionLabel(strings.keepingTextSafe),
+                  for (final action in BookWorkspaceAction.values)
+                    if (action.keepsTextSafe) tile(sheetContext, action),
+                ],
               ),
             ),
           ],
@@ -661,6 +695,14 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
     if (!_isFocusMode && _isA4Preview) _isA4Preview = false;
     _isFocusMode = !_isFocusMode;
   });
+
+  /// Wide enough for the side panels and for editing on sheets.
+  static const _tabletWidth = 700.0;
+
+  /// Whether the editor shows sheets: always on a wide screen, and on a
+  /// phone in the A4 preview.
+  bool get _usesPagedLayout =>
+      _isA4Preview || MediaQuery.sizeOf(context).width >= _tabletWidth;
 
   void _toggleA4Preview() {
     final enabled = !_isA4Preview;
@@ -816,32 +858,17 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
               title: AppStrings.of(context).writerSettings,
               onClose: () => Navigator.pop(sheetContext),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: FilledButton.tonalIcon(
-                key: const ValueKey('writer-a4-preview-action'),
-                onPressed: () {
-                  Navigator.pop(sheetContext);
-                  _toggleA4Preview();
-                },
-                icon: Icon(
-                  _isA4Preview
-                      ? Icons.edit_note_outlined
-                      : Icons.description_outlined,
-                ),
-                label: Text(
-                  _isA4Preview
-                      ? AppStrings.of(context).comfortableWriting
-                      : AppStrings.of(context).a4Preview,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
             Expanded(
               child: BookPropertiesPanel(
                 controller: widget.controller,
                 onChooseCover: _chooseCover,
                 onRemoveCover: widget.controller.clearCoverAsset,
+                a4Preview: _isA4Preview,
+                pagedLayout: _usesPagedLayout,
+                onToggleA4Preview: () {
+                  Navigator.pop(sheetContext);
+                  _toggleA4Preview();
+                },
               ),
             ),
           ],

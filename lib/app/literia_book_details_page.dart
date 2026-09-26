@@ -7,6 +7,7 @@ import 'package:dnevnik/features/books/presentation/widgets/book_adaptive_contro
 import 'package:dnevnik/features/books/presentation/widgets/book_cover_view.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_metadata_editor_dialog.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_settings_controls.dart';
 import 'package:flutter/material.dart';
 
 class LiteriaBookDetailsPage extends StatelessWidget {
@@ -127,7 +128,7 @@ class _BookDetailsBody extends StatelessWidget {
                             onPressed: () => _editMetadata(context, metadata),
                             icon: const Icon(Icons.edit_outlined),
                             label: Text(
-                              strings.editMetadata,
+                              strings.editShort,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -138,69 +139,117 @@ class _BookDetailsBody extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 14),
-            LinearProgressIndicator(value: progress),
-            const SizedBox(height: 6),
-            Text('${strings.readingProgress}: ${(progress * 100).round()}%'),
-            _detail(
-              context,
-              strings.readingTime,
-              _formatDuration(project.libraryState.readingTimeSeconds),
-            ),
-            if (lastReadAt != null)
-              _detail(
-                context,
-                strings.lastRead,
-                MaterialLocalizations.of(context).formatMediumDate(lastReadAt),
-              ),
-            if (project.libraryState.readingSessions.isNotEmpty) ...[
-              const SizedBox(height: 20),
-              Text(
-                strings.readingHistory,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              ...project.libraryState.readingSessions
-                  .take(5)
-                  .map(
-                    (session) => ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.history),
-                      title: Text(
-                        MaterialLocalizations.of(
-                          context,
-                        ).formatMediumDate(session.startedAt),
-                      ),
-                      subtitle: Text(_formatDuration(session.durationSeconds)),
+            const SizedBox(height: 4),
+            _LeatherSection(
+              child: BookSettingsCard(
+                key: const ValueKey('book-details-reading'),
+                title: strings.readingProgress,
+                icon: Icons.auto_stories_outlined,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text('${(progress * 100).round()}%'),
+                      ],
                     ),
+                    const SizedBox(height: 8),
+                    BookSettingsRow(
+                      children: [
+                        _Fact(
+                          label: strings.readingTime,
+                          value: _formatDuration(
+                            strings,
+                            project.libraryState.readingTimeSeconds,
+                          ),
+                        ),
+                        _Fact(
+                          label: strings.lastRead,
+                          value: lastReadAt == null
+                              ? '—'
+                              : MaterialLocalizations.of(
+                                  context,
+                                ).formatMediumDate(lastReadAt),
+                        ),
+                      ],
+                    ),
+                    if (project.libraryState.readingSessions.isNotEmpty)
+                      Theme(
+                        data: Theme.of(
+                          context,
+                        ).copyWith(dividerColor: Colors.transparent),
+                        child: ExpansionTile(
+                          key: const ValueKey('book-details-history'),
+                          tilePadding: EdgeInsets.zero,
+                          dense: true,
+                          textColor: BookLeatherColors.foreground,
+                          collapsedTextColor: BookLeatherColors.foreground,
+                          iconColor: BookLeatherColors.accent,
+                          collapsedIconColor: BookLeatherColors.accent,
+                          title: Text(strings.readingHistory),
+                          children: [
+                            for (final session
+                                in project.libraryState.readingSessions.take(5))
+                              _Fact(
+                                label: MaterialLocalizations.of(
+                                  context,
+                                ).formatMediumDate(session.startedAt),
+                                value: _formatDuration(
+                                  strings,
+                                  session.durationSeconds,
+                                ),
+                                inline: true,
+                              ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            if ([
+              metadata.series,
+              metadata.genre,
+              metadata.isbn,
+              metadata.publisher,
+              metadata.description,
+            ].any((value) => value.isNotEmpty))
+              _LeatherSection(
+                child: BookSettingsCard(
+                  key: const ValueKey('book-details-about'),
+                  title: strings.aboutBook,
+                  icon: Icons.info_outline,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final (label, value) in [
+                        (strings.series, metadata.series),
+                        (strings.genre, metadata.genre),
+                        (strings.isbn, metadata.isbn),
+                        (strings.publisher, metadata.publisher),
+                        (strings.description, metadata.description),
+                      ])
+                        if (value.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: _Fact(label: label, value: value),
+                          ),
+                    ],
                   ),
-            ],
-            if (metadata.series.isNotEmpty)
-              _detail(context, strings.series, metadata.series),
-            if (metadata.genre.isNotEmpty)
-              _detail(context, strings.genre, metadata.genre),
-            if (metadata.isbn.isNotEmpty)
-              _detail(context, strings.isbn, metadata.isbn),
-            if (metadata.publisher.isNotEmpty)
-              _detail(context, strings.publisher, metadata.publisher),
-            if (metadata.description.isNotEmpty)
-              _detail(context, strings.description, metadata.description),
+                ),
+              ),
           ],
         ),
       ),
     );
   }
-
-  Widget _detail(BuildContext context, String label, String value) => Padding(
-    padding: const EdgeInsets.only(top: 16),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: Theme.of(context).textTheme.labelLarge),
-        const SizedBox(height: 3),
-        SelectableText(value),
-      ],
-    ),
-  );
 
   Future<void> _editMetadata(
     BuildContext context,
@@ -215,11 +264,71 @@ class _BookDetailsBody extends StatelessWidget {
     await controller.flush();
   }
 
-  String _formatDuration(int seconds) {
+  String _formatDuration(AppStrings strings, int seconds) {
     final duration = Duration(seconds: seconds);
     final hours = duration.inHours;
-    final minutes = duration.inMinutes.remainder(60);
-    if (hours == 0) return '$minutes мин';
-    return '$hours ч $minutes мин';
+    final minutes =
+        '${duration.inMinutes.remainder(60)} ${strings.minutesShort}';
+    return hours == 0 ? minutes : '$hours ${strings.hoursShort} $minutes';
+  }
+}
+
+/// A section of the page on the leather of the book's title card.
+class _LeatherSection extends StatelessWidget {
+  const _LeatherSection({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 8),
+    // The card of the section lies flat on the leather.
+    child: Theme(
+      data: bookLeatherModalTheme(context).copyWith(
+        cardTheme: const CardThemeData(
+          color: Colors.transparent,
+          elevation: 0,
+          margin: EdgeInsets.zero,
+          shape: RoundedRectangleBorder(),
+        ),
+      ),
+      child: LiteriaLeatherCard(padding: EdgeInsets.zero, child: child),
+    ),
+  );
+}
+
+/// A fact about the book with its name above it, or beside it when [inline].
+class _Fact extends StatelessWidget {
+  const _Fact({required this.label, required this.value, this.inline = false});
+
+  final String label;
+  final String value;
+  final bool inline;
+
+  @override
+  Widget build(BuildContext context) {
+    final labelStyle = Theme.of(
+      context,
+    ).textTheme.labelMedium?.copyWith(color: BookLeatherColors.mutedForeground);
+    const valueStyle = TextStyle(color: BookLeatherColors.foreground);
+    if (inline) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Row(
+          children: [
+            Expanded(child: Text(label, style: labelStyle)),
+            Text(value, style: valueStyle),
+          ],
+        ),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: labelStyle),
+        const SizedBox(height: 2),
+        SelectableText(value, style: valueStyle),
+      ],
+    );
   }
 }

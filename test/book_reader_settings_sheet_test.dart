@@ -57,15 +57,21 @@ void main() {
     await tester.binding.setSurfaceSize(null);
   });
 
-  testWidgets('font slider previews locally and commits once on release', (
+  testWidgets('text size steps once per tap and named choices apply', (
     tester,
   ) async {
     final applied = <BookReaderSettings>[];
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       MaterialApp(
         locale: const Locale('ru'),
         supportedLocales: const [Locale('ru'), Locale('en')],
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(size: const Size(390, 844)),
+          child: child!,
+        ),
         home: Scaffold(
           body: BookReaderSettingsSheet(
             settings: const BookReaderSettings(),
@@ -76,18 +82,21 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final slider = find.byType(Slider).first;
-    final gesture = await tester.startGesture(tester.getCenter(slider));
-    await gesture.moveBy(const Offset(70, 0));
+    expect(find.byType(Slider), findsNothing);
+    await tester.tap(find.byTooltip('Больше'));
     await tester.pump();
+    expect(applied.single.fontSize, 19);
+    expect(find.text('19'), findsOneWidget);
 
-    expect(applied, isEmpty);
-
-    await gesture.up();
-    await tester.pump();
-
-    expect(applied, hasLength(1));
-    expect(applied.single.fontSize, isNot(const BookReaderSettings().fontSize));
+    // Margins are named, not given in pixels.
+    await tester.tap(find.byKey(const ValueKey('reader-side-margins')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Широкие').last);
+    await tester.pumpAndSettle();
+    expect(applied.last.horizontalPadding, 56);
+    expect(find.textContaining('px'), findsNothing);
+    // Text width means nothing on a phone, so it is not offered.
+    expect(find.byKey(const ValueKey('reader-text-width')), findsNothing);
   });
 }
 

@@ -3,20 +3,33 @@ import 'package:dnevnik/features/books/application/author_workspace_controller.d
 import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_page_settings_section.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_settings_controls.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+/// The settings of a manuscript: what the book is, how its pages look, and
+/// the progress of the chapter being written.
 class BookPropertiesPanel extends StatelessWidget {
   const BookPropertiesPanel({
     required this.controller,
     required this.onChooseCover,
     required this.onRemoveCover,
+    required this.a4Preview,
+    required this.pagedLayout,
+    required this.onToggleA4Preview,
     super.key,
   });
 
   final AuthorWorkspaceController controller;
   final Future<void> Function() onChooseCover;
   final VoidCallback onRemoveCover;
+
+  /// Whether the editor shows the manuscript as A4 sheets right now.
+  final bool a4Preview;
+
+  /// Whether the editor lays text out in pages, where the page view applies.
+  final bool pagedLayout;
+  final VoidCallback onToggleA4Preview;
 
   @override
   Widget build(BuildContext context) {
@@ -28,9 +41,9 @@ class BookPropertiesPanel extends StatelessWidget {
       color: Colors.transparent,
       child: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(12, 4, 12, 20),
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
           children: [
-            _SettingsCard(
+            BookSettingsCard(
               key: const ValueKey('writer-properties-section'),
               title: strings.properties,
               child: Column(
@@ -42,26 +55,21 @@ class BookPropertiesPanel extends StatelessWidget {
                     onChanged: (value) =>
                         _updateMetadata(metadata, title: value),
                   ),
-                  Row(
+                  BookSettingsRow(
                     children: [
-                      Expanded(
-                        child: _PropertyField(
-                          key: ValueKey('${project.id}-subtitle'),
-                          label: strings.subtitle,
-                          initialValue: metadata.subtitle,
-                          onChanged: (value) =>
-                              _updateMetadata(metadata, subtitle: value),
-                        ),
+                      _PropertyField(
+                        key: ValueKey('${project.id}-subtitle'),
+                        label: strings.subtitle,
+                        initialValue: metadata.subtitle,
+                        onChanged: (value) =>
+                            _updateMetadata(metadata, subtitle: value),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _PropertyField(
-                          key: ValueKey('${project.id}-author'),
-                          label: strings.author,
-                          initialValue: metadata.author,
-                          onChanged: (value) =>
-                              _updateMetadata(metadata, author: value),
-                        ),
+                      _PropertyField(
+                        key: ValueKey('${project.id}-author'),
+                        label: strings.author,
+                        initialValue: metadata.author,
+                        onChanged: (value) =>
+                            _updateMetadata(metadata, author: value),
                       ),
                     ],
                   ),
@@ -73,77 +81,55 @@ class BookPropertiesPanel extends StatelessWidget {
                     onChanged: (value) =>
                         _updateMetadata(metadata, description: value),
                   ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<DraftStatus>(
-                          initialValue: section.status,
-                          isExpanded: true,
-                          decoration: InputDecoration(
-                            labelText: strings.draftStatus,
-                            border: const OutlineInputBorder(),
-                          ),
-                          items: DraftStatus.values
-                              .map(
-                                (status) => DropdownMenuItem(
-                                  value: status,
-                                  child: Text(
-                                    _statusLabel(strings, status),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (status) {
-                            if (status != null) {
-                              controller.updateSectionStatus(status);
-                            }
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Tooltip(
-                          message: strings.writingGoalHint,
-                          child: TextFormField(
-                            key: ValueKey('${section.id}-word-target'),
-                            initialValue: section.targetWords == 0
-                                ? ''
-                                : section.targetWords.toString(),
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                              LengthLimitingTextInputFormatter(8),
-                            ],
-                            decoration: InputDecoration(
-                              labelText: strings.writingGoal,
-                              border: const OutlineInputBorder(),
-                            ),
-                            onChanged: (value) =>
-                                controller.updateSectionTargetWords(
-                                  int.tryParse(value) ?? 0,
-                                ),
-                          ),
-                        ),
-                      ),
-                    ],
+                  _CoverSettings(
+                    key: const ValueKey('writer-cover-section'),
+                    coverBytes: project.coverAsset?.bytes,
+                    onChoose: onChooseCover,
+                    onRemove: project.coverAsset == null ? null : onRemoveCover,
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 8),
-            _SettingsCard(
-              key: const ValueKey('writer-cover-section'),
-              title: strings.bookCover,
-              child: _CoverSettings(
-                coverBytes: project.coverAsset?.bytes,
-                onChoose: onChooseCover,
-                onRemove: project.coverAsset == null ? null : onRemoveCover,
+            BookPageSettingsSection(
+              controller: controller,
+              a4Preview: a4Preview,
+              pagedLayout: pagedLayout,
+              onToggleA4Preview: onToggleA4Preview,
+            ),
+            BookSettingsCard(
+              key: const ValueKey('writer-chapter-section'),
+              title: strings.chapterSettings,
+              hint: strings.chapterSettingsHint,
+              child: BookSettingsRow(
+                children: [
+                  BookCompactDropdown<DraftStatus>(
+                    key: ValueKey('${section.id}-status'),
+                    label: strings.draftStatus,
+                    value: section.status,
+                    items: {
+                      for (final status in DraftStatus.values)
+                        status: _statusLabel(strings, status),
+                    },
+                    onChanged: controller.updateSectionStatus,
+                  ),
+                  TextFormField(
+                    key: ValueKey('${section.id}-word-target'),
+                    initialValue: section.targetWords == 0
+                        ? ''
+                        : section.targetWords.toString(),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(8),
+                    ],
+                    decoration: _denseDecoration(strings.writingGoal),
+                    onChanged: (value) => controller.updateSectionTargetWords(
+                      int.tryParse(value) ?? 0,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 8),
-            BookPageSettingsSection(controller: controller),
           ],
         ),
       ),
@@ -176,11 +162,20 @@ class BookPropertiesPanel extends StatelessWidget {
       };
 }
 
+/// The outlined field of the settings sheets, as low as their drop-downs.
+InputDecoration _denseDecoration(String label) => InputDecoration(
+  labelText: label,
+  isDense: true,
+  border: const OutlineInputBorder(),
+  contentPadding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+);
+
 class _CoverSettings extends StatelessWidget {
   const _CoverSettings({
     required this.coverBytes,
     required this.onChoose,
     required this.onRemove,
+    super.key,
   });
 
   final Uint8List? coverBytes;
@@ -192,16 +187,15 @@ class _CoverSettings extends StatelessWidget {
     final strings = AppStrings.of(context);
     final hasCover = coverBytes != null;
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
           key: const ValueKey('writer-cover-preview'),
-          width: 56,
-          height: 76,
+          width: 40,
+          height: 54,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(6),
             border: Border.all(color: Theme.of(context).dividerColor),
           ),
           child: hasCover
@@ -210,48 +204,33 @@ class _CoverSettings extends StatelessWidget {
                   fit: BoxFit.cover,
                   gaplessPlayback: true,
                 )
-              : const Icon(Icons.auto_stories_outlined, size: 28),
+              : const Icon(Icons.auto_stories_outlined, size: 20),
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                strings.coverHint,
-                maxLines: 2,
+          child: Tooltip(
+            message: strings.coverHint,
+            child: OutlinedButton.icon(
+              key: const ValueKey('choose-book-cover'),
+              onPressed: onChoose,
+              icon: const Icon(Icons.upload_outlined, size: 18),
+              label: Text(
+                hasCover ? strings.replaceCover : strings.uploadCover,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall,
               ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: FilledButton.tonalIcon(
-                      key: const ValueKey('choose-book-cover'),
-                      onPressed: onChoose,
-                      icon: const Icon(Icons.upload_outlined, size: 18),
-                      label: Text(
-                        hasCover ? strings.replaceCover : strings.uploadCover,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ),
-                  if (hasCover) ...[
-                    const SizedBox(width: 8),
-                    IconButton.outlined(
-                      key: const ValueKey('remove-book-cover'),
-                      tooltip: strings.removeCover,
-                      onPressed: onRemove,
-                      icon: const Icon(Icons.delete_outline, size: 20),
-                    ),
-                  ],
-                ],
-              ),
-            ],
+            ),
           ),
         ),
+        if (hasCover) ...[
+          const SizedBox(width: 8),
+          IconButton.outlined(
+            key: const ValueKey('remove-book-cover'),
+            tooltip: strings.removeCover,
+            onPressed: onRemove,
+            icon: const Icon(Icons.delete_outline, size: 20),
+          ),
+        ],
       ],
     );
   }
@@ -272,43 +251,14 @@ class _PropertyField extends StatelessWidget {
   final int maxLines;
 
   @override
-  Widget build(BuildContext context) {
-    final field = TextFormField(
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: TextFormField(
       initialValue: initialValue,
+      minLines: 1,
       maxLines: maxLines,
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-      ),
+      decoration: _denseDecoration(label),
       onChanged: onChanged,
-    );
-    return Padding(padding: const EdgeInsets.only(bottom: 8), child: field);
-  }
-}
-
-class _SettingsCard extends StatelessWidget {
-  const _SettingsCard({required this.title, required this.child, super.key});
-
-  final String title;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => Card(
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 8),
-          child,
-        ],
-      ),
     ),
   );
 }

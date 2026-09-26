@@ -1,7 +1,9 @@
+import 'package:dnevnik/app/literia_version.dart';
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/domain/literia_app_preferences.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_adaptive_control_shell.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_settings_controls.dart';
 import 'package:flutter/material.dart';
 
 class LiteriaSettingsPage extends StatelessWidget {
@@ -38,52 +40,35 @@ class LiteriaSettingsPage extends StatelessWidget {
           data: bookLeatherModalTheme(context),
           child: ListView(
             key: const ValueKey('literia-settings-list'),
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 24),
+            padding: const EdgeInsets.fromLTRB(12, 2, 12, 24),
             children: [
-              _SettingsCard(
+              BookSettingsCard(
                 title: strings.appearance,
                 icon: Icons.palette_outlined,
-                child: DropdownButtonFormField<LiteriaThemePreference>(
-                  initialValue: themePreference,
-                  isExpanded: true,
-                  decoration: const InputDecoration(),
-                  items: [
-                    DropdownMenuItem(
-                      value: LiteriaThemePreference.system,
-                      child: Text(strings.systemTheme),
+                child: BookSettingsRow(
+                  children: [
+                    BookCompactDropdown<LiteriaThemePreference>(
+                      key: const ValueKey('app-theme'),
+                      label: strings.appTheme,
+                      value: themePreference,
+                      items: {
+                        LiteriaThemePreference.system: strings.systemTheme,
+                        LiteriaThemePreference.light: strings.lightTheme,
+                        LiteriaThemePreference.dark: strings.darkTheme,
+                      },
+                      onChanged: onThemeChanged,
                     ),
-                    DropdownMenuItem(
-                      value: LiteriaThemePreference.light,
-                      child: Text(strings.lightTheme),
-                    ),
-                    DropdownMenuItem(
-                      value: LiteriaThemePreference.dark,
-                      child: Text(strings.darkTheme),
+                    BookCompactDropdown<String>(
+                      key: const ValueKey('app-language'),
+                      label: strings.language,
+                      value: languageCode,
+                      items: const {'ru': 'Русский', 'en': 'English'},
+                      onChanged: onLanguageChanged,
                     ),
                   ],
-                  onChanged: (value) {
-                    if (value != null) onThemeChanged(value);
-                  },
                 ),
               ),
-              _SettingsCard(
-                title: strings.language,
-                icon: Icons.language,
-                child: SizedBox(
-                  width: double.infinity,
-                  child: SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'ru', label: Text('Русский')),
-                      ButtonSegment(value: 'en', label: Text('English')),
-                    ],
-                    selected: {languageCode},
-                    showSelectedIcon: false,
-                    onSelectionChanged: (selection) =>
-                        onLanguageChanged(selection.first),
-                  ),
-                ),
-              ),
-              _SettingsCard(
+              BookSettingsCard(
                 title: strings.data,
                 icon: Icons.inventory_2_outlined,
                 child: Column(
@@ -91,6 +76,7 @@ class LiteriaSettingsPage extends StatelessWidget {
                     LiteriaCompactActionTile(
                       icon: Icons.download_outlined,
                       title: strings.backupProject,
+                      subtitle: strings.backupProjectHint,
                       enabled: canBackup,
                       onTap: () {
                         onBackup();
@@ -100,6 +86,7 @@ class LiteriaSettingsPage extends StatelessWidget {
                     LiteriaCompactActionTile(
                       icon: Icons.upload_file_outlined,
                       title: strings.restoreProjectBackup,
+                      subtitle: strings.restoreProjectBackupHint,
                       onTap: () {
                         onRestore();
                       },
@@ -115,29 +102,47 @@ class LiteriaSettingsPage extends StatelessWidget {
                   ],
                 ),
               ),
-              _SettingsCard(
+              BookSettingsCard(
                 title: strings.help,
                 icon: Icons.help_outline,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      '${strings.quickStartBody}\n'
-                      '${strings.supportedBookFormats}',
-                      style: const TextStyle(
-                        color: BookLeatherColors.mutedForeground,
-                        height: 1.35,
+                child: Theme(
+                  data: Theme.of(
+                    context,
+                  ).copyWith(dividerColor: Colors.transparent),
+                  // The guide stays folded until asked for, so the settings
+                  // themselves fit on the screen.
+                  child: ExpansionTile(
+                    key: const ValueKey('app-help'),
+                    tilePadding: EdgeInsets.zero,
+                    childrenPadding: const EdgeInsets.only(bottom: 4),
+                    dense: true,
+                    textColor: BookLeatherColors.foreground,
+                    collapsedTextColor: BookLeatherColors.foreground,
+                    iconColor: BookLeatherColors.accent,
+                    collapsedIconColor: BookLeatherColors.accent,
+                    title: Text(strings.showGuide),
+                    children: [
+                      Text(
+                        '${strings.quickStartBody}\n'
+                        '${strings.supportedBookFormats}',
+                        style: const TextStyle(
+                          color: BookLeatherColors.mutedForeground,
+                          height: 1.35,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-              _SettingsCard(
+              BookSettingsCard(
                 title: strings.about,
                 icon: Icons.info_outline,
-                child: const Text(
-                  'Литерия 1.0.3',
-                  style: TextStyle(color: BookLeatherColors.mutedForeground),
+                child: Text(
+                  '${strings.studioTitle} $literiaVersion',
+                  key: const ValueKey('app-version'),
+                  style: const TextStyle(
+                    color: BookLeatherColors.mutedForeground,
+                  ),
                 ),
               ),
             ],
@@ -146,51 +151,4 @@ class LiteriaSettingsPage extends StatelessWidget {
       ),
     );
   }
-}
-
-class _SettingsCard extends StatelessWidget {
-  const _SettingsCard({
-    required this.title,
-    required this.icon,
-    required this.child,
-  });
-
-  final String title;
-  final IconData icon;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(bottom: 8),
-    decoration: BoxDecoration(
-      color: const Color(0x52160B07),
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(
-        color: BookLeatherColors.stitch.withValues(alpha: 0.38),
-      ),
-    ),
-    child: Padding(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 19, color: BookLeatherColors.accent),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: BookLeatherColors.foreground,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          child,
-        ],
-      ),
-    ),
-  );
 }
