@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/book_image_file.dart';
 import 'package:dnevnik/features/books/domain/book_image_placement.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_text_color_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -197,9 +198,10 @@ class BookImageEditingScope extends InheritedWidget {
       onInsertImageFile != oldWidget.onInsertImageFile;
 }
 
-/// The regular text selection menu plus "Paste image" when the clipboard
-/// holds a picture. Android hides its own Paste item when the clipboard has
-/// no text, so without this entry a copied picture cannot be pasted at all.
+/// The regular text selection menu plus "Colour" for selected words and
+/// "Paste image" when the clipboard holds a picture. Android hides its own
+/// Paste item when the clipboard has no text, so without this entry a copied
+/// picture cannot be pasted at all.
 class _BookEditorContextMenu extends StatefulWidget {
   const _BookEditorContextMenu({
     required this.state,
@@ -227,9 +229,48 @@ class _BookEditorContextMenuState extends State<_BookEditorContextMenu> {
     });
   }
 
+  bool get _canColor =>
+      !widget.state.widget.config.readOnly &&
+      !widget.state.controller.selection.isCollapsed;
+
+  /// Opens the colours in place of the menu, as the reader's selection bar
+  /// offers highlights, and colours the selected words with the chosen one.
+  void _chooseColor() {
+    final state = widget.state;
+    final editorContext = state.context;
+    final overlay =
+        Overlay.of(editorContext).context.findRenderObject()! as RenderBox;
+    final anchor = overlay.globalToLocal(
+      state.contextMenuAnchors.primaryAnchor,
+    );
+    state.hideToolbar(false);
+    showMenu<String>(
+      context: editorContext,
+      position: RelativeRect.fromRect(
+        anchor & Size.zero,
+        Offset.zero & overlay.size,
+      ),
+      items: bookTextColorMenuItems(editorContext),
+    ).then((hex) {
+      if (hex != null) applyBookTextColor(state.controller, hex);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final items = [...widget.state.contextMenuButtonItems];
+    if (_canColor) {
+      final copyIndex = items.indexWhere(
+        (item) => item.type == ContextMenuButtonType.copy,
+      );
+      items.insert(
+        copyIndex < 0 ? items.length : copyIndex + 1,
+        ContextMenuButtonItem(
+          label: AppStrings.of(context).textColorAction,
+          onPressed: _chooseColor,
+        ),
+      );
+    }
     if (_hasImage) {
       final pasteIndex = items.indexWhere(
         (item) => item.type == ContextMenuButtonType.paste,

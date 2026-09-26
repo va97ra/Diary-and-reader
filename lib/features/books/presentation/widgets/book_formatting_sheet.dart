@@ -2,11 +2,11 @@ import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/domain/book_page_format.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
-import 'package:dnevnik/features/books/presentation/book_text_colors.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_compact_dropdown.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_paragraph_settings_section.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_paragraph_style_selector.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_text_color_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
@@ -331,79 +331,27 @@ class _TextColorButton extends StatelessWidget {
   final QuillController controller;
 
   @override
-  Widget build(BuildContext context) {
-    final strings = AppStrings.of(context);
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (context, _) {
-        final current = _currentTextColor(controller);
-        return PopupMenuButton<String>(
-          tooltip: strings.textColor,
-          initialValue: current,
-          onSelected: (hex) => controller.formatSelection(
-            ColorAttribute(hex.isEmpty ? null : hex),
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: controller,
+    builder: (context, _) {
+      final current = bookTextColorAt(controller);
+      return PopupMenuButton<String>(
+        tooltip: AppStrings.of(context).textColor,
+        initialValue: current,
+        onSelected: (hex) => applyBookTextColor(controller, hex),
+        itemBuilder: bookTextColorMenuItems,
+        child: SizedBox.square(
+          dimension: 30,
+          child: Icon(
+            Icons.format_color_text,
+            size: 20,
+            color: bookTextColorOf(current),
           ),
-          itemBuilder: (context) => [
-            for (final (hex, name) in [
-              ('', strings.noTextColor),
-              for (final (id, color) in BookTextColors.palette)
-                (BookTextColors.hex(color), strings.textColorName(id)),
-            ])
-              PopupMenuItem(
-                value: hex,
-                child: Row(
-                  children: [
-                    _ColorSwatch(hex: hex),
-                    const SizedBox(width: 10),
-                    Text(name),
-                  ],
-                ),
-              ),
-          ],
-          child: SizedBox.square(
-            dimension: 30,
-            child: Icon(
-              Icons.format_color_text,
-              size: 20,
-              color: _colorOf(current),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _ColorSwatch extends StatelessWidget {
-  const _ColorSwatch({required this.hex});
-
-  /// A `#rrggbb` colour, or empty for text without a colour of its own.
-  final String hex;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 16,
-    height: 16,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      color: _colorOf(hex),
-      border: Border.all(color: Theme.of(context).colorScheme.onSurface),
-    ),
+        ),
+      );
+    },
   );
 }
-
-Color? _colorOf(String hex) => hex.isEmpty
-    ? null
-    : Color(0xFF000000 | int.parse(hex.substring(1), radix: 16));
-
-String _currentTextColor(QuillController controller) =>
-    controller
-        .getSelectionStyle()
-        .attributes[Attribute.color.key]
-        ?.value
-        ?.toString()
-        .toLowerCase() ??
-    '';
 
 class _EvenToolbarRow extends StatelessWidget {
   const _EvenToolbarRow({required this.children});

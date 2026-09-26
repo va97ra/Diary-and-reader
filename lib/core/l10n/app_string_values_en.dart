@@ -488,6 +488,7 @@ const appStringValuesEn = <String, String>{
   'deletedPicture': 'Picture',
   'verse': 'Verse',
   'textColor': 'Text color',
+  'textColorAction': 'Color',
   'noTextColor': 'No color',
   'textColor_red': 'Red',
   'textColor_burgundy': 'Burgundy',

@@ -86,6 +86,38 @@ void main() {
     await tester.binding.setSurfaceSize(null);
   });
 
+  testWidgets('the selection menu colours the selected words', (tester) async {
+    final (controller, editor) = await _openChapter(tester, 'Синее слово');
+    await tester.tap(find.byType(QuillEditor));
+    await tester.pumpAndSettle();
+    editor.updateSelection(
+      const TextSelection(baseOffset: 0, extentOffset: 5),
+      ChangeSource.local,
+    );
+    await tester.pumpAndSettle();
+
+    final editorState = tester.state<QuillRawEditorState>(
+      find.byType(QuillRawEditor),
+    );
+    expect(editorState.showToolbar(), isTrue);
+    await tester.pumpAndSettle();
+    // The test font is wide, so the item waits in the overflow menu.
+    if (find.text('Цвет').evaluate().isEmpty) {
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.text('Цвет'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Синий').last);
+    await tester.pumpAndSettle();
+
+    expect(controller.activeSection!.content.first, {
+      'insert': 'Синее',
+      'attributes': {'color': '#1565c0'},
+    });
+    await tester.binding.setSurfaceSize(null);
+  });
+
   testWidgets('the exit button stands out on the dark focus bar', (
     tester,
   ) async {

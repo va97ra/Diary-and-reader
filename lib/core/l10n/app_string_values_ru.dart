@@ -489,6 +489,7 @@ const appStringValuesRu = <String, String>{
   'deletedPicture': 'Картинка',
   'verse': 'Стихи',
   'textColor': 'Цвет текста',
+  'textColorAction': 'Цвет',
   'noTextColor': 'Без цвета',
   'textColor_red': 'Красный',
   'textColor_burgundy': 'Бордовый',

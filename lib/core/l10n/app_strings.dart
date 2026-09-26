@@ -486,6 +486,7 @@ class AppStrings {
   String get deletedPicture => _text('deletedPicture');
   String get verse => _text('verse');
   String get textColor => _text('textColor');
+  String get textColorAction => _text('textColorAction');
   String get noTextColor => _text('noTextColor');
   String textColorName(String id) => _text('textColor_$id');
 
