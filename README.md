@@ -24,13 +24,18 @@ EPUB 3.3, FB2/FB2.ZIP, PDF, DOCX, HTML, Markdown и TXT.
 
 ## Архитектура
 
-- `lib/app` — сборка приложения и маршрутизация верхнего уровня.
+- `lib/app` — сборка приложения, главная, библиотеки, настройки, трей Windows.
 - `lib/core` — тема и локализованные строки.
-- `lib/features/books/domain` — модель книги и интерфейс репозитория.
-- `lib/features/books/data` — нативное файловое хранилище, миграции и экспорт.
-- `lib/features/books/application` — состояние авторской студии и сценарии.
+- `lib/features/books/domain` — модель книги и интерфейсы хранилищ.
+- `lib/features/books/data` — файловое хранилище, файлы, буфер обмена.
+- `lib/features/books/application` — состояние студии, сценарии, импорт и
+  экспорт.
 - `lib/features/books/presentation` — адаптивный редактор и читалка.
-- `lib/features/diary` — совместимость и миграция данных ранней версии.
+- `lib/features/books/legacy` — формат данных ранней версии «Дневник».
+
+Подробная карта — [docs/CODE_MAP.md](docs/CODE_MAP.md), указатель классов и
+методов с номерами строк — [docs/CODE_SYMBOLS.md](docs/CODE_SYMBOLS.md)
+(обновляется командой `dart run tool/code_map.dart`).
 
 UI зависит от контроллера, контроллер — только от интерфейса репозитория. Формат
 хранения можно заменить на SQLite, шифрованное хранилище или сервер без
