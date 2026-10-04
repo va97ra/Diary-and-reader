@@ -36,6 +36,7 @@
 | Кирпичики шторок настроек | `widgets/book_settings_controls.dart`: `BookSettingsCard`, `BookSettingsRow(flex:)`, `BookCompactChoice`, `BookSettingSwitch`, `BookCompactDropdown`, `bookNumberChoices`, `bookNamedChoices`, `bookSettingNumber` |
 | Кнопки и подписи боковых панелей | `widgets/book_adaptive_control_shell.dart`: `BookPanelAction`, `BookPanelSectionLabel`, `BookWholeWordsText` (слово не рвётся — текст уменьшается), ширина панелей — `_sidePanelWidths` (+ вырез камеры) |
 | Открыть шторку / диалог | `widgets/book_leather_modal.dart`: `showBookLeatherBottomSheet`, `BookLeatherModalHeader`, `BookLeatherDialog`, `bookLeatherModalTheme` |
+| Меню выделенных слов в писалке | `widgets/book_editor_context_menu.dart`: `BookEditorContextMenu` (копировать/вставить сверху, «Вставить картинку») + `BookSelectionFormattingBar` под словами (Ж, К, Ч, З, цвет с палитрой в самой панели); подключается через `BookImageEditingScope.contextMenuBuilder` |
 | Состояние всей программы | `application/author_workspace_controller.dart` `AuthorWorkspaceController` |
 | Модель книги | `domain/book_project.dart` `BookProject`; глава — `domain/book_section.dart` `BookSection` |
 | Текст главы | `domain/rich_document.dart` — Quill Delta, список операций `{insert, attributes}` |
@@ -302,7 +303,22 @@ lib/main.dart ─► lib/app (экраны верхнего уровня, нав
   `widgets/book_image_settings_sheet.dart` (черновик применяется при
   закрытии); правки документа — `application/book_image_document_editing.dart`.
 
-### 6.8 Остальное в писалке
+### 6.8 Меню выделенных слов
+`widgets/book_editor_context_menu.dart`:
+- `BookEditorContextMenu` — то, что Quill показывает при выделении:
+  системное меню «Копировать / Вставить» над словами (плюс «Вставить
+  картинку», если в буфере картинка) и под словами
+  `BookSelectionFormattingBar`;
+- `_BelowSelectionLayout` ставит панель под словами, ниже ручек выделения;
+  если меню уехало под слова (нет места сверху) — ещё ниже; если нет места
+  снизу — над словами и меню;
+- `BookSelectionFormattingBar`: Ж, К, Ч, З переключаются (`_toggle`), цвет
+  открывает палитру прямо в панели (без всплывающего меню — так выделение
+  не теряется), «Без цвета» снимает цвет. Панель остаётся после нажатия,
+  можно сделать и жирным, и курсивом. Цвета — `BookTextColors.palette`,
+  кружок — `BookTextColorSwatch(size:)`.
+
+### 6.9 Остальное в писалке
 - Структура книги: `widgets/book_navigator.dart`; дерево —
   `application/section_tree_editor.dart`.
 - Поиск и замена: `presentation/book_manuscript_search_sheet.dart`,
@@ -504,6 +520,12 @@ lib/main.dart ─► lib/app (экраны верхнего уровня, нав
   интервала для одного абзаца в «Оформлении».
 - 2026-10-04 — карта расписана подробно по сценариям; добавлены генератор
   `tool/code_map.dart` и указатель `docs/CODE_SYMBOLS.md` с номерами строк.
+- 2026-10-04 — новое меню выделенных слов
+  `widgets/book_editor_context_menu.dart` (перенесено из
+  `book_image_editing_scope.dart` + панель форматирования под словами);
+  строки `boldText`, `italicText`, `underlineText`, `strikeText`; удалены
+  `textColorAction`, `undo`, `redo`; тест
+  `test/book_selection_formatting_test.dart`.
 - 2026-10-04 — читалка «Страница»: страница между панелями
   (`BookReaderSectionView.build` + `readingInsets`); заголовок главы на
   листе без серой плашки темы (`BookPageCanvas`); тест в

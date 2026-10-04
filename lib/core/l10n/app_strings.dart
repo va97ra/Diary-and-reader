@@ -524,7 +524,10 @@ class AppStrings {
   String get deletedPicture => _text('deletedPicture');
   String get verse => _text('verse');
   String get textColor => _text('textColor');
-  String get textColorAction => _text('textColorAction');
+  String get boldText => _text('boldText');
+  String get italicText => _text('italicText');
+  String get underlineText => _text('underlineText');
+  String get strikeText => _text('strikeText');
   String get noTextColor => _text('noTextColor');
   String textColorName(String id) => _text('textColor_$id');
 

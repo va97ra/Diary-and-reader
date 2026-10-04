@@ -160,13 +160,13 @@
 ### lib/app/literia_version.dart (3)
 - 3 const literiaVersion — The version shown to people, as `version` in pubspec.yaml has it before the build number.
 
-### lib/core/l10n/app_string_values_en.dart (548)
+### lib/core/l10n/app_string_values_en.dart (551)
 - 1 const appStringValuesEn
 
-### lib/core/l10n/app_string_values_ru.dart (549)
+### lib/core/l10n/app_string_values_ru.dart (552)
 - 1 const appStringValuesRu
 
-### lib/core/l10n/app_strings.dart (541)
+### lib/core/l10n/app_strings.dart (544)
 - 5 class **AppStrings**
   - 16 of
   - 19 _text
@@ -668,14 +668,17 @@
   - 524 get deletedPicture
   - 525 get verse
   - 526 get textColor
-  - 527 get textColorAction
-  - 528 get noTextColor
-  - 529 textColorName
-  - 531 get trayPanel
-  - 532 get trayWindow
-  - 533 get trayQuit
-  - 534 get expandToWindow
-  - 535 get hideToTray
+  - 527 get boldText
+  - 528 get italicText
+  - 529 get underlineText
+  - 530 get strikeText
+  - 531 get noTextColor
+  - 532 textColorName
+  - 534 get trayPanel
+  - 535 get trayWindow
+  - 536 get trayQuit
+  - 537 get expandToWindow
+  - 538 get hideToTray
 
 ### lib/core/theme/app_theme.dart (137)
 - 3 class **AppTheme**
@@ -2311,6 +2314,22 @@
 ### lib/features/books/presentation/widgets/book_cover_view.dart (73)
 - 5 class **BookCoverView**
 
+### lib/features/books/presentation/widgets/book_editor_context_menu.dart (318)
+- 15 class **BookEditorContextMenu** — The menu of selected words in the editor: the regular copy and paste menu above the words, with "Paste image" when the clipboard holds a ...
+- 31 class **_BookEditorContextMenuState**
+  - 43 get _canFormat
+- 104 class **_BelowSelectionLayout** — Places the formatting bar right below the selected words, clear of the selection handles and of the copy menu, which drops below the word...
+  - 119 getConstraintsForChild
+  - 128 getPositionForChild
+  - 149 shouldRelayout
+- 159 class **BookSelectionFormattingBar** — Bold, italic, underlined, struck through and the colour of the selected words, so that they need not open the formatting sheet.
+- 169 class **_BookSelectionFormattingBarState**
+  - 173 _toggle
+  - 183 _color
+  - 210 _buttons
+  - 244 _palette
+- 280 class **_BarButton**
+
 ### lib/features/books/presentation/widgets/book_editor_metrics.dart (22)
 - 1 class **BookEditorMetrics**
 
@@ -2334,31 +2353,27 @@
 - 349 fn _currentFontSize
 - 368 fn _nearest
 
-### lib/features/books/presentation/widgets/book_image_editing_scope.dart (307)
-- 11 typedef **BookImageTapCallback**
-- 18 typedef **BookImagePasteCallback**
-- 21 typedef **BookImageFileInsertCallback**
-- 26 class **BookImageSelection** — Tracks which illustration is selected for on-page editing.
-  - 34 isSelected
-  - 37 isAttached
-  - 42 attach — Starts watching [controller] so that typing or moving the cursor drops the illustration selection.
-  - 63 detach
-  - 73 swallowEditorTap — Called when an illustration handles a tap.
-  - 78 takeEditorTap
-  - 84 select
-  - 92 clear
-  - 101 edit — Applies an edit made by the illustration controls.
-- 130 class **BookImageEditingScope** — Provides illustration editing services to the editors and embeds below it.
-  - 147 maybeOf
-  - 159 contentInsertionFor — Accepts images committed by the keyboard, such as Gboard's clipboard strip, stickers, and GIFs.
-  - 176 handleEditorTapUp — Passed to `QuillEditorConfig.onTapUp`; returns true to make Quill ignore a tap that an illustration has already handled.
-  - 181 get contextMenuBuilder
-  - 193 updateShouldNotify
-- 205 class **_BookEditorContextMenu** — The regular text selection menu plus "Colour" for selected words and "Paste image" when the clipboard holds a picture.
-- 220 class **_BookEditorContextMenuState**
-  - 232 get _canColor
-  - 238 _chooseColor — Opens the colours in place of the menu, as the reader's selection bar offers highlights, and colours the selected words with the chosen one.
-- 301 fn bookClipboardPrefersImage — Keyboard shortcut helper shared by the editors: whether an image paste should take precedence over the regular text paste.
+### lib/features/books/presentation/widgets/book_image_editing_scope.dart (208)
+- 10 typedef **BookImageTapCallback**
+- 17 typedef **BookImagePasteCallback**
+- 20 typedef **BookImageFileInsertCallback**
+- 25 class **BookImageSelection** — Tracks which illustration is selected for on-page editing.
+  - 33 isSelected
+  - 36 isAttached
+  - 41 attach — Starts watching [controller] so that typing or moving the cursor drops the illustration selection.
+  - 62 detach
+  - 72 swallowEditorTap — Called when an illustration handles a tap.
+  - 77 takeEditorTap
+  - 83 select
+  - 91 clear
+  - 100 edit — Applies an edit made by the illustration controls.
+- 129 class **BookImageEditingScope** — Provides illustration editing services to the editors and embeds below it.
+  - 146 maybeOf
+  - 158 contentInsertionFor — Accepts images committed by the keyboard, such as Gboard's clipboard strip, stickers, and GIFs.
+  - 175 handleEditorTapUp — Passed to `QuillEditorConfig.onTapUp`; returns true to make Quill ignore a tap that an illustration has already handled.
+  - 180 get contextMenuBuilder
+  - 192 updateShouldNotify
+- 202 fn bookClipboardPrefersImage — Keyboard shortcut helper shared by the editors: whether an image paste should take precedence over the regular text paste.
 
 ### lib/features/books/presentation/widgets/book_image_embed_builder.dart (780)
 - 14 class **BookImageEmbedBuilder**
@@ -2523,7 +2538,7 @@
 ### lib/features/books/presentation/widgets/book_sheet_keyboard_dismiss.dart (19)
 - 5 class **BookSheetKeyboardDismiss** — Gives every modal book panel the same desktop escape-key behavior.
 
-### lib/features/books/presentation/widgets/book_text_color_menu.dart (64)
+### lib/features/books/presentation/widgets/book_text_color_menu.dart (65)
 - 8 fn bookTextColorAt — The colour of the words at the cursor as `#rrggbb`, or empty for text without a colour of its own.
 - 18 fn applyBookTextColor — Colours the selected words; an empty [hex] takes their colour away.
 - 22 fn bookTextColorOf — [hex] as a colour, or null for text without a colour of its own.
@@ -2851,6 +2866,9 @@
 - 8 weights reading progress by readable section length
 - 46 falls back to section order when every section is empty
 
+### test/book_selection_formatting_test.dart
+- 42 formatting appears right below the selected words
+
 ### test/book_speech_segmenter_test.dart
 - 5 starts at the requested Cyrillic word and keeps source offsets
 - 17 skips whitespace and safely splits a long sentence
@@ -2882,8 +2900,8 @@
 ### test/book_writer_safety_and_color_test.dart
 - 34 deleted words wait in the trash and go back into the text
 - 65 formatting colours the selected words
-- 89 the selection menu colours the selected words
-- 121 the exit button stands out on the dark focus bar
+- 89 the bar below the selection colours the words
+- 126 the exit button stands out on the dark focus bar
 
 ### test/book_writing_state_test.dart
 - 5 records writing goals, time, words and streaks

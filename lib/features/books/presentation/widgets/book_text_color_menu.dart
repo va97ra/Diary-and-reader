@@ -46,15 +46,16 @@ List<PopupMenuEntry<String>> bookTextColorMenuItems(BuildContext context) {
 }
 
 class BookTextColorSwatch extends StatelessWidget {
-  const BookTextColorSwatch({required this.hex, super.key});
+  const BookTextColorSwatch({required this.hex, this.size = 16, super.key});
 
   /// A `#rrggbb` colour, or empty for text without a colour of its own.
   final String hex;
+  final double size;
 
   @override
   Widget build(BuildContext context) => Container(
-    width: 16,
-    height: 16,
+    width: size,
+    height: size,
     decoration: BoxDecoration(
       shape: BoxShape.circle,
       color: bookTextColorOf(hex),

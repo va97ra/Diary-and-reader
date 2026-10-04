@@ -86,7 +86,7 @@ void main() {
     await tester.binding.setSurfaceSize(null);
   });
 
-  testWidgets('the selection menu colours the selected words', (tester) async {
+  testWidgets('the bar below the selection colours the words', (tester) async {
     final (controller, editor) = await _openChapter(tester, 'Синее слово');
     await tester.tap(find.byType(QuillEditor));
     await tester.pumpAndSettle();
@@ -101,19 +101,24 @@ void main() {
     );
     expect(editorState.showToolbar(), isTrue);
     await tester.pumpAndSettle();
-    // The test font is wide, so the item waits in the overflow menu.
-    if (find.text('Цвет').evaluate().isEmpty) {
-      await tester.tap(find.byIcon(Icons.more_vert));
-      await tester.pumpAndSettle();
-    }
-    await tester.tap(find.text('Цвет'));
+    // The palette opens in the bar itself, so the words stay selected.
+    await tester.tap(find.byKey(const ValueKey('selection-format-color')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Синий').last);
+    await tester.tap(find.byKey(const ValueKey('selection-color-#1565c0')));
     await tester.pumpAndSettle();
 
     expect(controller.activeSection!.content.first, {
       'insert': 'Синее',
       'attributes': {'color': '#1565c0'},
+    });
+
+    // Back to the buttons; «Без цвета» takes the colour away.
+    await tester.tap(find.byKey(const ValueKey('selection-format-color')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('selection-color-none')));
+    await tester.pumpAndSettle();
+    expect(controller.activeSection!.content.first, {
+      'insert': 'Синее слово\n',
     });
     await tester.binding.setSurfaceSize(null);
   });
