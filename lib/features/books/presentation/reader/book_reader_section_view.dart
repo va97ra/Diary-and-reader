@@ -8,6 +8,7 @@ import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_bookmark_flag.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_continuous_view.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_document_model.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_document_view.dart';
@@ -59,6 +60,7 @@ class BookReaderSectionView extends StatefulWidget {
     required this.navigationController,
     required this.onUserNavigation,
     required this.readingInsets,
+    this.bookmarks = const [],
     this.speechRange,
     this.onNextSectionRequested,
     this.onPreviousSectionRequested,
@@ -84,6 +86,9 @@ class BookReaderSectionView extends StatefulWidget {
 
   /// Room the floating panels need at the start and end of a chapter.
   final EdgeInsets readingInsets;
+
+  /// The chapter's bookmarks with their numbers in the book.
+  final List<({double progress, int number})> bookmarks;
   final BookReaderTextRange? speechRange;
   final VoidCallback? onNextSectionRequested;
   final VoidCallback? onPreviousSectionRequested;
@@ -270,6 +275,11 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
       );
     },
   );
+
+  List<BookReaderBookmarkMark> get _bookmarkMarks => [
+    for (final bookmark in widget.bookmarks)
+      (offset: _displayOffsetFor(bookmark.progress), number: bookmark.number),
+  ];
 
   /// The start of the next page, or the text at the bottom of the screen,
   /// as a share of the chapter; 1 once the end of the chapter is in sight.

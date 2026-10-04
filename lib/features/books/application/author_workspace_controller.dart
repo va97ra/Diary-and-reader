@@ -665,7 +665,7 @@ class AuthorWorkspaceController extends ChangeNotifier {
         updatedAt: DateTime.now(),
       ),
     );
-    notify ? _changed() : _changedWithoutNotification();
+    notify ? _changed() : _changedWithoutNotification(save: true);
   }
 
   void beginReaderSession({BookProject? hydratedProject}) {
@@ -834,8 +834,13 @@ class AuthorWorkspaceController extends ChangeNotifier {
     _persistence.scheduleSave();
   }
 
-  void _changedWithoutNotification() {
+  /// A change made while reading, which must not rebuild the app around
+  /// the reader. It is written when the reader closes or the app leaves the
+  /// screen, or soon with [save] for marks too valuable to wait: bookmarks
+  /// were lost when the app was killed with the reader open.
+  void _changedWithoutNotification({bool save = false}) {
     _markDirty();
+    if (save) _persistence.scheduleSave();
   }
 
   void _markDirty() => _persistence.markChanged();

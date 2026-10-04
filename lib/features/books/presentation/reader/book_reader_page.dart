@@ -951,6 +951,15 @@ class _BookReaderPageState extends State<BookReaderPage> {
               navigationController: _sectionNavigationController,
               onUserNavigation: _handleUserNavigation,
               readingInsets: panelInsets,
+              bookmarks: [
+                for (final (bookmark, number)
+                    in BookReaderAnnotationActions.numberedBookmarks(
+                      _annotations,
+                      _sections,
+                    ))
+                  if (bookmark.sectionId == _section.id)
+                    (progress: bookmark.sectionProgress, number: number),
+              ],
               speechTargetMode: _isChoosingSpeechStart,
               onSpeechTargetSelected: (offset) =>
                   unawaited(_handleSpeechTargetSelected(offset)),

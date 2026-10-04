@@ -3,6 +3,7 @@ import 'package:dnevnik/features/books/application/author_workspace_controller.d
 import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_bookmark_flag.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -188,6 +189,19 @@ void main() {
     await tester.tap(bookmark);
     await tester.pumpAndSettle();
     expect(bookmarks(), hasLength(1));
+    // Its ribbon hangs from the page with the bookmark's number.
+    Iterable<int> flagsOn(String page) => tester
+        .widgetList<BookReaderBookmarkFlag>(
+          find.descendant(
+            of: find.ancestor(
+              of: find.byKey(ValueKey(page)),
+              matching: find.byType(Stack),
+            ),
+            matching: find.byType(BookReaderBookmarkFlag),
+          ),
+        )
+        .map((flag) => flag.number);
+    expect(flagsOn('reader-page-1'), [1]);
 
     await tester.fling(
       find.byKey(const ValueKey('reader-page-swipe-area')),
@@ -209,6 +223,40 @@ void main() {
     expect(
       find.descendant(of: bookmark, matching: find.byIcon(Icons.bookmark)),
       findsOneWidget,
+    );
+    expect(flagsOn('reader-page-2'), [2]);
+  });
+
+  testWidgets('the continuous text shows a bookmark as a numbered ribbon', (
+    tester,
+  ) async {
+    final controller = await _controllerWithLongChapter(
+      const BookReaderSettings(),
+    );
+    await tester.binding.setSurfaceSize(const Size(1280, 820));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(AuthorStudioApp(controller: controller));
+    await tester.pumpAndSettle();
+    await openReaderPreview(tester, controller);
+    await _pumpUntil(
+      tester,
+      find.byKey(const ValueKey('reader-continuous-view')),
+    );
+    expect(find.byType(BookReaderBookmarkFlag), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('reader-bookmark-action')));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widgetList<BookReaderBookmarkFlag>(
+            find.descendant(
+              of: find.byKey(const ValueKey('reader-continuous-view')),
+              matching: find.byType(BookReaderBookmarkFlag),
+            ),
+          )
+          .map((flag) => flag.number),
+      [1],
     );
   });
 

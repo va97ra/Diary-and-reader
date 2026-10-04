@@ -57,6 +57,7 @@ extension _BookReaderPaginationFlow on _BookReaderSectionViewState {
         speechTargetMode: widget.speechTargetMode,
         speechRange: _renderSpeechRange,
         showPageNumber: true,
+        bookmarks: _bookmarkMarks,
         onSpeechTargetSelected: widget.speechTargetMode
             ? _selectSpeechTarget
             : null,

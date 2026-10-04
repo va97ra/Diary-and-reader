@@ -181,6 +181,11 @@ lib/main.dart ─► lib/app (экраны верхнего уровня, нав
 Правка проходит так: `_changed` → `WorkspacePersistenceCoordinator`
 (`application/workspace_persistence_coordinator.dart`): `markChanged`,
 `scheduleSave` (пауза 350 мс, не дольше 2 с) → `repository.save`.
+Правки во время чтения идут через `_changedWithoutNotification` (без
+перестройки приложения): прогресс пишется при закрытии читалки или уходе
+приложения с экрана, а закладки, выделения и заметки
+(`_updateReaderAnnotations`) — сразу, с `save: true`, иначе они терялись,
+если приложение убивали с открытой книгой.
 Состояние сохранения — `WorkspaceSaveState` (`saved/saving/error`),
 показ — `widgets/book_save_status.dart`.
 
@@ -411,8 +416,18 @@ lib/main.dart ─► lib/app (экраны верхнего уровня, нав
   `reader/book_reader_annotations_panel.dart`,
   `reader/book_reader_note_dialog.dart`; выгрузка —
   `application/book_reader_annotation_exporter.dart`.
-- Оглавление и закладки сбоку: `reader/book_reader_navigation_panel.dart`,
-  `reader/book_reader_contents.dart`.
+- Флажки закладок на тексте: `reader/book_reader_bookmark_flag.dart`
+  (`BookReaderBookmarkFlag` — красная ленточка с номером,
+  `BookReaderBookmarkFlags` — ряд, `BookReaderBookmarkMark` — смещение в
+  показанном тексте + номер). Номера по порядку чтения даёт
+  `BookReaderAnnotationActions.numberedBookmarks`; путь:
+  `_BookReaderPageState` (закладки этой главы) →
+  `BookReaderSectionView.bookmarks` → `_bookmarkMarks` (доля главы →
+  смещение) → `BookReaderPageCard` (флажок у верхнего края страницы, на
+  которой стоит закладка) или `BookReaderContinuousView._buildItem` (у
+  абзаца в «Ленте»).
+- Оглавление и закладки сбоку: `reader/book_reader_navigation_panel.dart`
+  (в списке те же номера-флажки), `reader/book_reader_contents.dart`.
 
 ---
 
@@ -563,3 +578,11 @@ lib/main.dart ─► lib/app (экраны верхнего уровня, нав
 - 2026-10-04 — читалка: межстрочный интервал из настроек для всех абзацев,
   поле `BookReaderBlock.lineHeight` удалено; у `BookFormattingSheet` убран
   параметр `paragraphSettings`; строка `alignJustify`; README обновлён.
+- 2026-10-04 — закладки сохраняются сразу (`_changedWithoutNotification`
+  с `save: true` в `_updateReaderAnnotations`), тест в
+  `test/author_workspace_controller_test.dart`; новый файл
+  `reader/book_reader_bookmark_flag.dart` — флажки с номерами на странице,
+  в «Ленте» и в списке; `BookReaderAnnotationActions.numberedBookmarks`,
+  `BookReaderSectionView.bookmarks`, `BookReaderPageCard.bookmarks`,
+  `BookReaderContinuousView.bookmarks`; тесты в
+  `test/book_reader_paged_view_test.dart`.

@@ -1,7 +1,9 @@
 import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_annotation_actions.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_annotations_panel.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_bookmark_flag.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_contents.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_location_callback.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
@@ -172,13 +174,18 @@ class _BookmarksList extends StatelessWidget {
         message: strings.noBookmarks,
       );
     }
+    final numbered = BookReaderAnnotationActions.numberedBookmarks(
+      BookReaderAnnotations(bookmarks: bookmarks),
+      sections,
+    );
     return ListView.builder(
       key: const ValueKey('reader-bookmarks'),
       padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: bookmarks.length,
+      itemCount: numbered.length,
       itemBuilder: (context, index) {
-        final bookmark = bookmarks[index];
+        final (bookmark, number) = numbered[index];
         return ListTile(
+          leading: BookReaderBookmarkFlag(number: number),
           title: Text(
             bookmark.excerpt.isEmpty ? strings.bookmark : bookmark.excerpt,
             maxLines: 2,

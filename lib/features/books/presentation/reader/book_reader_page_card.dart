@@ -2,6 +2,7 @@ import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/book_reader_text_anchor.dart';
 import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_bookmark_flag.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_document_view.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_layout_engine.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.dart';
@@ -22,6 +23,7 @@ class BookReaderPageCard extends StatelessWidget {
     required this.onSelectionChanged,
     required this.speechTargetMode,
     required this.showPageNumber,
+    this.bookmarks = const [],
     this.speechRange,
     this.onSpeechTargetSelected,
     super.key,
@@ -43,8 +45,34 @@ class BookReaderPageCard extends StatelessWidget {
   final BookReaderTextRange? speechRange;
   final ValueChanged<int>? onSpeechTargetSelected;
 
+  /// Bookmarks of the chapter; those on this page hang from its top edge.
+  final List<BookReaderBookmarkMark> bookmarks;
+
   @override
   Widget build(BuildContext context) {
+    final lastPage = pageCount != null && pageNumber >= pageCount!;
+    final flags = [
+      for (final mark in bookmarks)
+        if (mark.offset >= layout.sourceStart &&
+            (mark.offset < layout.sourceEnd || lastPage))
+          mark.number,
+    ];
+    final page = _buildPage(context);
+    if (flags.isEmpty) return page;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        page,
+        Positioned(
+          top: 0,
+          right: 6,
+          child: BookReaderBookmarkFlags(numbers: flags),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPage(BuildContext context) {
     final metrics = BookReaderPageMetrics.resolve(
       width: width,
       height: height,

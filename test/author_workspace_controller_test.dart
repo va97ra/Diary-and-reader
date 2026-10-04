@@ -443,6 +443,32 @@ void main() {
     );
     expect(repository.snapshot!.activeProject!.sourceFileName, 'book.epub');
   });
+
+  testWidgets('a bookmark made while reading is written soon', (tester) async {
+    final repository = MemoryAuthorWorkspaceRepository();
+    final controller = AuthorWorkspaceController(repository);
+    await controller.load(preferredLanguage: 'ru');
+    final section = controller.activeSection!;
+    controller.beginReaderSession();
+
+    controller.updateReaderAnnotationsDuringReading(
+      controller.activeProject!.readerAnnotations.addBookmark(
+        BookReaderBookmark.create(
+          sectionId: section.id,
+          sectionProgress: 0.3,
+          excerpt: 'Отрывок',
+        ),
+      ),
+    );
+    // No leaving the reader and no going to the background: the app may
+    // be killed right here.
+    await tester.pump(const Duration(seconds: 3));
+
+    expect(
+      repository.snapshot!.projects.single.readerAnnotations.bookmarks,
+      hasLength(1),
+    );
+  });
 }
 
 class _ControlledAuthorWorkspaceRepository

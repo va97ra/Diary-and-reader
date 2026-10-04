@@ -37,6 +37,29 @@ abstract final class BookReaderAnnotationActions {
         .firstOrNull;
   }
 
+  /// The bookmarks in reading order, numbered from one as their flags on
+  /// the page show them.
+  static List<(BookReaderBookmark, int)> numberedBookmarks(
+    BookReaderAnnotations annotations,
+    List<BookSection> sections,
+  ) {
+    final order = {
+      for (final (index, section) in sections.indexed) section.id: index,
+    };
+    final sorted = [...annotations.bookmarks]
+      ..sort((a, b) {
+        final bySection = (order[a.sectionId] ?? sections.length).compareTo(
+          order[b.sectionId] ?? sections.length,
+        );
+        return bySection != 0
+            ? bySection
+            : a.sectionProgress.compareTo(b.sectionProgress);
+      });
+    return [
+      for (final (index, bookmark) in sorted.indexed) (bookmark, index + 1),
+    ];
+  }
+
   /// Takes away the bookmark in sight, or puts one at [sectionProgress].
   static BookReaderAnnotations toggleBookmark({
     required BookReaderAnnotations annotations,

@@ -11,6 +11,7 @@ extension _BookReaderContinuousFlow on _BookReaderSectionViewState {
     controller: _continuousController,
     initialDisplayOffset: _displayOffsetFor(_pendingProgress),
     edgeInsets: widget.readingInsets,
+    bookmarks: _bookmarkMarks,
     highlights: _renderHighlights,
     selectionGeneration: _selectionGeneration,
     onSelectionChanged: _handleDisplaySelection,

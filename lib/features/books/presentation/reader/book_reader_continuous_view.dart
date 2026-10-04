@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:dnevnik/features/books/application/book_reader_text_anchor.dart';
 import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_bookmark_flag.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_document_model.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_document_view.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_layout_engine.dart';
@@ -54,6 +55,7 @@ class BookReaderContinuousView extends StatefulWidget {
     required this.onPointerCancel,
     required this.onUserScroll,
     required this.speechTargetMode,
+    this.bookmarks = const [],
     this.speechRange,
     this.onSpeechTargetSelected,
     super.key,
@@ -73,6 +75,9 @@ class BookReaderContinuousView extends StatefulWidget {
   /// Extra room at the start and end of the chapter, left for panels that
   /// float above the text.
   final EdgeInsets edgeInsets;
+
+  /// Bookmarks of the chapter, shown as ribbons in the right margin.
+  final List<BookReaderBookmarkMark> bookmarks;
   final List<BookReaderRenderHighlight> highlights;
   final int selectionGeneration;
   final ValueChanged<TextSelection?> onSelectionChanged;
@@ -336,39 +341,70 @@ class _BookReaderContinuousViewState extends State<BookReaderContinuousView> {
   Widget _buildItem(int index) {
     final block = _blocks[index];
     final settings = widget.settings;
+    final end = index + 1 < _blocks.length
+        ? _blocks[index + 1].sourceStart
+        : null;
+    final flags = [
+      for (final mark in widget.bookmarks)
+        if (mark.offset >= block.sourceStart &&
+            (end == null || mark.offset < end))
+          mark.number,
+    ];
+    final top = index == 0
+        ? settings.verticalPadding + widget.edgeInsets.top
+        : 0.0;
+    final content = _buildBlockContent(index, block, settings);
     return _ContinuousBlockItem(
       key: ValueKey('reader-block-$index'),
       index: index,
       items: _items,
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          settings.horizontalPadding,
-          index == 0 ? settings.verticalPadding + widget.edgeInsets.top : 0,
-          settings.horizontalPadding,
-          index == _blocks.length - 1
-              ? settings.verticalPadding + widget.edgeInsets.bottom
-              : 0,
-        ),
-        child: BookReaderFragmentView(
-          key: ValueKey(
-            'reader-fragment-${block.sourceStart}-0-'
-            '${widget.selectionGeneration}',
-          ),
-          fragment: _fragmentFor(block),
-          settings: settings,
-          palette: widget.palette,
-          assets: widget.assets,
-          highlights: widget.highlights,
-          selectionGeneration: widget.selectionGeneration,
-          onSelectionChanged: widget.onSelectionChanged,
-          speechTargetMode: widget.speechTargetMode,
-          speechRange: widget.speechRange,
-          onSpeechTargetSelected: widget.onSpeechTargetSelected,
-          constrainToMeasuredHeight: false,
-        ),
-      ),
+      child: flags.isEmpty
+          ? content
+          : Stack(
+              clipBehavior: Clip.none,
+              children: [
+                content,
+                Positioned(
+                  top: top,
+                  right: 2,
+                  child: BookReaderBookmarkFlags(numbers: flags),
+                ),
+              ],
+            ),
     );
   }
+
+  Widget _buildBlockContent(
+    int index,
+    BookReaderBlock block,
+    BookReaderSettings settings,
+  ) => Padding(
+    padding: EdgeInsets.fromLTRB(
+      settings.horizontalPadding,
+      index == 0 ? settings.verticalPadding + widget.edgeInsets.top : 0,
+      settings.horizontalPadding,
+      index == _blocks.length - 1
+          ? settings.verticalPadding + widget.edgeInsets.bottom
+          : 0,
+    ),
+    child: BookReaderFragmentView(
+      key: ValueKey(
+        'reader-fragment-${block.sourceStart}-0-'
+        '${widget.selectionGeneration}',
+      ),
+      fragment: _fragmentFor(block),
+      settings: settings,
+      palette: widget.palette,
+      assets: widget.assets,
+      highlights: widget.highlights,
+      selectionGeneration: widget.selectionGeneration,
+      onSelectionChanged: widget.onSelectionChanged,
+      speechTargetMode: widget.speechTargetMode,
+      speechRange: widget.speechRange,
+      onSpeechTargetSelected: widget.onSpeechTargetSelected,
+      constrainToMeasuredHeight: false,
+    ),
+  );
 
   BookReaderBlockSlice _fragmentFor(BookReaderBlock block) {
     if (block.isText) {
