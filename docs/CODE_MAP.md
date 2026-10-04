@@ -34,6 +34,7 @@
 | Цвета и тема | `lib/core/theme/app_theme.dart` `AppTheme`; кожа панелей — `widgets/book_adaptive_control_shell.dart` `BookLeatherColors` |
 | Ширина «телефон / планшет» | `widgets/book_adaptive_control_shell.dart` `bookControlBreakpoint` = 700 |
 | Кирпичики шторок настроек | `widgets/book_settings_controls.dart`: `BookSettingsCard`, `BookSettingsRow(flex:)`, `BookCompactChoice`, `BookSettingSwitch`, `BookCompactDropdown`, `bookNumberChoices`, `bookNamedChoices`, `bookSettingNumber` |
+| Кнопки и подписи боковых панелей | `widgets/book_adaptive_control_shell.dart`: `BookPanelAction`, `BookPanelSectionLabel`, `BookWholeWordsText` (слово не рвётся — текст уменьшается), ширина панелей — `_sidePanelWidths` (+ вырез камеры) |
 | Открыть шторку / диалог | `widgets/book_leather_modal.dart`: `showBookLeatherBottomSheet`, `BookLeatherModalHeader`, `BookLeatherDialog`, `bookLeatherModalTheme` |
 | Состояние всей программы | `application/author_workspace_controller.dart` `AuthorWorkspaceController` |
 | Модель книги | `domain/book_project.dart` `BookProject`; глава — `domain/book_section.dart` `BookSection` |
@@ -200,8 +201,9 @@ lib/main.dart ─► lib/app (экраны верхнего уровня, нав
 ### 6.1 Экран
 `presentation/author_workspace_page.dart` `_AuthorWorkspacePageState`:
 - каркас — `BookAdaptiveControlShell`: телефон (< 700 px) —
-  `_buildCompactWriterTop` + `_buildCompactWriterBottom`; планшет/Windows —
-  `_buildWideWriterStart` + `_buildWideWriterEnd`;
+  `_buildCompactWriterTop` + `_buildCompactWriterBottom`; планшет/Windows и
+  телефон боком — `_buildWideWriterStart` + `_buildWideWriterEnd` (панели
+  128/176 px плюс вырез на их стороне);
 - кнопки нижней панели телефона: «Структура» `_showManuscript`,
   «Оформление» `_showFormatting`, «Картинка» `_showAddPicture`,
   «Настройки» `_showWriterSettings`, «Ещё» `_showWorkspaceTools`;
@@ -221,6 +223,9 @@ lib/main.dart ─► lib/app (экраны верхнего уровня, нав
   `_measureCurrentDocument` (скрытый редактор-«линейка» той же вёрстки) →
   `application/book_page_paginator.dart`. Вставка картинки из буфера —
   `_pasteClipboardImage`. Переход к найденному — `revealTextRange`.
+- Прокрутка к курсору в режиме листов — `_revealCaret` (из слушателя
+  страницы и `didChangeMetrics`, когда появилась клавиатура или повернулся
+  экран): у Quill там `scrollable: false`, и сам он не прокручивает.
 - Отрисовка листов: `widgets/book_editor_page_stage.dart`,
   `widgets/book_page_canvas.dart` (лист A4 с полями и номером),
   `widgets/book_mobile_editor.dart` (крупный режим телефона).
@@ -384,7 +389,8 @@ lib/main.dart ─► lib/app (экраны верхнего уровня, нав
 - Главная: `lib/app/literia_home_page.dart` («Писать», «Читать»,
   «Продолжить»).
 - Библиотеки: `lib/app/literia_library_page.dart`
-  (`LiteriaLibraryMode.manuscripts/reading`),
+  (`LiteriaLibraryMode.manuscripts/reading`; кожаная панель поиска до краёв,
+  карточки отступают от выреза через `sides`),
   `literia_library_controls.dart` (поиск, сортировка, фильтры),
   `literia_library_items.dart` (карточки); запросы —
   `application/book_library_query.dart`; статус чтения —
@@ -495,6 +501,11 @@ lib/main.dart ─► lib/app (экраны верхнего уровня, нав
   интервала для одного абзаца в «Оформлении».
 - 2026-10-04 — карта расписана подробно по сценариям; добавлены генератор
   `tool/code_map.dart` и указатель `docs/CODE_SYMBOLS.md` с номерами строк.
+- 2026-10-04 — проверка на телефоне: `_revealCaret` в
+  `BookSectionEditorState`, `_sidePanelWidths` и `BookWholeWordsText` в
+  панелях, отступы от выреза в библиотеке; тесты
+  `test/book_panel_layout_test.dart` и прокрутка в
+  `test/book_pagination_widget_test.dart`.
 - 2026-10-04 — читалка: межстрочный интервал из настроек для всех абзацев,
   поле `BookReaderBlock.lineHeight` удалено; у `BookFormattingSheet` убран
   параметр `paragraphSettings`; строка `alignJustify`; README обновлён.

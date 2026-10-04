@@ -66,7 +66,8 @@ class BookSectionEditor extends StatefulWidget {
   State<BookSectionEditor> createState() => BookSectionEditorState();
 }
 
-class BookSectionEditorState extends State<BookSectionEditor> {
+class BookSectionEditorState extends State<BookSectionEditor>
+    with WidgetsBindingObserver {
   final _controllers = <QuillController>[];
   final _focusNodes = <FocusNode>[];
   final _scrollControllers = <ScrollController>[];
@@ -80,6 +81,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
 
   int _activePage = 0;
   bool _usesPagedLayout = false;
+  bool _revealCaretScheduled = false;
   Timer? _paginationTimer;
   int _paginationRequest = 0;
   final _paginationMeasurement = BookPaginationMeasurement(maxRetries: 6);
@@ -111,6 +113,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _titleController = TextEditingController(text: widget.section.title);
     _measurementTitleController = TextEditingController(
       text: widget.section.title,
@@ -204,7 +207,10 @@ class BookSectionEditorState extends State<BookSectionEditor> {
           ),
         ),
       );
-      controller.addListener(() => _handleDocumentChanged(controller));
+      controller.addListener(() {
+        _handleDocumentChanged(controller);
+        _revealCaret(controller);
+      });
       _imageSelection.attach(controller);
       _controllers.add(controller);
 
@@ -239,6 +245,31 @@ class BookSectionEditorState extends State<BookSectionEditor> {
     widget.onContentChanged(manuscript);
     _scheduleMetricsNotification();
     if (_usesPagedLayout) _schedulePagination();
+  }
+
+  /// The keyboard came up or the screen turned: the caret may now be hidden.
+  @override
+  void didChangeMetrics() => _revealCaret(controller);
+
+  /// Keeps the caret of the page being written in sight, also above the
+  /// keyboard. Quill does so only in an editor that scrolls itself, while
+  /// sheets scroll in the page view around them, so nothing scrolled there.
+  void _revealCaret(QuillController changed) {
+    if (!_usesPagedLayout || _revealCaretScheduled) return;
+    final index = _controllers.indexOf(changed);
+    if (index < 0 || !_focusNodes[index].hasFocus) return;
+    _revealCaretScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _revealCaretScheduled = false;
+      if (!mounted || index >= _controllers.length) return;
+      final editor = _editorKeys[index].currentState;
+      final selection = _controllers[index].selection;
+      if (editor == null || !editor.mounted || !selection.isValid) return;
+      final renderEditor = editor.renderEditor;
+      renderEditor.showOnScreen(
+        rect: renderEditor.getLocalRectForCaret(selection.extent).inflate(16),
+      );
+    });
   }
 
   void _activatePage(FocusNode changedNode) {
@@ -679,6 +710,7 @@ class BookSectionEditorState extends State<BookSectionEditor> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _paginationTimer?.cancel();
     _paginationRequest++;
     _measurementController?.dispose();

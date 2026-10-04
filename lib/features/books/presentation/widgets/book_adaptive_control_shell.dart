@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -86,12 +88,12 @@ class BookAdaptiveControlShell extends StatelessWidget {
             ),
           );
         }
-        final panelWidth = constraints.maxWidth >= 1200 ? 176.0 : 128.0;
+        final (start, end) = _sidePanelWidths(context, constraints);
         return Scaffold(
           body: Row(
             children: [
               SizedBox(
-                width: panelWidth,
+                width: start,
                 child: BookLeatherPanel(
                   key: const ValueKey('book-wide-start-panel'),
                   safeArea: const EdgeInsets.only(top: 1, bottom: 1, left: 1),
@@ -100,7 +102,7 @@ class BookAdaptiveControlShell extends StatelessWidget {
               ),
               Expanded(child: content),
               SizedBox(
-                width: panelWidth,
+                width: end,
                 child: BookLeatherPanel(
                   key: const ValueKey('book-wide-end-panel'),
                   safeArea: const EdgeInsets.only(top: 1, right: 1, bottom: 1),
@@ -118,17 +120,18 @@ class BookAdaptiveControlShell extends StatelessWidget {
     body: LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < bookControlBreakpoint;
-        final panelWidth = constraints.maxWidth >= 1200 ? 176.0 : 128.0;
+        final (start, end) = _sidePanelWidths(context, constraints);
         return Stack(
           children: [
             Positioned.fill(
               child: Padding(
-                // Wide screens keep the side gutters free for the panels;
-                // on phones the panels float above the text.
-                padding: EdgeInsets.symmetric(
-                  horizontal: compact ? 0 : panelWidth,
-                ),
-                child: SafeArea(child: content),
+                // Wide screens keep the side gutters free for the panels,
+                // which also cover a cutout at the side; on phones the
+                // panels float above the text.
+                padding: compact
+                    ? EdgeInsets.zero
+                    : EdgeInsets.only(left: start, right: end),
+                child: SafeArea(left: compact, right: compact, child: content),
               ),
             ),
             if (compact) ...[
@@ -169,7 +172,7 @@ class BookAdaptiveControlShell extends StatelessWidget {
                 top: 0,
                 bottom: 0,
                 left: 0,
-                width: panelWidth,
+                width: start,
                 child: _RevealedPanel(
                   visible: panelsVisible,
                   offset: const Offset(-1, 0),
@@ -184,7 +187,7 @@ class BookAdaptiveControlShell extends StatelessWidget {
                 top: 0,
                 bottom: 0,
                 right: 0,
-                width: panelWidth,
+                width: end,
                 child: _RevealedPanel(
                   visible: panelsVisible,
                   offset: const Offset(1, 0),
@@ -205,6 +208,19 @@ class BookAdaptiveControlShell extends StatelessWidget {
       },
     ),
   );
+}
+
+/// The widths of the start and end panels of a wide screen. Each keeps its
+/// width for the controls and grows by the camera cutout or rounded corner
+/// on its side, which its SafeArea leaves empty; otherwise a phone on its
+/// side squeezed the labels of one panel until words broke apart.
+(double, double) _sidePanelWidths(
+  BuildContext context,
+  BoxConstraints constraints,
+) {
+  final width = constraints.maxWidth >= 1200 ? 176.0 : 128.0;
+  final insets = MediaQuery.paddingOf(context);
+  return (width + insets.left, width + insets.right);
 }
 
 /// Slides a panel in and out and leaves the tree once it is hidden, so a
@@ -541,23 +557,17 @@ class BookPanelAction extends StatelessWidget {
   final bool selected;
   final bool compact;
 
-  Widget _buildLabel(Color color) {
-    final text = Text(
-      label,
-      maxLines: compact ? 1 : 2,
-      overflow: TextOverflow.ellipsis,
-      textAlign: TextAlign.center,
-      style: TextStyle(
-        color: color,
-        fontSize: 10.5,
-        fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-        height: 1.08,
-      ),
-    );
-    // A single long word would otherwise break mid-word on narrow phones.
-    if (!compact || label.contains(' ')) return text;
-    return FittedBox(fit: BoxFit.scaleDown, child: text);
-  }
+  Widget _buildLabel(Color color) => BookWholeWordsText(
+    label,
+    maxLines: compact ? 1 : 2,
+    textAlign: TextAlign.center,
+    style: TextStyle(
+      color: color,
+      fontSize: 10.5,
+      fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+      height: 1.08,
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -647,10 +657,9 @@ class BookPanelSectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(8, 12, 8, 5),
-    child: Text(
+    child: BookWholeWordsText(
       label.toUpperCase(),
       maxLines: 2,
-      overflow: TextOverflow.ellipsis,
       style: const TextStyle(
         color: BookLeatherColors.mutedForeground,
         fontSize: 9,
@@ -659,6 +668,66 @@ class BookPanelSectionLabel extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// A short label that never breaks a word in the middle, as «Оформлен-ие»:
+/// when its longest word is wider than the room, the whole label gets
+/// smaller instead. Longer labels still wrap between words.
+class BookWholeWordsText extends StatelessWidget {
+  const BookWholeWordsText(
+    this.text, {
+    required this.style,
+    required this.maxLines,
+    this.textAlign,
+    super.key,
+  });
+
+  final String text;
+  final TextStyle style;
+  final int maxLines;
+  final TextAlign? textAlign;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final style = DefaultTextStyle.of(context).style.merge(this.style);
+      final fitted = constraints.maxWidth.isFinite
+          ? _fitted(context, style, constraints.maxWidth)
+          : style;
+      return Text(
+        text,
+        maxLines: maxLines,
+        overflow: TextOverflow.ellipsis,
+        textAlign: textAlign,
+        style: fitted,
+      );
+    },
+  );
+
+  TextStyle _fitted(BuildContext context, TextStyle style, double room) {
+    final painter = TextPainter(
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    );
+    var widest = 0.0;
+    for (final word in text.split(' ')) {
+      painter
+        ..text = TextSpan(text: word, style: style)
+        ..layout();
+      widest = math.max(widest, painter.width);
+    }
+    painter.dispose();
+    if (widest <= room) return style;
+    // Letter spacing shrinks with the letters, so the word shrinks evenly.
+    final scale = room / widest * 0.98;
+    return style.copyWith(
+      fontSize: (style.fontSize ?? 14) * scale,
+      letterSpacing: style.letterSpacing == null
+          ? null
+          : style.letterSpacing! * scale,
+    );
+  }
 }
 
 class BookPanelTitleAction extends StatelessWidget {

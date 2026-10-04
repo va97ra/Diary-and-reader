@@ -86,6 +86,8 @@ class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
     List<String> collections,
   ) {
     final strings = AppStrings.of(context);
+    // A camera cutout or rounded corner at the side of a phone on its side.
+    final sides = MediaQuery.paddingOf(context);
     return Scaffold(
       appBar: LiteriaLeatherAppBar(
         title: Text(
@@ -117,8 +119,13 @@ class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
         onPressed: _scanningDeviceBooks ? null : widget.onPrimaryAction,
       ),
       body: LiteriaParchmentBackground(
+        // The leather controls reach the edges like the app bar above them,
+        // and keep their own controls clear of a cutout; the books below
+        // keep clear of it by their padding.
         child: SafeArea(
           top: false,
+          left: false,
+          right: false,
           child: CustomScrollView(
             key: ValueKey(_writing ? 'manuscript-library' : 'reading-library'),
             slivers: [
@@ -162,10 +169,10 @@ class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
               else if (_showGrid && projects.length == 1)
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      16,
+                    padding: EdgeInsets.fromLTRB(
+                      16 + sides.left,
                       8,
-                      16,
+                      16 + sides.right,
                       _floatingActionClearance,
                     ),
                     child: Center(
@@ -193,10 +200,10 @@ class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
                 )
               else if (_showGrid)
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(
-                    16,
+                  padding: EdgeInsets.fromLTRB(
+                    16 + sides.left,
                     8,
-                    16,
+                    16 + sides.right,
                     _floatingActionClearance,
                   ),
                   sliver: SliverGrid.builder(
@@ -226,10 +233,10 @@ class _LiteriaLibraryPageState extends State<LiteriaLibraryPage> {
                 ),
               if (projects.isNotEmpty && !_showGrid)
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(
-                    12,
+                  padding: EdgeInsets.fromLTRB(
+                    12 + sides.left,
                     8,
-                    12,
+                    12 + sides.right,
                     _floatingActionClearance,
                   ),
                   sliver: SliverList.separated(

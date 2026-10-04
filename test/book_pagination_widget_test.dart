@@ -9,6 +9,7 @@ import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_section_editor.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/literia_test_navigation.dart';
@@ -91,5 +92,69 @@ void main() {
     expect(find.byKey(const ValueKey('book-page-2')), findsOneWidget);
 
     await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('the sheets scroll to the caret, as above a keyboard', (
+    tester,
+  ) async {
+    final now = DateTime(2026);
+    final section = BookSection(
+      id: 'chapter-1',
+      title: 'Глава 1',
+      type: BookSectionType.chapter,
+      status: DraftStatus.draft,
+      content: [
+        {'insert': '${'Строка рукописи. ' * 40}\n' * 8},
+      ],
+      createdAt: now,
+      updatedAt: now,
+    );
+    final project = BookProject(
+      id: 'book-1',
+      metadata: const BookMetadata(title: 'Книга'),
+      sections: [section],
+      activeSectionId: section.id,
+      createdAt: now,
+      updatedAt: now,
+    );
+    final controller = AuthorWorkspaceController(
+      MemoryAuthorWorkspaceRepository()
+        ..snapshot = AuthorWorkspaceSnapshot(
+          projects: [project],
+          activeProjectId: project.id,
+          languageCode: 'ru',
+        ),
+    );
+    await controller.load(preferredLanguage: 'ru');
+
+    // A phone on its side: wide enough for sheets, as low as above a
+    // keyboard.
+    await tester.binding.setSurfaceSize(const Size(900, 420));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(AuthorStudioApp(controller: controller));
+    await openLastManuscript(tester, controller);
+    for (var index = 0; index < 20; index++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    final pages = tester.state<ScrollableState>(
+      find.descendant(
+        of: find.byKey(const ValueKey('continuous-page-view')),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    expect(pages.position.pixels, 0);
+
+    final editor = tester.widget<QuillEditor>(find.byType(QuillEditor).first);
+    editor.focusNode.requestFocus();
+    await tester.pump();
+    final end = editor.controller.document.length - 1;
+    editor.controller.updateSelection(
+      TextSelection.collapsed(offset: end),
+      ChangeSource.local,
+    );
+    await tester.pumpAndSettle();
+
+    expect(pages.position.pixels, greaterThan(0));
+    expect(tester.takeException(), isNull);
   });
 }

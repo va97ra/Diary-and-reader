@@ -143,16 +143,16 @@
 - 215 class **_LibraryListTile**
 - 343 enum **_LibraryCardAction**
 
-### lib/app/literia_library_page.dart (352)
+### lib/app/literia_library_page.dart (359)
 - 16 enum **LiteriaLibraryMode**
 - 21 class **LiteriaLibraryPage**
 - 45 class **_LiteriaLibraryPageState**
   - 53 get _writing
   - 83 _buildPage
-  - 262 _scanDeviceBooks
-  - 272 _showCollectionDialog
-  - 312 _toggleFavorite
-  - 319 _showReadingStatusDialog
+  - 269 _scanDeviceBooks
+  - 279 _showCollectionDialog
+  - 319 _toggleFavorite
+  - 326 _showReadingStatusDialog
 
 ### lib/app/literia_settings_page.dart (154)
 - 9 class **LiteriaSettingsPage**
@@ -2284,29 +2284,31 @@
   - 208 _fontWeight
   - 216 _color
 
-### lib/features/books/presentation/widgets/book_adaptive_control_shell.dart (751)
-- 4 const bookControlBreakpoint
-- 6 class **BookLeatherColors**
-- 19 fn bookStatusBarStyle — Status bar icons that stay readable over a [background] of this brightness.
-- 29 class **BookAdaptiveControlShell**
-  - 65 _buildInline
-  - 117 _buildOverlay
-- 212 class **_RevealedPanel** — Slides a panel in and out and leaves the tree once it is hidden, so a hidden panel neither takes taps nor reaches screen readers.
-- 229 class **_RevealedPanelState**
-- 270 class **BookLeatherPanel**
-- 337 class **LiteriaLeatherAppBar**
-  - 353 get preferredSize
-- 371 class **LiteriaParchmentBackground**
-- 395 class **LiteriaLeatherCard**
-- 436 class **LiteriaCompactActionTile**
-- 526 class **BookPanelAction**
-  - 544 _buildLabel
-- 621 class **BookPanelIconAction**
-- 642 class **BookPanelSectionLabel**
-- 664 class **BookPanelTitleAction**
-- 727 class **_LeatherStitchPainter**
-  - 731 paint
-  - 750 shouldRepaint
+### lib/features/books/presentation/widgets/book_adaptive_control_shell.dart (820)
+- 6 const bookControlBreakpoint
+- 8 class **BookLeatherColors**
+- 21 fn bookStatusBarStyle — Status bar icons that stay readable over a [background] of this brightness.
+- 31 class **BookAdaptiveControlShell**
+  - 67 _buildInline
+  - 119 _buildOverlay
+- 228 class **_RevealedPanel** — Slides a panel in and out and leaves the tree once it is hidden, so a hidden panel neither takes taps nor reaches screen readers.
+- 245 class **_RevealedPanelState**
+- 286 class **BookLeatherPanel**
+- 353 class **LiteriaLeatherAppBar**
+  - 369 get preferredSize
+- 387 class **LiteriaParchmentBackground**
+- 411 class **LiteriaLeatherCard**
+- 452 class **LiteriaCompactActionTile**
+- 542 class **BookPanelAction**
+  - 560 _buildLabel
+- 631 class **BookPanelIconAction**
+- 652 class **BookPanelSectionLabel**
+- 676 class **BookWholeWordsText** — A short label that never breaks a word in the middle, as «Оформлен-ие»: when its longest word is wider than the room, the whole label get...
+  - 707 _fitted
+- 733 class **BookPanelTitleAction**
+- 796 class **_LeatherStitchPainter**
+  - 800 paint
+  - 819 shouldRepaint
 
 ### lib/features/books/presentation/widgets/book_cover_view.dart (73)
 - 5 class **BookCoverView**
@@ -2473,40 +2475,42 @@
 ### lib/features/books/presentation/widgets/book_save_status.dart (82)
 - 5 class **BookSaveStatus**
 
-### lib/features/books/presentation/widgets/book_section_editor.dart (711)
+### lib/features/books/presentation/widgets/book_section_editor.dart (743)
 - 23 class **BookSectionEditor**
 - 69 class **BookSectionEditorState**
-  - 94 get controller
-  - 95 get pageCount
-  - 97 suspendTextInputFocus
-  - 105 resumeTextInputFocus
-  - 165 _collapseToMobileDocument
-  - 177 _createPageControllers
-  - 222 _pasteClipboardImage — Runs before Quill's own paste handling; a picture wins only when the clipboard holds no text.
-  - 231 _handleDocumentChanged
-  - 244 _activatePage
-  - 252 get _pageDocuments
-  - 262 _schedulePagination
-  - 273 _beginPaginationMeasurement
-  - 279 _installMeasurementDocument
-  - 305 _measureCurrentDocument
-  - 365 _finishPaginationMeasurement
-  - 391 _selectPage
-  - 398 revealTextRange
-  - 416 _globalSelectionOffset
-  - 443 _pageContentLength
-  - 446 _documentLength
-  - 455 _hasSoftPageBreak
-  - 492 _disposeMeasurementResourcesAfterFrame
-  - 523 _buildEditors
-  - 544 _scheduleMetricsNotification
-  - 559 _buildPagedEditorWithMeasurement
-  - 594 _buildPagedEditor
-  - 610 _buildContinuousPages
-  - 629 _buildSinglePage
-  - 645 _buildPageSpread
-  - 663 _buildPage
-  - 694 _disposePageControllers
+  - 96 get controller
+  - 97 get pageCount
+  - 99 suspendTextInputFocus
+  - 107 resumeTextInputFocus
+  - 168 _collapseToMobileDocument
+  - 180 _createPageControllers
+  - 228 _pasteClipboardImage — Runs before Quill's own paste handling; a picture wins only when the clipboard holds no text.
+  - 237 _handleDocumentChanged
+  - 252 didChangeMetrics — The keyboard came up or the screen turned: the caret may now be hidden.
+  - 257 _revealCaret — Keeps the caret of the page being written in sight, also above the keyboard.
+  - 275 _activatePage
+  - 283 get _pageDocuments
+  - 293 _schedulePagination
+  - 304 _beginPaginationMeasurement
+  - 310 _installMeasurementDocument
+  - 336 _measureCurrentDocument
+  - 396 _finishPaginationMeasurement
+  - 422 _selectPage
+  - 429 revealTextRange
+  - 447 _globalSelectionOffset
+  - 474 _pageContentLength
+  - 477 _documentLength
+  - 486 _hasSoftPageBreak
+  - 523 _disposeMeasurementResourcesAfterFrame
+  - 554 _buildEditors
+  - 575 _scheduleMetricsNotification
+  - 590 _buildPagedEditorWithMeasurement
+  - 625 _buildPagedEditor
+  - 641 _buildContinuousPages
+  - 660 _buildSinglePage
+  - 676 _buildPageSpread
+  - 694 _buildPage
+  - 726 _disposePageControllers
 
 ### lib/features/books/presentation/widgets/book_settings_controls.dart (276)
 - 8 class **BookSettingsCard** — A section of a settings sheet: a card with a title and, when the title alone may puzzle a newcomer, a one-line hint.
@@ -2729,7 +2733,13 @@
 - 27 bounds render retries for a measurement pass
 
 ### test/book_pagination_widget_test.dart
-- 18 flows a chapter across A4 pages without losing content
+- 19 flows a chapter across A4 pages without losing content
+- 97 the sheets scroll to the caret, as above a keyboard
+
+### test/book_panel_layout_test.dart
+- 7 a side panel grows by the cutout on its side
+- 34 a long word gets smaller instead of breaking apart
+- 66 words that fit keep their size and wrap between words
 
 ### test/book_panel_semantics_test.dart
 - 6 panel controls announce their label once and stay tappable
