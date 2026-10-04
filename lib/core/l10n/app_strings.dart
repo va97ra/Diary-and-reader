@@ -92,8 +92,6 @@ class AppStrings {
   String get bySize => _text('bySize');
   String get byLastRead => _text('byLastRead');
   String get structure => _text('structure');
-  String get undo => _text('undo');
-  String get redo => _text('redo');
   String get writerSettings => _text('writerSettings');
   String get writerFormatting => _text('writerFormatting');
   String get onboarding => _text('onboarding');

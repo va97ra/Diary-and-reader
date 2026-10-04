@@ -75,8 +75,6 @@ const appStringValuesRu = <String, String>{
   'bySize': 'По размеру',
   'byLastRead': 'По последнему чтению',
   'structure': 'Структура',
-  'undo': 'Отменить',
-  'redo': 'Повторить',
   'writerSettings': 'Настройки рукописи',
   'writerFormatting': 'Оформление',
   'onboarding': 'Обучение',

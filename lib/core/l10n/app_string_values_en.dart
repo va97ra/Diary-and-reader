@@ -75,8 +75,6 @@ const appStringValuesEn = <String, String>{
   'bySize': 'By size',
   'byLastRead': 'By last read',
   'structure': 'Structure',
-  'undo': 'Undo',
-  'redo': 'Redo',
   'writerSettings': 'Manuscript settings',
   'writerFormatting': 'Formatting',
   'onboarding': 'Tutorial',
