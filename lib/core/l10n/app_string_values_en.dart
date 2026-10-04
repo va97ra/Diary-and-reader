@@ -533,6 +533,9 @@ const appStringValuesEn = <String, String>{
   'italicText': 'Italic',
   'underlineText': 'Underline',
   'strikeText': 'Strikethrough',
+  'clearFormatting': 'Clear formatting',
+  'selectionBarHint':
+      'Bold, italic and colour are in the bar below the selected words',
   'noTextColor': 'No color',
   'textColor_red': 'Red',
   'textColor_burgundy': 'Burgundy',

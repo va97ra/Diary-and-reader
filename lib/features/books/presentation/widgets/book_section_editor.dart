@@ -72,6 +72,10 @@ class BookSectionEditorState extends State<BookSectionEditor>
   final _focusNodes = <FocusNode>[];
   final _scrollControllers = <ScrollController>[];
   final _editorKeys = <GlobalKey<EditorState>>[];
+
+  /// The phone editor's own key: sharing a sheet's key would move that
+  /// editor's state into it when the A4 preview closes.
+  final _mobileEditorKey = GlobalKey<EditorState>();
   final _viewportKeys = <GlobalKey>[];
   final _imageSelection = BookImageSelection();
   late final TextEditingController _titleController;
@@ -557,6 +561,7 @@ class BookSectionEditorState extends State<BookSectionEditor>
           controller: controller,
           focusNode: _focusNodes[_activePage],
           scrollController: _scrollControllers[_activePage],
+          editorKey: _mobileEditorKey,
           pageNumber: _activePage + 1,
           pageCount: _controllers.length,
           pageFormat: widget.pageFormat,

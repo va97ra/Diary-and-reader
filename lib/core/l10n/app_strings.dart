@@ -528,6 +528,8 @@ class AppStrings {
   String get italicText => _text('italicText');
   String get underlineText => _text('underlineText');
   String get strikeText => _text('strikeText');
+  String get clearFormatting => _text('clearFormatting');
+  String get selectionBarHint => _text('selectionBarHint');
   String get noTextColor => _text('noTextColor');
   String textColorName(String id) => _text('textColor_$id');
 

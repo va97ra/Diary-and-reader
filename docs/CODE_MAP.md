@@ -36,7 +36,7 @@
 | Кирпичики шторок настроек | `widgets/book_settings_controls.dart`: `BookSettingsCard`, `BookSettingsRow(flex:)`, `BookCompactChoice`, `BookSettingSwitch`, `BookCompactDropdown`, `bookNumberChoices`, `bookNamedChoices`, `bookSettingNumber` |
 | Кнопки и подписи боковых панелей | `widgets/book_adaptive_control_shell.dart`: `BookPanelAction`, `BookPanelSectionLabel`, `BookWholeWordsText` (слово не рвётся — текст уменьшается), ширина панелей — `_sidePanelWidths` (+ вырез камеры) |
 | Открыть шторку / диалог | `widgets/book_leather_modal.dart`: `showBookLeatherBottomSheet`, `BookLeatherModalHeader`, `BookLeatherDialog`, `bookLeatherModalTheme` |
-| Меню выделенных слов в писалке | `widgets/book_editor_context_menu.dart`: `BookEditorContextMenu` (копировать/вставить сверху, «Вставить картинку») + `BookSelectionFormattingBar` под словами (Ж, К, Ч, З, цвет с палитрой в самой панели); подключается через `BookImageEditingScope.contextMenuBuilder` |
+| Меню выделенных слов в писалке | `widgets/book_editor_context_menu.dart`: `BookEditorContextMenu` (копировать/вставить сверху, «Вставить картинку») + `BookSelectionFormattingBar` под словами (Ж, К, Ч, З, цвет с палитрой в самой панели, очистить); на компьютере — `BookSelectionBarTrigger` (панель сразу после выделения мышью); подключается через `BookImageEditingScope.contextMenuBuilder` |
 | Состояние всей программы | `application/author_workspace_controller.dart` `AuthorWorkspaceController` |
 | Модель книги | `domain/book_project.dart` `BookProject`; глава — `domain/book_section.dart` `BookSection` |
 | Текст главы | `domain/rich_document.dart` — Quill Delta, список операций `{insert, attributes}` |
@@ -257,10 +257,9 @@ lib/main.dart ─► lib/app (экраны верхнего уровня, нав
 ### 6.4 «Оформление» (`widgets/book_formatting_sheet.dart`)
 Открывает `_showFormatting`; `onApplied` закрывает шторку после **любого**
 изменения (кнопки Quill — через `afterButtonPressed`, списки — `_applying`).
-- «Выделенный текст»: шрифт и размер — `_FormattingDropdown` →
-  `controller.formatSelection`; Ж/К/Ч/З; цвет — `_TextColorButton` +
-  `widgets/book_text_color_menu.dart` (`applyBookTextColor`, палитра —
-  `presentation/book_text_colors.dart`); «очистить формат».
+- «Выделенный текст»: только шрифт и размер слов — `_FormattingDropdown` →
+  `controller.formatSelection`; подсказка `selectionBarHint`: Ж, К, Ч, З,
+  цвет и «очистить» — в панели под выделенными словами (6.8).
 - «Абзац»: стиль — `widgets/book_paragraph_style_selector.dart` →
   `BookParagraphStyleActions.apply`; одна строка `_EvenToolbarRow`:
   4 выравнивания (у «по ширине» своя подсказка `alignJustify` — у Quill
@@ -314,9 +313,19 @@ lib/main.dart ─► lib/app (экраны верхнего уровня, нав
   снизу — над словами и меню;
 - `BookSelectionFormattingBar`: Ж, К, Ч, З переключаются (`_toggle`), цвет
   открывает палитру прямо в панели (без всплывающего меню — так выделение
-  не теряется), «Без цвета» снимает цвет. Панель остаётся после нажатия,
-  можно сделать и жирным, и курсивом. Цвета — `BookTextColors.palette`,
-  кружок — `BookTextColorSwatch(size:)`.
+  не теряется), «Без цвета» снимает цвет, «очистить» (`_clear`) снимает
+  только оформление слов, не абзаца. Панель остаётся после нажатия, можно
+  сделать и жирным, и курсивом. Цвета — `BookTextColors.palette`, кружок —
+  `BookTextColorSwatch(size:)`, значок кнопки — `BookTextColorIcon` (буква
+  с радужной полоской или полоской цвета слов) из
+  `widgets/book_text_color_menu.dart`;
+- `BookSelectionBarTrigger` оборачивает оба редактора (`BookPageCanvas`,
+  `BookMobileEditor`): на Windows/macOS/Linux после выделения мышью
+  (протянуть, двойной щелчок) вызывает `showToolbar` с `barOnly` — меню
+  показывает одну панель, без копировать/вставить; правый клик — всё меню.
+  Ключ телефонного редактора — свой (`_mobileEditorKey` в
+  `BookSectionEditorState`): общий с листами перенёс бы состояние
+  редактора листа в телефонный при закрытии A4.
 
 ### 6.9 Остальное в писалке
 - Структура книги: `widgets/book_navigator.dart`; дерево —
@@ -520,6 +529,11 @@ lib/main.dart ─► lib/app (экраны верхнего уровня, нав
   интервала для одного абзаца в «Оформлении».
 - 2026-10-04 — карта расписана подробно по сценариям; добавлены генератор
   `tool/code_map.dart` и указатель `docs/CODE_SYMBOLS.md` с номерами строк.
+- 2026-10-04 — «Оформление» без Ж/К/Ч/З/цвета/очистить (они в панели
+  под словами), подсказка `selectionBarHint`; «очистить» в панели;
+  `BookSelectionBarTrigger` для компьютера; `BookTextColorIcon`;
+  удалены `_TextColorButton`, `bookTextColorMenuItems`; тесты в
+  `test/book_selection_formatting_test.dart`.
 - 2026-10-04 — новое меню выделенных слов
   `widgets/book_editor_context_menu.dart` (перенесено из
   `book_image_editing_scope.dart` + панель форматирования под словами);

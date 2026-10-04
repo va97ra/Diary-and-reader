@@ -4,6 +4,8 @@ import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/presentation/book_text_colors.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_image_editing_scope.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_text_color_menu.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
@@ -11,7 +13,8 @@ import 'package:flutter_quill/flutter_quill.dart';
 /// menu above the words, with "Paste image" when the clipboard holds a
 /// picture, and the words' formatting right below them. Android hides its
 /// own Paste item when the clipboard has no text, so without that entry a
-/// copied picture could not be pasted at all.
+/// copied picture could not be pasted at all. After a mouse selection on a
+/// computer only the formatting shows; see [BookSelectionBarTrigger].
 class BookEditorContextMenu extends StatefulWidget {
   const BookEditorContextMenu({
     required this.state,
@@ -65,20 +68,27 @@ class _BookEditorContextMenuState extends State<BookEditorContextMenu> {
     }
     final anchors = widget.state.contextMenuAnchors;
     final mediaQuery = MediaQuery.of(context);
+    final barOnly =
+        widget.state.context
+            .findAncestorStateOfType<BookSelectionBarTriggerState>()
+            ?.barOnly ??
+        false;
     return TextFieldTapRegion(
       child: Stack(
         children: [
-          Positioned.fill(
-            child: AdaptiveTextSelectionToolbar.buttonItems(
-              buttonItems: items,
-              anchors: anchors,
+          if (!barOnly)
+            Positioned.fill(
+              child: AdaptiveTextSelectionToolbar.buttonItems(
+                buttonItems: items,
+                anchors: anchors,
+              ),
             ),
-          ),
           if (_canFormat)
             Positioned.fill(
               child: CustomSingleChildLayout(
                 delegate: _BelowSelectionLayout(
                   anchors: anchors,
+                  menu: barOnly ? 0 : _BelowSelectionLayout.copyMenu,
                   padding: mediaQuery.padding.copyWith(
                     bottom: math.max(
                       mediaQuery.padding.bottom,
@@ -102,15 +112,22 @@ class _BookEditorContextMenuState extends State<BookEditorContextMenu> {
 /// there is no room above them. With no room below either, the bar goes
 /// above the words and the menu.
 class _BelowSelectionLayout extends SingleChildLayoutDelegate {
-  _BelowSelectionLayout({required this.anchors, required this.padding});
+  _BelowSelectionLayout({
+    required this.anchors,
+    required this.padding,
+    required this.menu,
+  });
 
   final TextSelectionToolbarAnchors anchors;
   final EdgeInsets padding;
 
+  /// Room the copy menu takes, or 0 when only the bar shows.
+  final double menu;
+
   static const _margin = 8.0;
 
   /// The Material copy menu and its distance from the words.
-  static const _menu = 44.0 + 8.0;
+  static const copyMenu = 44.0 + 8.0;
 
   /// Room for the handles that hang below the selected words.
   static const _handles = 24.0;
@@ -130,10 +147,10 @@ class _BelowSelectionLayout extends SingleChildLayoutDelegate {
     final bottom = size.height - padding.bottom - _margin;
     final above = anchors.primaryAnchor;
     final below = anchors.secondaryAnchor ?? above;
-    final menuBelow = above.dy - _menu < top;
-    var y = below.dy + _handles + (menuBelow ? _menu : 0);
+    final menuBelow = above.dy - menu < top;
+    var y = below.dy + _handles + (menuBelow ? menu : 0);
     if (y + childSize.height > bottom) {
-      y = above.dy - (menuBelow ? 0 : _menu) - _margin - childSize.height;
+      y = above.dy - (menuBelow ? 0 : menu) - _margin - childSize.height;
     }
     final x = above.dx - childSize.width / 2;
     return Offset(
@@ -149,11 +166,78 @@ class _BelowSelectionLayout extends SingleChildLayoutDelegate {
   bool shouldRelayout(_BelowSelectionLayout oldDelegate) =>
       anchors.primaryAnchor != oldDelegate.anchors.primaryAnchor ||
       anchors.secondaryAnchor != oldDelegate.anchors.secondaryAnchor ||
-      padding != oldDelegate.padding;
+      padding != oldDelegate.padding ||
+      menu != oldDelegate.menu;
 }
 
-/// Bold, italic, underlined, struck through and the colour of the selected
-/// words, so that they need not open the formatting sheet. The colour shows
+/// On a computer, shows the formatting bar as soon as words are selected
+/// with the mouse, by dragging or a double click, as a phone shows it after
+/// a long press; a right click still opens the full menu with the bar.
+/// Elsewhere it changes nothing.
+class BookSelectionBarTrigger extends StatefulWidget {
+  const BookSelectionBarTrigger({
+    required this.editorKey,
+    required this.child,
+    super.key,
+  });
+
+  final GlobalKey<EditorState> editorKey;
+  final Widget child;
+
+  @override
+  State<BookSelectionBarTrigger> createState() =>
+      BookSelectionBarTriggerState();
+}
+
+class BookSelectionBarTriggerState extends State<BookSelectionBarTrigger> {
+  /// Whether the menu shows the bar alone: it came up by itself after a
+  /// selection, not on a right click.
+  bool barOnly = false;
+  bool _primaryButton = false;
+
+  static bool get _computer =>
+      !kIsWeb &&
+      switch (defaultTargetPlatform) {
+        TargetPlatform.windows ||
+        TargetPlatform.macOS ||
+        TargetPlatform.linux => true,
+        _ => false,
+      };
+
+  void _pointerDown(PointerDownEvent event) {
+    barOnly = false;
+    _primaryButton =
+        event.kind == PointerDeviceKind.mouse &&
+        event.buttons == kPrimaryMouseButton;
+  }
+
+  void _pointerUp(PointerUpEvent event) {
+    if (!_primaryButton) return;
+    // Quill settles the selection on this same release.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final editor = widget.editorKey.currentState;
+      if (!mounted || editor == null || !editor.mounted) return;
+      if (editor.widget.config.readOnly ||
+          editor.textEditingValue.selection.isCollapsed) {
+        return;
+      }
+      barOnly = true;
+      editor.showToolbar();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => _computer
+      ? Listener(
+          onPointerDown: _pointerDown,
+          onPointerUp: _pointerUp,
+          child: widget.child,
+        )
+      : widget.child;
+}
+
+/// Bold, italic, underlined, struck through, the colour of the selected
+/// words and clearing them, so that they need not open the formatting sheet. The colour shows
 /// its palette in place of the buttons; the bar stays up for the next
 /// change.
 class BookSelectionFormattingBar extends StatefulWidget {
@@ -178,6 +262,19 @@ class _BookSelectionFormattingBarState
     controller.formatSelection(
       on ? Attribute.clone(attribute, null) : attribute,
     );
+  }
+
+  /// Takes away the formatting of the words, not of their paragraph.
+  void _clear() {
+    final controller = widget.controller;
+    final attributes = {
+      for (final style in controller.getAllSelectionStyles())
+        for (final attribute in style.attributes.values)
+          if (attribute.scope == AttributeScope.inline) attribute,
+    };
+    for (final attribute in attributes) {
+      controller.formatSelection(Attribute.clone(attribute, null));
+    }
   }
 
   void _color(String hex) {
@@ -213,7 +310,7 @@ class _BookSelectionFormattingBarState
     Widget toggle(Attribute<dynamic> attribute, IconData icon, String label) =>
         _BarButton(
           key: ValueKey('selection-format-${attribute.key}'),
-          icon: icon,
+          icon: Icon(icon, size: 20),
           label: label,
           selected: style.containsKey(attribute.key),
           onPressed: () => _toggle(attribute),
@@ -233,10 +330,15 @@ class _BookSelectionFormattingBarState
       ),
       _BarButton(
         key: const ValueKey('selection-format-color'),
-        icon: Icons.format_color_text,
-        iconColor: bookTextColorOf(bookTextColorAt(widget.controller)),
+        icon: BookTextColorIcon(hex: bookTextColorAt(widget.controller)),
         label: strings.textColor,
         onPressed: () => setState(() => _choosingColor = true),
+      ),
+      _BarButton(
+        key: const ValueKey('selection-format-clear'),
+        icon: const Icon(Icons.format_clear, size: 20),
+        label: strings.clearFormatting,
+        onPressed: _clear,
       ),
     ];
   }
@@ -269,7 +371,7 @@ class _BookSelectionFormattingBarState
           ),
         ),
       _BarButton(
-        icon: Icons.close,
+        icon: const Icon(Icons.close, size: 20),
         label: MaterialLocalizations.of(context).closeButtonTooltip,
         onPressed: () => setState(() => _choosingColor = false),
       ),
@@ -283,15 +385,13 @@ class _BarButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.selected = false,
-    this.iconColor,
     super.key,
   });
 
-  final IconData icon;
+  final Widget icon;
   final String label;
   final VoidCallback onPressed;
   final bool selected;
-  final Color? iconColor;
 
   @override
   Widget build(BuildContext context) {
@@ -305,14 +405,14 @@ class _BarButton extends StatelessWidget {
         foregroundColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
               ? scheme.onPrimary
-              : iconColor ?? scheme.onSurface,
+              : scheme.onSurface,
         ),
         backgroundColor: WidgetStateProperty.resolveWith(
           (states) =>
               states.contains(WidgetState.selected) ? scheme.primary : null,
         ),
       ),
-      icon: Icon(icon, size: 20),
+      icon: icon,
     );
   }
 }

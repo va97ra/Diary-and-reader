@@ -4,6 +4,7 @@ import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_page_format.dart';
 import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/presentation/book_typography.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_editor_context_menu.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_image_editing_scope.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_image_embed_builder.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_page_break_embed_builder.dart';
@@ -115,34 +116,38 @@ class BookPageCanvas extends StatelessWidget {
                   Expanded(
                     child: ClipRect(
                       key: viewportKey,
-                      child: QuillEditor(
-                        controller: controller,
-                        focusNode: focusNode,
-                        scrollController: scrollController,
-                        config: QuillEditorConfig(
-                          editorKey: editorKey,
-                          placeholder: AppStrings.of(context).startWriting,
-                          padding: EdgeInsets.zero,
-                          customStyles: BookTypography.editorStyles(
-                            paragraphSettings,
-                          ),
-                          textSpanBuilder: BookTypography.textSpanBuilder(
-                            paragraphSettings,
-                          ),
-                          textSelectionThemeData: BookTypography.selectionTheme,
-                          embedBuilders: [
-                            BookImageEmbedBuilder(
-                              assets,
-                              onTap: isMeasurement ? null : onImageTap,
+                      child: BookSelectionBarTrigger(
+                        editorKey: editorKey,
+                        child: QuillEditor(
+                          controller: controller,
+                          focusNode: focusNode,
+                          scrollController: scrollController,
+                          config: QuillEditorConfig(
+                            editorKey: editorKey,
+                            placeholder: AppStrings.of(context).startWriting,
+                            padding: EdgeInsets.zero,
+                            customStyles: BookTypography.editorStyles(
+                              paragraphSettings,
                             ),
-                            const BookPageBreakEmbedBuilder(),
-                          ],
-                          scrollable: false,
-                          autoFocus: false,
-                          contextMenuBuilder: imageScope?.contextMenuBuilder,
-                          onTapUp: imageScope?.handleEditorTapUp,
-                          contentInsertionConfiguration: imageScope
-                              ?.contentInsertionFor(controller),
+                            textSpanBuilder: BookTypography.textSpanBuilder(
+                              paragraphSettings,
+                            ),
+                            textSelectionThemeData:
+                                BookTypography.selectionTheme,
+                            embedBuilders: [
+                              BookImageEmbedBuilder(
+                                assets,
+                                onTap: isMeasurement ? null : onImageTap,
+                              ),
+                              const BookPageBreakEmbedBuilder(),
+                            ],
+                            scrollable: false,
+                            autoFocus: false,
+                            contextMenuBuilder: imageScope?.contextMenuBuilder,
+                            onTapUp: imageScope?.handleEditorTapUp,
+                            contentInsertionConfiguration: imageScope
+                                ?.contentInsertionFor(controller),
+                          ),
                         ),
                       ),
                     ),

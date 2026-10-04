@@ -534,6 +534,9 @@ const appStringValuesRu = <String, String>{
   'italicText': 'Курсив',
   'underlineText': 'Подчёркнутый',
   'strikeText': 'Зачёркнутый',
+  'clearFormatting': 'Очистить формат',
+  'selectionBarHint':
+      'Жирный, курсив и цвет — в панели под выделенными словами',
   'noTextColor': 'Без цвета',
   'textColor_red': 'Красный',
   'textColor_burgundy': 'Бордовый',

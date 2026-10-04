@@ -6,7 +6,6 @@ import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.d
 import 'package:dnevnik/features/books/presentation/widgets/book_paragraph_settings_section.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_paragraph_style_selector.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_settings_controls.dart';
-import 'package:dnevnik/features/books/presentation/widgets/book_text_color_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
@@ -63,88 +62,57 @@ class BookFormattingSheet extends StatelessWidget {
               closeKey: const ValueKey('writer-formatting-close'),
               padding: const EdgeInsets.fromLTRB(0, 8, 0, 4),
             ),
+            // Bold, italic, colour and the like sit in the bar below the
+            // selected words, where they need no sheet; the rare font and
+            // size of some words stay here.
             BookSettingsCard(
               key: const ValueKey('formatting-text-section'),
               title: strings.characterFormatting,
-              child: Column(
+              hint: strings.selectionBarHint,
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _FormattingDropdown<String>(
-                          key: const ValueKey('formatting-font-family'),
-                          listenable: controller,
-                          label: strings.font,
-                          value: () =>
-                              _currentFontFamily(controller, paragraphSettings),
-                          values: {
-                            for (final family in bookFontFamilies)
-                              family: family,
-                          },
-                          itemStyle: (family) => TextStyle(fontFamily: family),
-                          onChanged: _applying(
-                            (family) => controller.formatSelection(
-                              Attribute.fromKeyValue(
-                                Attribute.font.key,
-                                family,
-                              ),
-                            ),
-                          ),
+                  Expanded(
+                    child: _FormattingDropdown<String>(
+                      key: const ValueKey('formatting-font-family'),
+                      listenable: controller,
+                      label: strings.font,
+                      value: () =>
+                          _currentFontFamily(controller, paragraphSettings),
+                      values: {
+                        for (final family in bookFontFamilies) family: family,
+                      },
+                      itemStyle: (family) => TextStyle(fontFamily: family),
+                      onChanged: _applying(
+                        (family) => controller.formatSelection(
+                          Attribute.fromKeyValue(Attribute.font.key, family),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        width: 104,
-                        child: _FormattingDropdown<double>(
-                          key: const ValueKey('formatting-font-size'),
-                          listenable: controller,
-                          label: strings.fontSize,
-                          value: () =>
-                              _currentFontSize(controller, paragraphSettings),
-                          values: {
-                            for (final points in bookFontSizesPt)
-                              points:
-                                  '${bookSettingNumber(points)} '
-                                  '${strings.points}',
-                          },
-                          onChanged: _applying(
-                            (points) => controller.formatSelection(
-                              Attribute.fromKeyValue(
-                                Attribute.size.key,
-                                BookPageFormat.pointsToLogicalPixels(points),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                  const SizedBox(height: 6),
-                  _EvenToolbarRow(
-                    children: [
-                      for (final attribute in const [
-                        Attribute.bold,
-                        Attribute.italic,
-                        Attribute.underline,
-                        Attribute.strikeThrough,
-                      ])
-                        QuillToolbarToggleStyleButton(
-                          controller: controller,
-                          attribute: attribute,
-                          baseOptions: _buttons,
-                        ),
-                      _TextColorButton(
-                        key: const ValueKey('formatting-text-color'),
-                        controller: controller,
-                        onSelected: _applying(
-                          (hex) => applyBookTextColor(controller, hex),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 104,
+                    child: _FormattingDropdown<double>(
+                      key: const ValueKey('formatting-font-size'),
+                      listenable: controller,
+                      label: strings.fontSize,
+                      value: () =>
+                          _currentFontSize(controller, paragraphSettings),
+                      values: {
+                        for (final points in bookFontSizesPt)
+                          points:
+                              '${bookSettingNumber(points)} '
+                              '${strings.points}',
+                      },
+                      onChanged: _applying(
+                        (points) => controller.formatSelection(
+                          Attribute.fromKeyValue(
+                            Attribute.size.key,
+                            BookPageFormat.pointsToLogicalPixels(points),
+                          ),
                         ),
                       ),
-                      QuillToolbarClearFormatButton(
-                        controller: controller,
-                        baseOptions: _buttons,
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),
@@ -279,40 +247,6 @@ class _FormattingDropdown<T> extends StatelessWidget {
       itemStyle: itemStyle,
       onChanged: onChanged,
     ),
-  );
-}
-
-/// Colours the selected words; the letter shows the colour at the cursor.
-class _TextColorButton extends StatelessWidget {
-  const _TextColorButton({
-    required this.controller,
-    required this.onSelected,
-    super.key,
-  });
-
-  final QuillController controller;
-  final ValueChanged<String> onSelected;
-
-  @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-    animation: controller,
-    builder: (context, _) {
-      final current = bookTextColorAt(controller);
-      return PopupMenuButton<String>(
-        tooltip: AppStrings.of(context).textColor,
-        initialValue: current,
-        onSelected: onSelected,
-        itemBuilder: bookTextColorMenuItems,
-        child: SizedBox.square(
-          dimension: 30,
-          child: Icon(
-            Icons.format_color_text,
-            size: 20,
-            color: bookTextColorOf(current),
-          ),
-        ),
-      );
-    },
   );
 }
 

@@ -160,13 +160,13 @@
 ### lib/app/literia_version.dart (3)
 - 3 const literiaVersion — The version shown to people, as `version` in pubspec.yaml has it before the build number.
 
-### lib/core/l10n/app_string_values_en.dart (551)
+### lib/core/l10n/app_string_values_en.dart (554)
 - 1 const appStringValuesEn
 
-### lib/core/l10n/app_string_values_ru.dart (552)
+### lib/core/l10n/app_string_values_ru.dart (555)
 - 1 const appStringValuesRu
 
-### lib/core/l10n/app_strings.dart (544)
+### lib/core/l10n/app_strings.dart (546)
 - 5 class **AppStrings**
   - 16 of
   - 19 _text
@@ -672,13 +672,15 @@
   - 528 get italicText
   - 529 get underlineText
   - 530 get strikeText
-  - 531 get noTextColor
-  - 532 textColorName
-  - 534 get trayPanel
-  - 535 get trayWindow
-  - 536 get trayQuit
-  - 537 get expandToWindow
-  - 538 get hideToTray
+  - 531 get clearFormatting
+  - 532 get selectionBarHint
+  - 533 get noTextColor
+  - 534 textColorName
+  - 536 get trayPanel
+  - 537 get trayWindow
+  - 538 get trayQuit
+  - 539 get expandToWindow
+  - 540 get hideToTray
 
 ### lib/core/theme/app_theme.dart (137)
 - 3 class **AppTheme**
@@ -2314,21 +2316,27 @@
 ### lib/features/books/presentation/widgets/book_cover_view.dart (73)
 - 5 class **BookCoverView**
 
-### lib/features/books/presentation/widgets/book_editor_context_menu.dart (318)
-- 15 class **BookEditorContextMenu** — The menu of selected words in the editor: the regular copy and paste menu above the words, with "Paste image" when the clipboard holds a ...
-- 31 class **_BookEditorContextMenuState**
-  - 43 get _canFormat
-- 104 class **_BelowSelectionLayout** — Places the formatting bar right below the selected words, clear of the selection handles and of the copy menu, which drops below the word...
-  - 119 getConstraintsForChild
-  - 128 getPositionForChild
-  - 149 shouldRelayout
-- 159 class **BookSelectionFormattingBar** — Bold, italic, underlined, struck through and the colour of the selected words, so that they need not open the formatting sheet.
-- 169 class **_BookSelectionFormattingBarState**
-  - 173 _toggle
-  - 183 _color
-  - 210 _buttons
-  - 244 _palette
-- 280 class **_BarButton**
+### lib/features/books/presentation/widgets/book_editor_context_menu.dart (418)
+- 18 class **BookEditorContextMenu** — The menu of selected words in the editor: the regular copy and paste menu above the words, with "Paste image" when the clipboard holds a ...
+- 34 class **_BookEditorContextMenuState**
+  - 46 get _canFormat
+- 114 class **_BelowSelectionLayout** — Places the formatting bar right below the selected words, clear of the selection handles and of the copy menu, which drops below the word...
+  - 136 getConstraintsForChild
+  - 145 getPositionForChild
+  - 166 shouldRelayout
+- 177 class **BookSelectionBarTrigger** — On a computer, shows the formatting bar as soon as words are selected with the mouse, by dragging or a double click, as a phone shows it ...
+- 192 class **BookSelectionBarTriggerState**
+  - 198 get _computer
+  - 207 _pointerDown
+  - 214 _pointerUp
+- 243 class **BookSelectionFormattingBar** — Bold, italic, underlined, struck through, the colour of the selected words and clearing them, so that they need not open the formatting s...
+- 253 class **_BookSelectionFormattingBarState**
+  - 257 _toggle
+  - 268 _clear — Takes away the formatting of the words, not of their paragraph.
+  - 280 _color
+  - 307 _buttons
+  - 346 _palette
+- 382 class **_BarButton**
 
 ### lib/features/books/presentation/widgets/book_editor_metrics.dart (22)
 - 1 class **BookEditorMetrics**
@@ -2342,16 +2350,15 @@
 ### lib/features/books/presentation/widgets/book_focus_mode_bar.dart (47)
 - 7 class **BookFocusModeBar**
 
-### lib/features/books/presentation/widgets/book_formatting_sheet.dart (371)
-- 19 class **BookFormattingSheet** — The formatting sheet of the writer.
-  - 35 get _buttons
-  - 42 _applying — Applies a change to the text and hides the sheet.
-- 254 class **_FormattingDropdown** — A drop-down that follows the formatting at the cursor.
-- 286 class **_TextColorButton** — Colours the selected words; the letter shows the colour at the cursor.
-- 319 class **_EvenToolbarRow**
-- 335 fn _currentFontFamily
-- 349 fn _currentFontSize
-- 368 fn _nearest
+### lib/features/books/presentation/widgets/book_formatting_sheet.dart (305)
+- 18 class **BookFormattingSheet** — The formatting sheet of the writer.
+  - 34 get _buttons
+  - 41 _applying — Applies a change to the text and hides the sheet.
+- 222 class **_FormattingDropdown** — A drop-down that follows the formatting at the cursor.
+- 253 class **_EvenToolbarRow**
+- 269 fn _currentFontFamily
+- 283 fn _currentFontSize
+- 302 fn _nearest
 
 ### lib/features/books/presentation/widgets/book_image_editing_scope.dart (208)
 - 10 typedef **BookImageTapCallback**
@@ -2436,8 +2443,8 @@
   - 77 _field
   - 97 _save
 
-### lib/features/books/presentation/widgets/book_mobile_editor.dart (113)
-- 13 class **BookMobileEditor**
+### lib/features/books/presentation/widgets/book_mobile_editor.dart (122)
+- 14 class **BookMobileEditor**
 
 ### lib/features/books/presentation/widgets/book_navigator.dart (268)
 - 9 class **BookNavigator**
@@ -2453,9 +2460,9 @@
   - 11 get key
   - 14 toPlainText
 
-### lib/features/books/presentation/widgets/book_page_canvas.dart (190)
-- 13 class **BookPageCanvas**
-  - 49 get _isFirstPage
+### lib/features/books/presentation/widgets/book_page_canvas.dart (195)
+- 14 class **BookPageCanvas**
+  - 50 get _isFirstPage
 
 ### lib/features/books/presentation/widgets/book_page_settings_section.dart (186)
 - 10 class **BookPageSettingsSection** — How the pages of the manuscript look: the A4 preview, how the sheets are shown, their orientation and margins.
@@ -2488,42 +2495,42 @@
 ### lib/features/books/presentation/widgets/book_save_status.dart (82)
 - 5 class **BookSaveStatus**
 
-### lib/features/books/presentation/widgets/book_section_editor.dart (743)
+### lib/features/books/presentation/widgets/book_section_editor.dart (748)
 - 23 class **BookSectionEditor**
 - 69 class **BookSectionEditorState**
-  - 96 get controller
-  - 97 get pageCount
-  - 99 suspendTextInputFocus
-  - 107 resumeTextInputFocus
-  - 168 _collapseToMobileDocument
-  - 180 _createPageControllers
-  - 228 _pasteClipboardImage — Runs before Quill's own paste handling; a picture wins only when the clipboard holds no text.
-  - 237 _handleDocumentChanged
-  - 252 didChangeMetrics — The keyboard came up or the screen turned: the caret may now be hidden.
-  - 257 _revealCaret — Keeps the caret of the page being written in sight, also above the keyboard.
-  - 275 _activatePage
-  - 283 get _pageDocuments
-  - 293 _schedulePagination
-  - 304 _beginPaginationMeasurement
-  - 310 _installMeasurementDocument
-  - 336 _measureCurrentDocument
-  - 396 _finishPaginationMeasurement
-  - 422 _selectPage
-  - 429 revealTextRange
-  - 447 _globalSelectionOffset
-  - 474 _pageContentLength
-  - 477 _documentLength
-  - 486 _hasSoftPageBreak
-  - 523 _disposeMeasurementResourcesAfterFrame
-  - 554 _buildEditors
-  - 575 _scheduleMetricsNotification
-  - 590 _buildPagedEditorWithMeasurement
-  - 625 _buildPagedEditor
-  - 641 _buildContinuousPages
-  - 660 _buildSinglePage
-  - 676 _buildPageSpread
-  - 694 _buildPage
-  - 726 _disposePageControllers
+  - 100 get controller
+  - 101 get pageCount
+  - 103 suspendTextInputFocus
+  - 111 resumeTextInputFocus
+  - 172 _collapseToMobileDocument
+  - 184 _createPageControllers
+  - 232 _pasteClipboardImage — Runs before Quill's own paste handling; a picture wins only when the clipboard holds no text.
+  - 241 _handleDocumentChanged
+  - 256 didChangeMetrics — The keyboard came up or the screen turned: the caret may now be hidden.
+  - 261 _revealCaret — Keeps the caret of the page being written in sight, also above the keyboard.
+  - 279 _activatePage
+  - 287 get _pageDocuments
+  - 297 _schedulePagination
+  - 308 _beginPaginationMeasurement
+  - 314 _installMeasurementDocument
+  - 340 _measureCurrentDocument
+  - 400 _finishPaginationMeasurement
+  - 426 _selectPage
+  - 433 revealTextRange
+  - 451 _globalSelectionOffset
+  - 478 _pageContentLength
+  - 481 _documentLength
+  - 490 _hasSoftPageBreak
+  - 527 _disposeMeasurementResourcesAfterFrame
+  - 558 _buildEditors
+  - 580 _scheduleMetricsNotification
+  - 595 _buildPagedEditorWithMeasurement
+  - 630 _buildPagedEditor
+  - 646 _buildContinuousPages
+  - 665 _buildSinglePage
+  - 681 _buildPageSpread
+  - 699 _buildPage
+  - 731 _disposePageControllers
 
 ### lib/features/books/presentation/widgets/book_settings_controls.dart (276)
 - 8 class **BookSettingsCard** — A section of a settings sheet: a card with a title and, when the title alone may puzzle a newcomer, a one-line hint.
@@ -2538,12 +2545,12 @@
 ### lib/features/books/presentation/widgets/book_sheet_keyboard_dismiss.dart (19)
 - 5 class **BookSheetKeyboardDismiss** — Gives every modal book panel the same desktop escape-key behavior.
 
-### lib/features/books/presentation/widgets/book_text_color_menu.dart (65)
-- 8 fn bookTextColorAt — The colour of the words at the cursor as `#rrggbb`, or empty for text without a colour of its own.
-- 18 fn applyBookTextColor — Colours the selected words; an empty [hex] takes their colour away.
-- 22 fn bookTextColorOf — [hex] as a colour, or null for text without a colour of its own.
-- 27 fn bookTextColorMenuItems — The choices of a text colour menu, each with its swatch and name.
-- 48 class **BookTextColorSwatch**
+### lib/features/books/presentation/widgets/book_text_color_menu.dart (93)
+- 7 fn bookTextColorAt — The colour of the words at the cursor as `#rrggbb`, or empty for text without a colour of its own.
+- 17 fn applyBookTextColor — Colours the selected words; an empty [hex] takes their colour away.
+- 21 fn bookTextColorOf — [hex] as a colour, or null for text without a colour of its own.
+- 25 class **BookTextColorSwatch**
+- 47 class **BookTextColorIcon** — The sign of a colour button: a letter with a bar below it in the colour of the words, or in a rainbow while they have none, so that the b...
 
 ### lib/features/books/presentation/widgets/book_workspace_action.dart (15)
 - 3 enum **BookWorkspaceAction** — The less frequent writer tools: the book's own tools first, then those that keep the text safe.
@@ -2635,8 +2642,8 @@
 ### test/book_formatting_sheet_test.dart
 - 27 formatting goes from the words to the whole book
 - 59 formatting leaves out tools a book does not need
-- 87 the whole book spacings are drop-downs on one line
-- 124 a paragraph change hides the sheet to show the text
+- 97 the whole book spacings are drop-downs on one line
+- 134 a paragraph change hides the sheet to show the text
 
 ### test/book_image_document_editing_test.dart
 - 20 moving a full-width picture aside narrows it so the move shows
@@ -2867,7 +2874,9 @@
 - 46 falls back to section order when every section is empty
 
 ### test/book_selection_formatting_test.dart
-- 42 formatting appears right below the selected words
+- 69 formatting appears right below the selected words
+- 93 the colour button shows a rainbow, then the chosen colour
+- 122 clearing takes the words\
 
 ### test/book_speech_segmenter_test.dart
 - 5 starts at the requested Cyrillic word and keeps source offsets
@@ -2899,9 +2908,8 @@
 
 ### test/book_writer_safety_and_color_test.dart
 - 34 deleted words wait in the trash and go back into the text
-- 65 formatting colours the selected words
-- 89 the bar below the selection colours the words
-- 126 the exit button stands out on the dark focus bar
+- 65 the bar below the selection colours the words
+- 102 the exit button stands out on the dark focus bar
 
 ### test/book_writing_state_test.dart
 - 5 records writing goals, time, words and streaks

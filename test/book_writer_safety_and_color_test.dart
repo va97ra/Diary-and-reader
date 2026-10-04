@@ -62,30 +62,6 @@ void main() {
     await tester.binding.setSurfaceSize(null);
   });
 
-  testWidgets('formatting colours the selected words', (tester) async {
-    final (controller, editor) = await _openChapter(tester, 'Красное слово');
-    editor.updateSelection(
-      const TextSelection(baseOffset: 0, extentOffset: 7),
-      ChangeSource.local,
-    );
-
-    await tester.tap(find.byKey(const ValueKey('writer-formatting-action')));
-    await tester.pumpAndSettle();
-    final colorField = find.byKey(const ValueKey('formatting-text-color'));
-    await tester.ensureVisible(colorField);
-    await tester.pumpAndSettle();
-    await tester.tap(colorField);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Красный').last);
-    await tester.pumpAndSettle();
-
-    expect(controller.activeSection!.content.first, {
-      'insert': 'Красное',
-      'attributes': {'color': '#c62828'},
-    });
-    await tester.binding.setSurfaceSize(null);
-  });
-
   testWidgets('the bar below the selection colours the words', (tester) async {
     final (controller, editor) = await _openChapter(tester, 'Синее слово');
     await tester.tap(find.byType(QuillEditor));

@@ -67,8 +67,18 @@ void main() {
         )
         .map((button) => button.attribute.key)
         .toSet();
-    expect(attributes, containsAll(['bold', 'italic', 'underline', 'strike']));
+    // Bold, italic and colour sit in the bar below selected words; the sheet
+    // says where they went.
+    expect(
+      find.text('Жирный, курсив и цвет — в панели под выделенными словами'),
+      findsOneWidget,
+    );
+    expect(find.byType(QuillToolbarClearFormatButton), findsNothing);
     for (final unwanted in <Attribute<dynamic>>[
+      Attribute.bold,
+      Attribute.italic,
+      Attribute.underline,
+      Attribute.strikeThrough,
       Attribute.codeBlock,
       Attribute.inlineCode,
       Attribute.blockQuote,
