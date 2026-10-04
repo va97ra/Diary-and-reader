@@ -869,6 +869,8 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
                   Navigator.pop(sheetContext);
                   _toggleA4Preview();
                 },
+                // The sheet covers the page, so a new page look hides it.
+                onLayoutChanged: () => Navigator.pop(sheetContext),
               ),
             ),
           ],
@@ -901,6 +903,7 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
               Navigator.pop(sheetContext);
               _insertPageBreak();
             },
+            onApplied: () => Navigator.pop(sheetContext),
           ),
         ),
       ),

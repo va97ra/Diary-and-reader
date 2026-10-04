@@ -6,7 +6,8 @@ import 'package:flutter/material.dart';
 
 /// The reading settings: how the book looks, its text and margins, the
 /// gestures, and reading aloud. Every choice is named rather than a number,
-/// and applies to the book at once.
+/// and applies to the book at once. The sheet covers the book, so a choice
+/// that changes how the book looks hides it to show the change.
 class BookReaderSettingsSheet extends StatefulWidget {
   const BookReaderSettingsSheet({
     required this.settings,
@@ -23,8 +24,7 @@ class BookReaderSettingsSheet extends StatefulWidget {
 }
 
 class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
-  static const _minFontSize = 12.0;
-  static const _maxFontSize = 32.0;
+  static const _fontSizes = <double>[12, 14, 16, 18, 20, 22, 24, 26, 28, 32];
   static const _lineHeights = <double>[1.2, 1.4, 1.6, 1.8, 2.0, 2.2];
 
   /// Text wider than a phone screen, so the choice only shows on wide ones.
@@ -38,10 +38,13 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
     _settings = widget.settings;
   }
 
-  void _change(BookReaderSettings settings) {
+  /// Applies [settings]; a change to the look of the book also hides the
+  /// sheet, unless [hide] is false for a setting the page does not show.
+  void _change(BookReaderSettings settings, {bool hide = true}) {
     if (settings == _settings) return;
     setState(() => _settings = settings);
     widget.onChanged(settings);
+    if (hide) Navigator.maybePop(context);
   }
 
   @override
@@ -154,28 +157,21 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
                         ),
                       ),
                       const SizedBox(width: 8),
+                      // One choice reaches any size, as the sheet hides to
+                      // show it.
                       SizedBox(
-                        width: 128,
-                        child: BookSettingStepper(
+                        width: 104,
+                        child: BookCompactDropdown<double>(
                           key: const ValueKey('reader-font-size'),
                           label: strings.readerFontSize,
-                          value: '${_settings.fontSize.round()}',
-                          decreaseTooltip: strings.smallerText,
-                          increaseTooltip: strings.largerText,
-                          onDecrease: _settings.fontSize > _minFontSize
-                              ? () => _change(
-                                  _settings.copyWith(
-                                    fontSize: _settings.fontSize.round() - 1,
-                                  ),
-                                )
-                              : null,
-                          onIncrease: _settings.fontSize < _maxFontSize
-                              ? () => _change(
-                                  _settings.copyWith(
-                                    fontSize: _settings.fontSize.round() + 1,
-                                  ),
-                                )
-                              : null,
+                          value: _settings.fontSize,
+                          items: bookNumberChoices(
+                            _fontSizes,
+                            _settings.fontSize,
+                            (value) => '${value.round()}',
+                          ),
+                          onChanged: (value) =>
+                              _change(_settings.copyWith(fontSize: value)),
                         ),
                       ),
                     ],
@@ -297,14 +293,17 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
                   BookSettingSwitch(
                     title: strings.centerTapControls,
                     value: _settings.centerTapControls,
-                    onChanged: (value) =>
-                        _change(_settings.copyWith(centerTapControls: value)),
+                    onChanged: (value) => _change(
+                      _settings.copyWith(centerTapControls: value),
+                      hide: false,
+                    ),
                   ),
                   BookSettingSwitch(
                     title: strings.swipeChapterNavigation,
                     value: _settings.swipeChapterNavigation,
                     onChanged: (value) => _change(
                       _settings.copyWith(swipeChapterNavigation: value),
+                      hide: false,
                     ),
                   ),
                 ],
@@ -328,8 +327,10 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
                       _settings.speechRate,
                       (value) => value.toStringAsFixed(2),
                     ),
-                    onChanged: (value) =>
-                        _change(_settings.copyWith(speechRate: value)),
+                    onChanged: (value) => _change(
+                      _settings.copyWith(speechRate: value),
+                      hide: false,
+                    ),
                   ),
                   BookCompactDropdown<double>(
                     key: const ValueKey('reader-speech-pitch'),
@@ -344,8 +345,10 @@ class _BookReaderSettingsSheetState extends State<BookReaderSettingsSheet> {
                       _settings.speechPitch,
                       (value) => value.toStringAsFixed(1),
                     ),
-                    onChanged: (value) =>
-                        _change(_settings.copyWith(speechPitch: value)),
+                    onChanged: (value) => _change(
+                      _settings.copyWith(speechPitch: value),
+                      hide: false,
+                    ),
                   ),
                 ],
               ),

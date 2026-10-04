@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:dnevnik/features/books/application/book_export_artifact.dart';
 import 'package:dnevnik/features/books/application/book_section_outline.dart';
 import 'package:dnevnik/features/books/application/epub_rich_text_renderer.dart';
+import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 
 abstract final class BookHtmlExporter {
@@ -67,7 +68,7 @@ ${EpubRichTextRenderer.render(entry.section.content, imageSource: (assetId) {
     blockquote { border-left: .2rem solid #888; margin-left: 0; padding-left: 1rem; }
     pre { white-space: pre-wrap; }
     .align-center, .scene-break { text-align: center; text-indent: 0; }
-    .align-right, .epigraph { text-align: right; }
+    .align-right, .epigraph { text-align: right; text-indent: 0; }
     .poem { margin: 1em 1.5rem; font-style: italic; }
     .poem p { margin: 0; text-indent: 0; }
     .align-justify { text-align: justify; }
@@ -76,7 +77,7 @@ ${EpubRichTextRenderer.render(entry.section.content, imageSource: (assetId) {
     .book-image figcaption { margin-top: .4rem; font-size: .85em; font-style: italic; }
     .book-cover { display: block; max-width: min(72%, 24rem); max-height: 70vh; margin: 0 auto 1.5rem; }
     .page-break { break-after: page; page-break-after: always; }
-    ${[for (var index = 1; index <= 8; index++) '.indent-$index { margin-left: ${index * 1.5}em; }'].join('\n    ')}
+    ${[for (var index = 1; index <= 8; index++) '.indent-$index { margin-left: ${_number(index * bookIndentLevelEm)}em; }'].join('\n    ')}
     @media (max-width: 600px) { body { padding: 1.5rem 1rem; } }
   </style>
 </head>

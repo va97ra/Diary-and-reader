@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:dnevnik/features/books/application/book_export_artifact.dart';
 import 'package:dnevnik/features/books/application/epub_rich_text_renderer.dart';
+import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 
@@ -254,7 +255,7 @@ a { color: inherit; }
 .title-page .author { margin-top: 3em; text-indent: 0; }
 .title-page .description { margin-top: 4em; text-align: left; text-indent: 0; }
 .align-center, .scene-break { text-align: center; text-indent: 0; }
-.align-right, .epigraph { text-align: right; }
+.align-right, .epigraph { text-align: right; text-indent: 0; }
 .poem { margin: 1em 1.5em; font-style: italic; }
 .poem p { margin: 0; text-indent: 0; }
 .align-justify { text-align: justify; }
@@ -264,7 +265,7 @@ a { color: inherit; }
 .book-image figcaption { margin-top: .4em; font-size: .85em; font-style: italic; }
 .book-cover { display: block; max-width: 72%; max-height: 70vh; margin: 0 auto 1.5em; }
 .page-break { break-after: page; page-break-after: always; }
-${[for (var index = 1; index <= 8; index++) '.indent-$index { margin-left: ${index * 1.5}em; }'].join('\n')}
+${[for (var index = 1; index <= 8; index++) '.indent-$index { margin-left: ${_number(index * bookIndentLevelEm)}em; }'].join('\n')}
 ''';
   }
 

@@ -365,8 +365,6 @@ const appStringValuesRu = <String, String>{
   'pitchLow': 'Ниже',
   'pitchNormal': 'Обычная',
   'pitchHigh': 'Выше',
-  'smallerText': 'Меньше',
-  'largerText': 'Больше',
   'focusReading': 'Скрыть панели',
   'exitFocusReading': 'Показать панели',
   'readerTheme': 'Тема',

@@ -13,6 +13,7 @@ class BookPageSettingsSection extends StatelessWidget {
     required this.a4Preview,
     required this.pagedLayout,
     required this.onToggleA4Preview,
+    required this.onChanged,
     super.key,
   });
 
@@ -20,6 +21,9 @@ class BookPageSettingsSection extends StatelessWidget {
   final bool a4Preview;
   final bool pagedLayout;
   final VoidCallback onToggleA4Preview;
+
+  /// Called after every change, so the sheet can show the pages.
+  final VoidCallback onChanged;
 
   static const _marginPresetsMm = [12.7, 20.0, 25.4];
   static const _marginsMm = <double>[5, 10, 12.7, 15, 20, 25, 25.4, 30, 40, 50];
@@ -165,8 +169,10 @@ class BookPageSettingsSection extends StatelessWidget {
     );
   }
 
-  void _update(BookLayoutSettings settings) =>
-      controller.updateLayoutSettings(settings);
+  void _update(BookLayoutSettings settings) {
+    controller.updateLayoutSettings(settings);
+    onChanged();
+  }
 
   double? _uniformMarginPreset(BookLayoutSettings settings) {
     bool allEqual(double value) => [

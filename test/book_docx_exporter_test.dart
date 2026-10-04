@@ -107,6 +107,55 @@ void main() {
       ),
     );
   });
+
+  test('indents first lines and levels as the writer draws them', () {
+    final project = _project();
+    final chapter = project.sections.last.copyWith(
+      content: const [
+        {'insert': 'По ширине'},
+        {
+          'insert': '\n',
+          'attributes': {'align': 'justify'},
+        },
+        {'insert': 'По центру'},
+        {
+          'insert': '\n',
+          'attributes': {'align': 'center'},
+        },
+        {'insert': 'Справа'},
+        {
+          'insert': '\n',
+          'attributes': {'align': 'right'},
+        },
+        {'insert': 'Сдвинутый'},
+        {
+          'insert': '\n',
+          'attributes': {'indent': 2},
+        },
+      ],
+    );
+    final archive = ZipDecoder().decodeBytes(
+      BookDocxExporter.create(
+        project.copyWith(sections: [project.sections.first, chapter]),
+      ).bytes,
+    );
+    final document = _text(
+      archive.files.singleWhere((file) => file.name == 'word/document.xml'),
+    );
+    String properties(String text) {
+      final end = document.indexOf(text);
+      final start = document.lastIndexOf('<w:pPr>', end);
+      return document.substring(start, end);
+    }
+
+    expect(properties('По ширине'), contains('w:firstLine="283"'));
+    // Body text takes its indent from the style, so these say they take none.
+    expect(properties('По центру'), contains('w:firstLine="0"'));
+    expect(properties('Справа'), contains('w:firstLine="0"'));
+    // Two levels of one and a half sizes of 12 pt text.
+    expect(properties('Сдвинутый'), contains('w:left="720"'));
+    expect(properties('Сдвинутый'), contains('w:firstLine="283"'));
+  });
 }
 
 BookProject _project() {

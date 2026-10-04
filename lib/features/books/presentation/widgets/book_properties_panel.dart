@@ -17,6 +17,7 @@ class BookPropertiesPanel extends StatelessWidget {
     required this.a4Preview,
     required this.pagedLayout,
     required this.onToggleA4Preview,
+    required this.onLayoutChanged,
     super.key,
   });
 
@@ -30,6 +31,9 @@ class BookPropertiesPanel extends StatelessWidget {
   /// Whether the editor lays text out in pages, where the page view applies.
   final bool pagedLayout;
   final VoidCallback onToggleA4Preview;
+
+  /// Called after the look of the pages changes.
+  final VoidCallback onLayoutChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -95,6 +99,7 @@ class BookPropertiesPanel extends StatelessWidget {
               a4Preview: a4Preview,
               pagedLayout: pagedLayout,
               onToggleA4Preview: onToggleA4Preview,
+              onChanged: onLayoutChanged,
             ),
             BookSettingsCard(
               key: const ValueKey('writer-chapter-section'),

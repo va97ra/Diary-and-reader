@@ -451,7 +451,7 @@ TextSpan _styledSpan(
             ),
             style: BookReaderTypography.run(
               run,
-              typography.textStyle,
+              typography,
               backgroundColor: background,
             ),
           ),

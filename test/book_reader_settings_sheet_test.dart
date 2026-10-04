@@ -57,7 +57,7 @@ void main() {
     await tester.binding.setSurfaceSize(null);
   });
 
-  testWidgets('text size steps once per tap and named choices apply', (
+  testWidgets('text size and named choices apply and hide the sheet', (
     tester,
   ) async {
     final applied = <BookReaderSettings>[];
@@ -72,31 +72,61 @@ void main() {
           data: MediaQuery.of(context).copyWith(size: const Size(390, 844)),
           child: child!,
         ),
-        home: Scaffold(
-          body: BookReaderSettingsSheet(
-            settings: const BookReaderSettings(),
-            onChanged: applied.add,
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: TextButton(
+                onPressed: () => showModalBottomSheet<void>(
+                  context: context,
+                  isScrollControlled: true,
+                  builder: (_) => BookReaderSettingsSheet(
+                    settings: const BookReaderSettings(),
+                    onChanged: applied.add,
+                  ),
+                ),
+                child: const Text('open'),
+              ),
+            ),
           ),
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    Future<void> open() async {
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+    }
 
+    await open();
     expect(find.byType(Slider), findsNothing);
-    await tester.tap(find.byTooltip('Больше'));
-    await tester.pump();
-    expect(applied.single.fontSize, 19);
-    expect(find.text('19'), findsOneWidget);
+    // Any size is one choice away; the sheet then hides to show the book.
+    await tester.tap(find.byKey(const ValueKey('reader-font-size')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('24').last);
+    await tester.pumpAndSettle();
+    expect(applied.single.fontSize, 24);
+    expect(find.byType(BookReaderSettingsSheet), findsNothing);
 
     // Margins are named, not given in pixels.
+    await open();
     await tester.tap(find.byKey(const ValueKey('reader-side-margins')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Широкие').last);
     await tester.pumpAndSettle();
     expect(applied.last.horizontalPadding, 56);
+    expect(find.byType(BookReaderSettingsSheet), findsNothing);
+
+    // What the page does not show leaves the sheet open.
+    await open();
     expect(find.textContaining('px'), findsNothing);
     // Text width means nothing on a phone, so it is not offered.
     expect(find.byKey(const ValueKey('reader-text-width')), findsNothing);
+    final swipe = find.text('Свайп листает главы');
+    await tester.ensureVisible(swipe);
+    await tester.pumpAndSettle();
+    await tester.tap(swipe);
+    await tester.pumpAndSettle();
+    expect(applied.last.swipeChapterNavigation, isFalse);
+    expect(find.byType(BookReaderSettingsSheet), findsOneWidget);
   });
 }
 

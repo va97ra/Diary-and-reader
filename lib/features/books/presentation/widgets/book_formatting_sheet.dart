@@ -13,6 +13,9 @@ import 'package:flutter_quill/flutter_quill.dart';
 /// The formatting sheet of the writer. It goes from the small to the large:
 /// the selected words, the paragraph under the cursor, things to insert, and
 /// last the look of the whole book.
+///
+/// The sheet covers the text, so every change calls [onApplied], which hides
+/// the sheet and shows what the change did.
 class BookFormattingSheet extends StatelessWidget {
   const BookFormattingSheet({
     required this.workspaceController,
@@ -20,6 +23,7 @@ class BookFormattingSheet extends StatelessWidget {
     required this.paragraphSettings,
     required this.onInsertImage,
     required this.onInsertPageBreak,
+    required this.onApplied,
     super.key,
   });
 
@@ -28,14 +32,19 @@ class BookFormattingSheet extends StatelessWidget {
   final BookParagraphSettings paragraphSettings;
   final VoidCallback onInsertImage;
   final VoidCallback onInsertPageBreak;
+  final VoidCallback onApplied;
 
-  static const _buttons = QuillToolbarBaseButtonOptions(
+  QuillToolbarBaseButtonOptions get _buttons => QuillToolbarBaseButtonOptions(
     iconSize: 18,
     iconButtonFactor: 1.65,
+    afterButtonPressed: onApplied,
   );
 
-  /// The spacings Quill can show for a single paragraph.
-  static const _lineHeights = <double>[1, 1.15, 1.5, 2];
+  /// Applies a change to the text and hides the sheet.
+  ValueChanged<T> _applying<T>(ValueChanged<T> change) => (value) {
+    change(value);
+    onApplied();
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -72,8 +81,13 @@ class BookFormattingSheet extends StatelessWidget {
                               family: family,
                           },
                           itemStyle: (family) => TextStyle(fontFamily: family),
-                          onChanged: (family) => controller.formatSelection(
-                            Attribute.fromKeyValue(Attribute.font.key, family),
+                          onChanged: _applying(
+                            (family) => controller.formatSelection(
+                              Attribute.fromKeyValue(
+                                Attribute.font.key,
+                                family,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -92,10 +106,12 @@ class BookFormattingSheet extends StatelessWidget {
                                   '${bookSettingNumber(points)} '
                                   '${strings.points}',
                           },
-                          onChanged: (points) => controller.formatSelection(
-                            Attribute.fromKeyValue(
-                              Attribute.size.key,
-                              BookPageFormat.pointsToLogicalPixels(points),
+                          onChanged: _applying(
+                            (points) => controller.formatSelection(
+                              Attribute.fromKeyValue(
+                                Attribute.size.key,
+                                BookPageFormat.pointsToLogicalPixels(points),
+                              ),
                             ),
                           ),
                         ),
@@ -119,6 +135,9 @@ class BookFormattingSheet extends StatelessWidget {
                       _TextColorButton(
                         key: const ValueKey('formatting-text-color'),
                         controller: controller,
+                        onSelected: _applying(
+                          (hex) => applyBookTextColor(controller, hex),
+                        ),
                       ),
                       QuillToolbarClearFormatButton(
                         controller: controller,
@@ -135,8 +154,13 @@ class BookFormattingSheet extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  BookParagraphStyleSelector(controller: controller),
+                  BookParagraphStyleSelector(
+                    controller: controller,
+                    onApplied: onApplied,
+                  ),
                   const SizedBox(height: 6),
+                  // The spacing between lines is the book's, set below, so
+                  // that every paragraph keeps the book's spacing around it.
                   _EvenToolbarRow(
                     children: [
                       for (final attribute in const [
@@ -156,45 +180,15 @@ class BookFormattingSheet extends StatelessWidget {
                           isIncrease: increase,
                           baseOptions: _buttons,
                         ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
                       for (final attribute in const [
                         Attribute.ol,
                         Attribute.ul,
                       ])
-                        SizedBox(
-                          width: 44,
-                          child: Center(
-                            child: QuillToolbarToggleStyleButton(
-                              controller: controller,
-                              attribute: attribute,
-                              baseOptions: _buttons,
-                            ),
-                          ),
+                        QuillToolbarToggleStyleButton(
+                          controller: controller,
+                          attribute: attribute,
+                          baseOptions: _buttons,
                         ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _FormattingDropdown<double>(
-                          key: const ValueKey('formatting-line-height'),
-                          listenable: controller,
-                          label: strings.lineSpacing,
-                          value: () =>
-                              _currentLineHeight(controller, paragraphSettings),
-                          values: {
-                            for (final height in _lineHeights)
-                              height: bookSettingNumber(height),
-                          },
-                          onChanged: (height) => controller.formatSelection(
-                            Attribute.fromKeyValue(
-                              Attribute.lineHeight.key,
-                              height,
-                            ),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ],
@@ -239,6 +233,7 @@ class BookFormattingSheet extends StatelessWidget {
               hint: strings.wholeBookHint,
               child: BookParagraphSettingsSection(
                 controller: workspaceController,
+                onApplied: onApplied,
               ),
             ),
           ],
@@ -282,9 +277,14 @@ class _FormattingDropdown<T> extends StatelessWidget {
 
 /// Colours the selected words; the letter shows the colour at the cursor.
 class _TextColorButton extends StatelessWidget {
-  const _TextColorButton({required this.controller, super.key});
+  const _TextColorButton({
+    required this.controller,
+    required this.onSelected,
+    super.key,
+  });
 
   final QuillController controller;
+  final ValueChanged<String> onSelected;
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
@@ -294,7 +294,7 @@ class _TextColorButton extends StatelessWidget {
       return PopupMenuButton<String>(
         tooltip: AppStrings.of(context).textColor,
         initialValue: current,
-        onSelected: (hex) => applyBookTextColor(controller, hex),
+        onSelected: onSelected,
         itemBuilder: bookTextColorMenuItems,
         child: SizedBox.square(
           dimension: 30,
@@ -356,21 +356,6 @@ double _currentFontSize(
       BookPageFormat.pointsPerInch /
       BookPageFormat.logicalPixelsPerInch;
   return _nearest(points, bookFontSizesPt);
-}
-
-double _currentLineHeight(
-  QuillController controller,
-  BookParagraphSettings settings,
-) {
-  final raw = controller
-      .getSelectionStyle()
-      .attributes[Attribute.lineHeight.key]
-      ?.value;
-  final parsed = raw is num ? raw.toDouble() : double.tryParse('$raw');
-  return _nearest(
-    parsed ?? settings.lineHeight,
-    BookFormattingSheet._lineHeights,
-  );
 }
 
 double _nearest(double value, List<double> options) => options.reduce(

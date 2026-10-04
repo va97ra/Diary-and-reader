@@ -421,6 +421,12 @@ void registerAdaptiveLayoutScenarios() {
       controller.activeProject!.layoutSettings.orientation,
       BookPageOrientation.landscape,
     );
+    // The sheet covered the page, so it hides to show the new orientation.
+    expect(find.byType(BookPropertiesPanel), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('writer-settings-action')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(pageLayoutSection);
+    await tester.pumpAndSettle();
     expect(
       tester
           .widget<SegmentedButton<BookPageOrientation>>(

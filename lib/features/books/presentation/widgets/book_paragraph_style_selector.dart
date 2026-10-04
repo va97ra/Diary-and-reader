@@ -6,9 +6,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
 class BookParagraphStyleSelector extends StatelessWidget {
-  const BookParagraphStyleSelector({required this.controller, super.key});
+  const BookParagraphStyleSelector({
+    required this.controller,
+    required this.onApplied,
+    super.key,
+  });
 
   final QuillController controller;
+
+  /// Called once a style is applied, so the sheet can show the text.
+  final VoidCallback onApplied;
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
@@ -23,8 +30,10 @@ class BookParagraphStyleSelector extends StatelessWidget {
           for (final style in BookParagraphStyle.values)
             style: _label(strings, style),
         },
-        onChanged: (style) =>
-            BookParagraphStyleActions.apply(controller, style),
+        onChanged: (style) {
+          BookParagraphStyleActions.apply(controller, style);
+          onApplied();
+        },
       );
     },
   );

@@ -96,6 +96,8 @@ abstract final class BookParagraphStyleActions {
     Attribute.clone(Attribute.list, null),
     Attribute.clone(Attribute.codeBlock, null),
     Attribute.clone(Attribute.indent, null),
+    // Lines take the book's spacing; an older paragraph spacing goes too.
+    Attribute.clone(Attribute.lineHeight, null),
     const Attribute<String?>(semanticAttributeKey, AttributeScope.block, null),
   ];
 

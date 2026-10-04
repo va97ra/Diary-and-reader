@@ -47,23 +47,55 @@ void main() {
   });
 
   test('a dark word colour is lightened only on a dark page', () {
-    final run = BookReaderDocumentParser.parse(const [
+    final block = BookReaderDocumentParser.parse(const [
       {
         'insert': 'Blue',
         'attributes': {'color': '#1565c0'},
       },
       {'insert': '\n'},
-    ]).blocks.single.runs.single;
+    ]).blocks.single;
     const blue = Color(0xFF1565C0);
 
     Color colorOn(BookReaderTheme theme) {
-      final ink = BookReaderPalette.forTheme(theme).ink;
-      return BookReaderTypography.run(run, TextStyle(color: ink)).color!;
+      final typography = BookReaderTypography.block(
+        block,
+        const BookReaderSettings(),
+        BookReaderPalette.forTheme(theme),
+      );
+      return BookReaderTypography.run(block.runs.single, typography).color!;
     }
 
     expect(colorOn(BookReaderTheme.sepia), blue);
     final onDark = colorOn(BookReaderTheme.dark);
     expect(onDark, isNot(blue));
     expect(onDark.computeLuminance(), greaterThanOrEqualTo(0.2));
+  });
+
+  test('the reader text size and font apply to words the author styled', () {
+    final block = BookReaderDocumentParser.parse(const [
+      {
+        'insert': 'Крупно',
+        'attributes': {'size': 32, 'font': 'Courier New'},
+      },
+      {'insert': ' обычно\n'},
+    ]).blocks.single;
+    TextStyle style(BookReaderSettings settings, int run) =>
+        BookReaderTypography.run(
+          block.runs[run],
+          BookReaderTypography.block(
+            block,
+            settings,
+            BookReaderPalette.forTheme(settings.theme),
+          ),
+        );
+
+    const small = BookReaderSettings(fontSize: 16, fontFamily: 'Verdana');
+    const large = BookReaderSettings(fontSize: 24, fontFamily: 'Arial');
+    // Twice the book's text stays twice the reader's text.
+    expect(style(small, 0).fontSize, 32);
+    expect(style(large, 0).fontSize, 48);
+    expect(style(large, 1).fontSize, 24);
+    expect(style(small, 0).fontFamily, 'Verdana');
+    expect(style(large, 0).fontFamily, 'Arial');
   });
 }

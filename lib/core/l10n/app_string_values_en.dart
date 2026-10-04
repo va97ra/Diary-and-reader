@@ -366,8 +366,6 @@ const appStringValuesEn = <String, String>{
   'pitchLow': 'Lower',
   'pitchNormal': 'Normal',
   'pitchHigh': 'Higher',
-  'smallerText': 'Smaller',
-  'largerText': 'Larger',
   'focusReading': 'Hide controls',
   'exitFocusReading': 'Show controls',
   'readerTheme': 'Theme',

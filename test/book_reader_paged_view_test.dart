@@ -59,8 +59,8 @@ void main() {
       controller.activeProject!.readerSettings.viewMode,
       BookReaderViewMode.continuous,
     );
-    Navigator.of(tester.element(find.text('Настройки чтения'))).pop();
-    await tester.pumpAndSettle();
+    // The sheet hides itself to show the book in its new view.
+    expect(find.text('Настройки чтения'), findsNothing);
     expect(
       find.byKey(const ValueKey('reader-continuous-view')),
       findsOneWidget,

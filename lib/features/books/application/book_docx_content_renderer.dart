@@ -246,10 +246,14 @@ $body  </w:body>
         'SceneBreak',
       _ => 'BodyText',
     };
-    final left = block.indent * 360;
-    final firstLine = block.type == BookExportBlockType.paragraph
+    final left = (block.indent * settings.fontSizePt * bookIndentLevelEm * 20)
+        .round();
+    final firstLine = block.indentsFirstLine
         ? _millimetersToTwips(settings.paragraphIndentMm)
         : 0;
+    // Body text takes the first line indent from its style, so a body
+    // paragraph that is centred or set to the right says it takes none.
+    final ownsFirstLine = block.type == BookExportBlockType.paragraph;
     final line = ((block.lineHeight ?? settings.lineHeight) * 240).round();
     final before = (settings.spacingBeforePt * 20).round();
     final after = (settings.spacingAfterPt * 20).round();
@@ -258,9 +262,9 @@ $body  </w:body>
       ..write(
         '<w:spacing w:before="$before" w:after="$after" w:line="$line" w:lineRule="auto"/>',
       );
-    if (left > 0 || firstLine > 0) {
+    if (left > 0 || ownsFirstLine) {
       properties.write(
-        '<w:ind${left > 0 ? ' w:left="$left"' : ''}${firstLine > 0 ? ' w:firstLine="$firstLine"' : ''}/>',
+        '<w:ind${left > 0 ? ' w:left="$left"' : ''}${ownsFirstLine ? ' w:firstLine="$firstLine"' : ''}/>',
       );
     }
     if (numberingId != null) {

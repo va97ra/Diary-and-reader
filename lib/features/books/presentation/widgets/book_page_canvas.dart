@@ -118,6 +118,9 @@ class BookPageCanvas extends StatelessWidget {
                           customStyles: BookTypography.editorStyles(
                             paragraphSettings,
                           ),
+                          textSpanBuilder: BookTypography.textSpanBuilder(
+                            paragraphSettings,
+                          ),
                           textSelectionThemeData: BookTypography.selectionTheme,
                           embedBuilders: [
                             BookImageEmbedBuilder(

@@ -80,6 +80,14 @@ class BookExportBlock {
   /// A line of a poem; consecutive lines form a stanza, an empty line ends it.
   bool get isVerse => semanticStyle == 'verse';
 
+  /// Whether the first line takes the book's paragraph indent: body text set
+  /// to the left or justified, as the writer draws it.
+  bool get indentsFirstLine =>
+      type == BookExportBlockType.paragraph &&
+      semanticStyle != 'sceneBreak' &&
+      (alignment == BookExportTextAlignment.left ||
+          alignment == BookExportTextAlignment.justify);
+
   bool get isListItem => switch (type) {
     BookExportBlockType.orderedListItem ||
     BookExportBlockType.bulletListItem ||

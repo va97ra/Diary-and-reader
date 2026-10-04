@@ -60,6 +60,9 @@ class BookMobileEditor extends StatelessWidget {
                   placeholder: AppStrings.of(context).startWriting,
                   padding: EdgeInsets.zero,
                   customStyles: BookTypography.editorStyles(paragraphSettings),
+                  textSpanBuilder: BookTypography.textSpanBuilder(
+                    paragraphSettings,
+                  ),
                   textSelectionThemeData: BookTypography.selectionTheme,
                   embedBuilders: [
                     BookImageEmbedBuilder(assets, onTap: onImageTap),

@@ -186,6 +186,12 @@ abstract final class BookPdfContentRenderer {
       BookExportBlockType.uncheckedListItem => _checkRow(block, false, text),
       BookExportBlockType.image => pw.SizedBox(),
       BookExportBlockType.pageBreak => pw.SizedBox(),
+      _ when block.indent > 0 => pw.Padding(
+        padding: pw.EdgeInsets.only(
+          left: block.indent * settings.fontSizePt * bookIndentLevelEm,
+        ),
+        child: text,
+      ),
       _ => text,
     };
   }
@@ -198,7 +204,7 @@ abstract final class BookPdfContentRenderer {
     bool forceItalic = false,
   }) {
     final spans = <pw.InlineSpan>[];
-    final firstLineIndent = block.type == BookExportBlockType.paragraph
+    final firstLineIndent = block.indentsFirstLine
         ? settings.paragraphIndentMm
         : 0.0;
     final indentSpaces = (firstLineIndent / 1.8).round().clamp(0, 20);

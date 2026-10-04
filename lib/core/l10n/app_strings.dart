@@ -363,8 +363,6 @@ class AppStrings {
   String get pitchLow => _text('pitchLow');
   String get pitchNormal => _text('pitchNormal');
   String get pitchHigh => _text('pitchHigh');
-  String get smallerText => _text('smallerText');
-  String get largerText => _text('largerText');
   String get focusReading => _text('focusReading');
   String get exitFocusReading => _text('exitFocusReading');
   String get readerTheme => _text('readerTheme');

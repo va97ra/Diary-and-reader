@@ -7,9 +7,16 @@ import 'package:flutter/material.dart';
 /// The text settings of the whole manuscript: every value is a compact
 /// drop-down, and the three paragraph spacings share one line.
 class BookParagraphSettingsSection extends StatelessWidget {
-  const BookParagraphSettingsSection({required this.controller, super.key});
+  const BookParagraphSettingsSection({
+    required this.controller,
+    required this.onApplied,
+    super.key,
+  });
 
   final AuthorWorkspaceController controller;
+
+  /// Called after every change, so the sheet can show the text.
+  final VoidCallback onApplied;
 
   static const _lineHeights = <double>[1, 1.15, 1.35, 1.5, 2];
   static const _indentsMm = <double>[0, 5, 7.5, 10, 12.7, 15, 20];
@@ -37,9 +44,8 @@ class BookParagraphSettingsSection extends StatelessWidget {
                 for (final preset in BookParagraphPreset.values)
                   preset: _presetLabel(strings, preset),
               },
-              onChanged: (preset) => controller.updateParagraphSettings(
-                BookParagraphSettings.forPreset(preset),
-              ),
+              onChanged: (preset) =>
+                  _update(BookParagraphSettings.forPreset(preset)),
             ),
             BookCompactDropdown<String>(
               key: ValueKey('${project.id}-default-font'),
@@ -82,6 +88,8 @@ class BookParagraphSettingsSection extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         BookSettingsRow(
+          // «Красная строка» needs more room than «Сверху» and «Снизу».
+          flex: const [5, 3, 3],
           children: [
             BookCompactDropdown<double>(
               key: ValueKey('${project.id}-paragraph-indent'),
@@ -125,8 +133,10 @@ class BookParagraphSettingsSection extends StatelessWidget {
     );
   }
 
-  void _update(BookParagraphSettings settings) =>
-      controller.updateParagraphSettings(settings);
+  void _update(BookParagraphSettings settings) {
+    controller.updateParagraphSettings(settings);
+    onApplied();
+  }
 
   String _presetLabel(AppStrings strings, BookParagraphPreset preset) =>
       switch (preset) {

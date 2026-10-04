@@ -1,3 +1,4 @@
+import 'package:dnevnik/features/books/domain/book_paragraph_settings.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_document_model.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_palette.dart';
@@ -14,6 +15,7 @@ class BookReaderBlockTypography {
     required this.leftInset,
     required this.rightInset,
     required this.prefix,
+    required this.textScale,
   });
 
   final TextStyle textStyle;
@@ -24,6 +26,10 @@ class BookReaderBlockTypography {
   final double leftInset;
   final double rightInset;
   final String prefix;
+
+  /// How much larger the reader draws text than the writer does, for the
+  /// sizes an author gave some words.
+  final double textScale;
 }
 
 abstract final class BookReaderTypography {
@@ -40,7 +46,7 @@ abstract final class BookReaderTypography {
     var color = palette.ink;
     var top = 0.0;
     var bottom = settings.fontSize * 0.45;
-    var left = block.indent * settings.fontSize * 1.35;
+    var left = block.indent * settings.fontSize * bookIndentLevelEm;
     var right = 0.0;
     var prefix = '';
     var family = settings.fontFamily;
@@ -140,31 +146,37 @@ abstract final class BookReaderTypography {
       leftInset: left,
       rightInset: right,
       prefix: prefix,
+      textScale: settings.fontSize / bookDefaultTextSize,
     );
   }
 
+  /// The style of [run] within a block of [typography]. The reader's font
+  /// and text size apply to all of it: words the author set in another font
+  /// take the reader's, and a size the author gave them grows and shrinks
+  /// with the reader's text size.
   static TextStyle run(
     BookReaderTextRun run,
-    TextStyle baseStyle, {
+    BookReaderBlockTypography typography, {
     Color? backgroundColor,
   }) {
+    final baseStyle = typography.textStyle;
     final decorations = <TextDecoration>[
       if (run.underline) TextDecoration.underline,
       if (run.strike) TextDecoration.lineThrough,
     ];
     final scripted = run.superscript || run.subscript;
+    final size = switch (run.fontSize) {
+      final size? => size * typography.textScale,
+      null => baseStyle.fontSize,
+    };
     return baseStyle.copyWith(
       color: _legible(_color(run.foregroundHex), on: baseStyle.color),
       backgroundColor:
           backgroundColor ??
           _color(run.backgroundHex) ??
           baseStyle.backgroundColor,
-      fontFamily: run.code
-          ? 'monospace'
-          : run.fontFamily ?? baseStyle.fontFamily,
-      fontSize: scripted
-          ? (run.fontSize ?? baseStyle.fontSize ?? 16) * 0.76
-          : run.fontSize ?? baseStyle.fontSize,
+      fontFamily: run.code ? 'monospace' : baseStyle.fontFamily,
+      fontSize: scripted ? (size ?? bookDefaultTextSize) * 0.76 : size,
       fontWeight: run.bold ? FontWeight.bold : baseStyle.fontWeight,
       fontStyle: run.italic ? FontStyle.italic : baseStyle.fontStyle,
       decoration: decorations.isEmpty

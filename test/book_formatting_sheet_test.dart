@@ -1,5 +1,6 @@
 import 'package:dnevnik/app/author_studio_app.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_formatting_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -115,6 +116,38 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(controller.activeProject!.paragraphSettings.spacingBeforePt, 6);
+    // The sheet covered the text, so it hides to show the new spacing.
+    expect(manuscript, findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a paragraph change hides the sheet to show the text', (
+    tester,
+  ) async {
+    final controller = await _openFormatting(tester);
+
+    await tester.tap(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is QuillToolbarToggleStyleButton &&
+            widget.attribute == Attribute.justifyAlignment,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BookFormattingSheet), findsNothing);
+    final content = controller.activeSection!.content;
+    expect(
+      content.any(
+        (operation) => (operation['attributes'] as Map?)?['align'] == 'justify',
+      ),
+      isTrue,
+    );
+    // Each paragraph takes the book's line spacing, so there is no second
+    // spacing for one paragraph.
+    await tester.tap(find.byKey(const ValueKey('writer-formatting-action')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('formatting-line-height')), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

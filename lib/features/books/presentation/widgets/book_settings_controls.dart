@@ -65,18 +65,20 @@ class BookSettingsCard extends StatelessWidget {
   }
 }
 
-/// Settings side by side, equally wide.
+/// Settings side by side, equally wide unless [flex] gives each its share,
+/// as for a long name beside short ones.
 class BookSettingsRow extends StatelessWidget {
-  const BookSettingsRow({required this.children, super.key});
+  const BookSettingsRow({required this.children, this.flex, super.key});
 
   final List<Widget> children;
+  final List<int>? flex;
 
   @override
   Widget build(BuildContext context) => Row(
     children: [
       for (final (index, child) in children.indexed) ...[
         if (index > 0) const SizedBox(width: 8),
-        Expanded(child: child),
+        Expanded(flex: flex?[index] ?? 1, child: child),
       ],
     ],
   );
@@ -173,60 +175,6 @@ class BookSettingSwitch extends StatelessWidget {
           ),
     value: value,
     onChanged: onChanged,
-  );
-}
-
-/// A number changed a step at a time, such as the size of the text, so
-/// that every tap shows its effect at once.
-class BookSettingStepper extends StatelessWidget {
-  const BookSettingStepper({
-    required this.label,
-    required this.value,
-    required this.onDecrease,
-    required this.onIncrease,
-    this.decreaseTooltip,
-    this.increaseTooltip,
-    super.key,
-  });
-
-  final String label;
-  final String value;
-  final VoidCallback? onDecrease;
-  final VoidCallback? onIncrease;
-  final String? decreaseTooltip;
-  final String? increaseTooltip;
-
-  @override
-  Widget build(BuildContext context) => InputDecorator(
-    decoration: InputDecoration(
-      labelText: label,
-      isDense: true,
-      border: const OutlineInputBorder(),
-      contentPadding: const EdgeInsets.fromLTRB(2, 2, 2, 2),
-    ),
-    child: Row(
-      children: [
-        IconButton(
-          tooltip: decreaseTooltip,
-          visualDensity: VisualDensity.compact,
-          onPressed: onDecrease,
-          icon: const Icon(Icons.remove, size: 18),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
-        ),
-        IconButton(
-          tooltip: increaseTooltip,
-          visualDensity: VisualDensity.compact,
-          onPressed: onIncrease,
-          icon: const Icon(Icons.add, size: 18),
-        ),
-      ],
-    ),
   );
 }
 

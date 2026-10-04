@@ -436,7 +436,7 @@ TextSpan textSpanForRange(
             overlapStart - runStart,
             overlapEnd - runStart,
           ),
-          style: BookReaderTypography.run(run, typography.textStyle),
+          style: BookReaderTypography.run(run, typography),
         ),
       );
     }

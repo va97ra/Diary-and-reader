@@ -33,7 +33,6 @@ class BookReaderTextRun {
     this.superscript = false,
     this.subscript = false,
     this.link,
-    this.fontFamily,
     this.fontSize,
     this.foregroundHex,
     this.backgroundHex,
@@ -50,7 +49,6 @@ class BookReaderTextRun {
   final bool superscript;
   final bool subscript;
   final String? link;
-  final String? fontFamily;
   final double? fontSize;
   final String? foregroundHex;
   final String? backgroundHex;
@@ -234,7 +232,6 @@ abstract final class BookReaderDocumentParser {
     required Map<String, dynamic> attributes,
   }) {
     final link = attributes['link']?.toString().trim();
-    final font = attributes['font']?.toString().trim();
     return BookReaderTextRun(
       text: text,
       sourceStart: sourceStart,
@@ -247,7 +244,6 @@ abstract final class BookReaderDocumentParser {
       superscript: attributes['script'] == 'super',
       subscript: attributes['script'] == 'sub',
       link: link != null && _safeLink(link) ? link : null,
-      fontFamily: font == null || font.isEmpty ? null : font,
       fontSize: _fontSize(attributes['size']),
       foregroundHex: _color(attributes['color']),
       backgroundHex: _color(attributes['background']),

@@ -124,6 +124,14 @@ const bookFontFamilies = <String>[
   'Courier New',
 ];
 
+/// One level of a paragraph's indent, in sizes of the book's text, wherever
+/// the book is drawn: the writer, the reader and every export.
+const bookIndentLevelEm = 1.5;
+
+/// The size the writer gives the text of a new book, 12 pt, in logical
+/// pixels. The reader draws a size an author gave some words relative to it.
+const bookDefaultTextSize = 16.0;
+
 /// Text sizes offered by the formatting controls, in points.
 const bookFontSizesPt = <double>[
   8,
