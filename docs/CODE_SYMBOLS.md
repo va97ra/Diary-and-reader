@@ -2227,7 +2227,7 @@
   - 191 _clearVisiblePages
 - 197 class **_ReaderPageGeometry**
 
-### lib/features/books/presentation/reader/book_reader_section_view.dart (340)
+### lib/features/books/presentation/reader/book_reader_section_view.dart (350)
 - 27 class **BookReaderSectionController**
   - 30 moveForward
   - 32 moveBackward
@@ -2240,11 +2240,11 @@
   - 145 _displayOffsetFor — Display offset of [progress], the measure both view modes report.
   - 191 _scheduleHyphenation
   - 224 _layoutSettingsChanged
-  - 260 _modeForWidth
-  - 267 _restoreCurrentPosition
-  - 278 _moveByNavigation
-  - 318 _requestSectionNavigation
-  - 329 _mutate
+  - 270 _modeForWidth
+  - 277 _restoreCurrentPosition
+  - 288 _moveByNavigation
+  - 328 _requestSectionNavigation
+  - 339 _mutate
 
 ### lib/features/books/presentation/reader/book_reader_selection_bar.dart (119)
 - 7 class **BookReaderSelectionBar**
@@ -2440,7 +2440,7 @@
   - 11 get key
   - 14 toPlainText
 
-### lib/features/books/presentation/widgets/book_page_canvas.dart (182)
+### lib/features/books/presentation/widgets/book_page_canvas.dart (190)
 - 13 class **BookPageCanvas**
   - 49 get _isFirstPage
 
@@ -2804,12 +2804,13 @@
 - 71 a page slot holds every line its paragraph renders
 - 115 spread shows two consecutive pages on a wide screen
 - 144 spread automatically becomes one page on a phone
-- 166 paged reader stays usable in compact landscape constraints
-- 191 next chapter appears without a pagination placeholder
-- 241 last reader page continues with the next chapter
-- 284 continuous reader advances after scrolling to chapter end
-- 323 continuous reader swipes between short chapters
-- 373 desktop keyboard crosses chapter boundaries
+- 166 a page on a phone stands between the floating panels
+- 196 paged reader stays usable in compact landscape constraints
+- 221 next chapter appears without a pagination placeholder
+- 271 last reader page continues with the next chapter
+- 314 continuous reader advances after scrolling to chapter end
+- 353 continuous reader swipes between short chapters
+- 403 desktop keyboard crosses chapter boundaries
 
 ### test/book_reader_search_test.dart
 - 6 search finds all case-insensitive matches across book sections

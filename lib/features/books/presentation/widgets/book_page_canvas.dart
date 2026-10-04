@@ -94,10 +94,18 @@ class BookPageCanvas extends StatelessWidget {
                         height: 1.2,
                         fontWeight: FontWeight.w600,
                       ),
+                      // The title is printed on the sheet: no field of the
+                      // app's theme around it, which in a dark theme was a
+                      // grey box on the paper. The line below sets it apart.
                       decoration: InputDecoration(
                         hintText: AppStrings.of(context).newChapter,
                         hintStyle: const TextStyle(color: Colors.blueGrey),
                         isDense: true,
+                        filled: false,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
                       ),
                     ),
                     const SizedBox(height: 12),

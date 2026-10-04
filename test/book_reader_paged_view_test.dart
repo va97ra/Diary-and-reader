@@ -163,6 +163,36 @@ void main() {
     await tester.binding.setSurfaceSize(null);
   });
 
+  testWidgets('a page on a phone stands between the floating panels', (
+    tester,
+  ) async {
+    final controller = await _controllerWithLongChapter(
+      const BookReaderSettings(viewMode: BookReaderViewMode.singlePage),
+    );
+
+    // The reader measures the phone by MediaQuery, so the view itself is
+    // phone sized, not only the test surface.
+    tester.view
+      ..physicalSize = const Size(390, 844)
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(AuthorStudioApp(controller: controller));
+    await tester.pumpAndSettle();
+    await openReaderPreview(tester, controller);
+    await _pumpUntil(tester, find.byKey(const ValueKey('reader-page-1')));
+    final page = tester.getRect(find.byKey(const ValueKey('reader-page-1')));
+
+    // The panels show when the book opens and cover no line of the page.
+    final top = tester.getRect(
+      find.byKey(const ValueKey('book-compact-top-panel')),
+    );
+    final bottom = tester.getRect(
+      find.byKey(const ValueKey('book-compact-bottom-panel')),
+    );
+    expect(page.top, greaterThanOrEqualTo(top.bottom));
+    expect(page.bottom, lessThanOrEqualTo(bottom.top));
+  });
+
   testWidgets('paged reader stays usable in compact landscape constraints', (
     tester,
   ) async {

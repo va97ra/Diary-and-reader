@@ -227,7 +227,8 @@ lib/main.dart ─► lib/app (экраны верхнего уровня, нав
   страницы и `didChangeMetrics`, когда появилась клавиатура или повернулся
   экран): у Quill там `scrollable: false`, и сам он не прокручивает.
 - Отрисовка листов: `widgets/book_editor_page_stage.dart`,
-  `widgets/book_page_canvas.dart` (лист A4 с полями и номером),
+  `widgets/book_page_canvas.dart` (лист A4 с полями и номером; заголовок
+  главы — поле без заливки и рамки темы, как текст на бумаге),
   `widgets/book_mobile_editor.dart` (крупный режим телефона).
 - Оба редактора берут вид из `BookTypography.editorStyles` и
   `BookTypography.textSpanBuilder`.
@@ -349,7 +350,9 @@ lib/main.dart ─► lib/app (экраны верхнего уровня, нав
 4. Режимы: `reader/book_reader_section_view.dart`
    `_BookReaderSectionViewState` с частями `book_reader_section_continuous.dart`
    (лента), `book_reader_section_pagination.dart` (страницы, разворот),
-   `book_reader_section_document.dart`; раскладка страниц —
+   `book_reader_section_document.dart`; в режиме «Страница» на телефоне
+   страница стоит между парящими панелями (`readingInsets`, те же отступы,
+   что у «Ленты»); раскладка страниц —
    `reader/book_reader_layout_engine.dart`; отрисовка —
    `reader/book_reader_document_view.dart`, `book_reader_continuous_view.dart`,
    `book_reader_page_stage.dart`, `book_reader_page_card.dart`.
@@ -501,6 +504,11 @@ lib/main.dart ─► lib/app (экраны верхнего уровня, нав
   интервала для одного абзаца в «Оформлении».
 - 2026-10-04 — карта расписана подробно по сценариям; добавлены генератор
   `tool/code_map.dart` и указатель `docs/CODE_SYMBOLS.md` с номерами строк.
+- 2026-10-04 — читалка «Страница»: страница между панелями
+  (`BookReaderSectionView.build` + `readingInsets`); заголовок главы на
+  листе без серой плашки темы (`BookPageCanvas`); тест в
+  `test/book_reader_paged_view_test.dart` (размер через `tester.view`, так
+  как читалка меряет экран по `MediaQuery`).
 - 2026-10-04 — проверка на телефоне: `_revealCaret` в
   `BookSectionEditorState`, `_sidePanelWidths` и `BookWholeWordsText` в
   панелях, отступы от выреза в библиотеке; тесты

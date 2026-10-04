@@ -247,13 +247,23 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
       if (mode == BookReaderViewMode.continuous) {
         return _buildContinuousView();
       }
+      // Pages stand between the floating panels of a phone, as the
+      // continuous text keeps clear of them; otherwise the panels covered
+      // the first and last lines of a page while they showed.
+      final insets = widget.readingInsets;
       final geometry = _ReaderPageGeometry.fromConstraints(
-        constraints,
+        constraints.deflate(insets),
         settings: widget.settings,
         spread: mode == BookReaderViewMode.spread,
       );
       _ensurePagination(context, geometry);
-      return _buildPagedView(context, geometry, mode);
+      return ColoredBox(
+        color: widget.palette.background,
+        child: Padding(
+          padding: insets,
+          child: _buildPagedView(context, geometry, mode),
+        ),
+      );
     },
   );
 
