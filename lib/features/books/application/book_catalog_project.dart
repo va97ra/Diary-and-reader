@@ -1,12 +1,18 @@
 import 'package:dnevnik/features/books/application/book_cover_thumbnail.dart';
+import 'package:dnevnik/features/books/domain/book_asset.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/book_reading_progress.dart';
 
 abstract final class BookCatalogProject {
-  static BookProject compact(BookProject project) {
+  /// The book without its text, as the library keeps it. [cover] is the
+  /// small cover the catalog already has: shrinking the book's own cover
+  /// again blocks the screen for a second on a phone.
+  static BookProject compact(BookProject project, {BookAsset? cover}) {
     if (!project.isReadOnly || project.isCatalogOnly) return project;
-    final optimized = BookCoverThumbnail.compact(project);
-    final cover = optimized.coverAsset;
+    final optimized = cover == null
+        ? BookCoverThumbnail.compact(project)
+        : project;
+    cover ??= optimized.coverAsset;
     return optimized.copyWith(
       sections: const [],
       clearActiveSection: true,

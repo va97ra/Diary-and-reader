@@ -688,96 +688,96 @@
   - 13 get dark
   - 15 _theme
 
-### lib/features/books/application/author_workspace_controller.dart (866)
+### lib/features/books/application/author_workspace_controller.dart (876)
 - 33 class **AuthorWorkspaceController**
-  - 62 get projects
-  - 64 get languageCode
-  - 65 get saveState
-  - 66 get appPreferences
-  - 67 get readerSettings
-  - 68 get themePreference
-  - 70 get lastManuscript
-  - 75 get lastReading
-  - 80 get activeProject
-  - 88 get activeSection
-  - 90 load
-  - 103 compactImportedCatalogs
-  - 124 addProject
-  - 133 addImportedBook
-  - 146 rollbackImportedBook
-  - 164 deleteProject
-  - 177 updateImportedBookSource
-  - 196 clearImportedBookStoredSource
-  - 205 addBookScanFolder
-  - 213 removeBookScanFolder
-  - 224 selectProject
-  - 238 updateProjectCollection
-  - 250 updateProjectMetadata
-  - 260 updateProjectFavorite
-  - 272 updateProjectReadingStatus
-  - 284 recordReadingTime
-  - 288 recordReadingTimeDuringReading
-  - 293 _recordReadingTime
-  - 308 selectSection
-  - 315 addSection
-  - 328 moveSection
-  - 336 moveSectionToTarget
-  - 351 deleteSection
-  - 364 deleteSectionSafely
-  - 376 restoreDeletedSection
-  - 385 permanentlyDeleteSection
-  - 393 emptyTrash
-  - 399 restoreDeletedText
-  - 407 permanentlyDeleteText
-  - 416 updateSectionTitle
-  - 424 updateSectionContent
-  - 435 addAsset
-  - 446 setCoverAsset
-  - 460 clearCoverAsset
-  - 472 replaceAllInManuscript
-  - 491 replaceAllInManuscriptSafely
-  - 514 updateSectionStatus
-  - 522 updateSectionTargetWords
-  - 533 updateWritingGoals
-  - 550 recordWritingSession
-  - 572 updateMetadata
-  - 580 updateLayoutSettings
-  - 589 updateParagraphSettings
-  - 600 updateReaderSettings
-  - 604 updateReaderSettingsDuringReading
-  - 609 _updateReaderSettings
-  - 623 updateReaderProgress
-  - 627 updateReaderProgressDuringReading
-  - 632 _updateReaderProgress
-  - 646 updateReaderAnnotations
-  - 650 updateReaderAnnotationsDuringReading
-  - 657 _updateReaderAnnotations
-  - 671 beginReaderSession
-  - 683 finishReaderSession
-  - 696 setLanguage
-  - 704 _localizeDefaultTitles — Renames untouched default titles into the interface language; reports whether any changed.
-  - 716 setThemePreference
-  - 722 markOnboardingSeen
-  - 728 resetOnboarding
-  - 734 listVersions
-  - 740 createVersion
-  - 747 deleteVersion
-  - 753 restoreVersion
-  - 769 importProject
-  - 777 flush
-  - 781 flushWithResult
-  - 783 _replaceActiveProjectFromExternalSource
-  - 805 _newProject
-  - 811 _replaceActiveProject
-  - 818 _projectById
-  - 831 _changed
-  - 846 _markDirty
-  - 848 get _snapshot
+  - 65 get projects
+  - 67 get languageCode
+  - 68 get saveState
+  - 69 get appPreferences
+  - 70 get readerSettings
+  - 71 get themePreference
+  - 73 get lastManuscript
+  - 78 get lastReading
+  - 83 get activeProject
+  - 91 get activeSection
+  - 93 load
+  - 106 compactImportedCatalogs
+  - 127 addProject
+  - 136 addImportedBook
+  - 149 rollbackImportedBook
+  - 167 deleteProject
+  - 180 updateImportedBookSource
+  - 199 clearImportedBookStoredSource
+  - 208 addBookScanFolder
+  - 216 removeBookScanFolder
+  - 227 selectProject
+  - 241 updateProjectCollection
+  - 253 updateProjectMetadata
+  - 263 updateProjectFavorite
+  - 275 updateProjectReadingStatus
+  - 287 recordReadingTime
+  - 291 recordReadingTimeDuringReading
+  - 296 _recordReadingTime
+  - 311 selectSection
+  - 318 addSection
+  - 331 moveSection
+  - 339 moveSectionToTarget
+  - 354 deleteSection
+  - 367 deleteSectionSafely
+  - 379 restoreDeletedSection
+  - 388 permanentlyDeleteSection
+  - 396 emptyTrash
+  - 402 restoreDeletedText
+  - 410 permanentlyDeleteText
+  - 419 updateSectionTitle
+  - 427 updateSectionContent
+  - 438 addAsset
+  - 449 setCoverAsset
+  - 463 clearCoverAsset
+  - 475 replaceAllInManuscript
+  - 494 replaceAllInManuscriptSafely
+  - 517 updateSectionStatus
+  - 525 updateSectionTargetWords
+  - 536 updateWritingGoals
+  - 553 recordWritingSession
+  - 575 updateMetadata
+  - 583 updateLayoutSettings
+  - 592 updateParagraphSettings
+  - 603 updateReaderSettings
+  - 607 updateReaderSettingsDuringReading
+  - 612 _updateReaderSettings
+  - 626 updateReaderProgress
+  - 630 updateReaderProgressDuringReading
+  - 635 _updateReaderProgress
+  - 649 updateReaderAnnotations
+  - 653 updateReaderAnnotationsDuringReading
+  - 660 _updateReaderAnnotations
+  - 674 beginReaderSession
+  - 686 finishReaderSession
+  - 702 setLanguage
+  - 710 _localizeDefaultTitles — Renames untouched default titles into the interface language; reports whether any changed.
+  - 722 setThemePreference
+  - 728 markOnboardingSeen
+  - 734 resetOnboarding
+  - 740 listVersions
+  - 746 createVersion
+  - 753 deleteVersion
+  - 759 restoreVersion
+  - 775 importProject
+  - 783 flush
+  - 787 flushWithResult
+  - 789 _replaceActiveProjectFromExternalSource
+  - 811 _newProject
+  - 817 _replaceActiveProject
+  - 824 _projectById
+  - 837 _changed
+  - 852 _markDirty
+  - 854 get _snapshot
 
-### lib/features/books/application/book_catalog_project.dart (63)
-- 5 class **BookCatalogProject**
-  - 6 compact
-  - 23 hydrate
+### lib/features/books/application/book_catalog_project.dart (69)
+- 6 class **BookCatalogProject**
+  - 10 compact — The book without its text, as the library keeps it.
+  - 29 hydrate
 
 ### lib/features/books/application/book_cover_thumbnail.dart (41)
 - 7 class **BookCoverThumbnail**
@@ -2607,22 +2607,23 @@
 - 687 refreshes the editor content after version restore
 
 ### test/author_workspace_controller_test.dart
-- 61 creates a book and persists chapter and scene hierarchy
-- 76 default titles follow the interface language until renamed
-- 121 persists the selected page orientation with the book
-- 139 persists a section word target and reports save state
-- 158 saves during uninterrupted typing before the idle delay
-- 186 reports a save error and succeeds when retried
-- 209 replaces text across the manuscript and persists the result
-- 234 persists project paragraph settings
-- 249 removes reader locations that belong to a deleted section
-- 278 serializes saves so an older write cannot win a race
-- 306 restores a version and first saves the replaced state
-- 334 creates an automatic checkpoint before deleting a section
-- 350 imports a backup under the current project identity
-- 367 a restored backup brings its pictures and cover
-- 398 persists imported books but blocks authoring changes
-- 447 a bookmark made while reading is written soon
+- 62 creates a book and persists chapter and scene hierarchy
+- 77 default titles follow the interface language until renamed
+- 122 persists the selected page orientation with the book
+- 140 persists a section word target and reports save state
+- 159 saves during uninterrupted typing before the idle delay
+- 187 reports a save error and succeeds when retried
+- 210 replaces text across the manuscript and persists the result
+- 235 persists project paragraph settings
+- 250 removes reader locations that belong to a deleted section
+- 279 serializes saves so an older write cannot win a race
+- 307 restores a version and first saves the replaced state
+- 335 creates an automatic checkpoint before deleting a section
+- 351 imports a backup under the current project identity
+- 368 a restored backup brings its pictures and cover
+- 399 persists imported books but blocks authoring changes
+- 448 a bookmark made while reading is written soon
+- 474 a book read with its text keeps the small cover of the catalog
 
 ### test/book_additional_exporters_test.dart
 - 16 **additional book exporters**

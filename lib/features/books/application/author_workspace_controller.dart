@@ -57,7 +57,10 @@ class AuthorWorkspaceController extends ChangeNotifier {
   String _languageCode = 'ru';
   LiteriaAppPreferences _appPreferences = const LiteriaAppPreferences();
   bool _readerSessionActive = false;
-  final Set<String> _transientHydratedProjectIds = {};
+
+  /// The catalog entries of the books opened for reading with their text,
+  /// by id; their covers stand in for the books' own large ones.
+  final Map<String, BookProject> _catalogsBeingRead = {};
 
   UnmodifiableListView<BookProject> get projects =>
       UnmodifiableListView(_projects);
@@ -675,18 +678,21 @@ class AuthorWorkspaceController extends ChangeNotifier {
       (project) => project.id == hydratedProject.id && project.isReadOnly,
     );
     if (index >= 0 && _projects[index].isCatalogOnly) {
+      _catalogsBeingRead[hydratedProject.id] = _projects[index];
       _projects[index] = hydratedProject;
-      _transientHydratedProjectIds.add(hydratedProject.id);
     }
   }
 
   void finishReaderSession() {
     final project = activeProject;
-    if (project != null &&
-        _transientHydratedProjectIds.remove(project.id) &&
-        project.isReadOnly &&
-        !project.isCatalogOnly) {
-      _replaceActiveProject(BookCatalogProject.compact);
+    final catalog = project == null
+        ? null
+        : _catalogsBeingRead.remove(project.id);
+    if (catalog != null && project!.isReadOnly && !project.isCatalogOnly) {
+      _replaceActiveProject(
+        (project) =>
+            BookCatalogProject.compact(project, cover: catalog.coverAsset),
+      );
       _markDirty();
     }
     _readerSessionActive = false;
@@ -848,9 +854,13 @@ class AuthorWorkspaceController extends ChangeNotifier {
   AuthorWorkspaceSnapshot get _snapshot => AuthorWorkspaceSnapshot(
     projects: List.unmodifiable(
       _projects.map(
-        (project) => _transientHydratedProjectIds.contains(project.id)
-            ? BookCatalogProject.compact(project)
-            : project,
+        (project) => switch (_catalogsBeingRead[project.id]) {
+          final catalog? => BookCatalogProject.compact(
+            project,
+            cover: catalog.coverAsset,
+          ),
+          null => project,
+        },
       ),
     ),
     activeProjectId: _activeProjectId,

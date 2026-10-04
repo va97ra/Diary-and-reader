@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/application/workspace_save_state.dart';
@@ -469,6 +470,74 @@ void main() {
       hasLength(1),
     );
   });
+
+  test(
+    'a book read with its text keeps the small cover of the catalog',
+    () async {
+      final repository = MemoryAuthorWorkspaceRepository();
+      final controller = AuthorWorkspaceController(repository);
+      await controller.load(preferredLanguage: 'ru');
+      final timestamp = DateTime.utc(2026, 10, 4);
+      final catalog = controller.addImportedBook(
+        BookProject(
+          id: 'imported-book',
+          metadata: const BookMetadata(title: 'Чужая книга'),
+          sections: const [],
+          activeSectionId: null,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          kind: BookProjectKind.importedBook,
+          assets: [
+            BookAsset(
+              id: 'cover',
+              mediaType: 'image/jpeg',
+              bytes: Uint8List.fromList([1, 2, 3]),
+            ),
+          ],
+          coverAssetId: 'cover',
+        ),
+      );
+      final section = BookSection(
+        id: 'chapter',
+        title: 'Глава',
+        type: BookSectionType.chapter,
+        status: DraftStatus.complete,
+        content: const [
+          {'insert': 'Текст книги\n'},
+        ],
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      );
+      // The book's own cover is large: shrinking it again took a second on
+      // a phone, on every save while reading and on closing the book.
+      final read = catalog.copyWith(
+        sections: [section],
+        activeSectionId: section.id,
+        assets: [
+          BookAsset(
+            id: 'cover',
+            mediaType: 'image/jpeg',
+            bytes: Uint8List(400 * 1024),
+          ),
+        ],
+        coverAssetId: 'cover',
+      );
+      List<int>? savedCover() => repository.snapshot!.projects
+          .singleWhere((project) => project.id == catalog.id)
+          .coverAsset
+          ?.bytes;
+
+      controller.beginReaderSession(hydratedProject: read);
+      await controller.flush();
+      expect(savedCover(), [1, 2, 3]);
+
+      controller.finishReaderSession();
+      await controller.flush();
+      expect(controller.activeProject!.isCatalogOnly, isTrue);
+      expect(controller.activeProject!.coverAsset!.bytes, [1, 2, 3]);
+      expect(savedCover(), [1, 2, 3]);
+    },
+  );
 }
 
 class _ControlledAuthorWorkspaceRepository

@@ -453,6 +453,14 @@ lib/main.dart ─► lib/app (экраны верхнего уровня, нав
   `xml_text_decoder.dart`; исходник книги хранится в
   `data/file_book_source_storage.dart`; открытие —
   `application/book_reading_session_loader.dart`.
+- Импортированная книга в библиотеке хранится без текста (`isCatalogOnly`,
+  маленькая обложка — `application/book_cover_thumbnail.dart`). Для чтения
+  её текст подгружается (`BookCatalogProject.hydrate`,
+  `beginReaderSession` запоминает запись каталога в `_catalogsBeingRead`),
+  а при сохранении и закрытии книги текст снова выкидывается
+  (`BookCatalogProject.compact(project, cover:)` с обложкой из каталога —
+  пережимать большую обложку книги заново занимало секунду и вешало выход
+  из книги и каждую закладку).
 
 ---
 
@@ -586,3 +594,7 @@ lib/main.dart ─► lib/app (экраны верхнего уровня, нав
   `BookReaderSectionView.bookmarks`, `BookReaderPageCard.bookmarks`,
   `BookReaderContinuousView.bookmarks`; тесты в
   `test/book_reader_paged_view_test.dart`.
+- 2026-10-04 — выход из книги и сохранение во время чтения без пережима
+  обложки: `_transientHydratedProjectIds` заменён на `_catalogsBeingRead`,
+  у `BookCatalogProject.compact` параметр `cover`; тест в
+  `test/author_workspace_controller_test.dart`.
