@@ -1041,6 +1041,7 @@ class _BookReaderPageState extends State<BookReaderPage> {
         annotations: _annotations,
         sectionId: _section.id,
         sectionProgress: _sectionProgress,
+        visibleEnd: _sectionNavigationController.visibleEnd,
       );
 
   Widget _navigationPanel(
@@ -1130,6 +1131,7 @@ class _BookReaderPageState extends State<BookReaderPage> {
         annotations: _annotations,
         section: _section,
         sectionProgress: _sectionProgress,
+        visibleEnd: _sectionNavigationController.visibleEnd,
       ),
     );
   }

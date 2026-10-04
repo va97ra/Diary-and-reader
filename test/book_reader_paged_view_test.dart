@@ -1,5 +1,6 @@
 import 'package:dnevnik/app/author_studio_app.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
+import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:flutter/gestures.dart';
@@ -161,6 +162,54 @@ void main() {
     expect(find.byKey(const ValueKey('reader-spread-view')), findsNothing);
     expect(find.byKey(const ValueKey('reader-page-2')), findsNothing);
     await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('each page of a long chapter keeps a bookmark of its own', (
+    tester,
+  ) async {
+    // So long that a page is less than two percent of the chapter.
+    final controller = await _controllerWithLongChapter(
+      const BookReaderSettings(
+        viewMode: BookReaderViewMode.singlePage,
+        contentWidth: 620,
+      ),
+      paragraphs: 400,
+    );
+    await tester.binding.setSurfaceSize(const Size(1280, 820));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(AuthorStudioApp(controller: controller));
+    await tester.pumpAndSettle();
+    await openReaderPreview(tester, controller);
+    await _pumpUntil(tester, find.byKey(const ValueKey('reader-page-1')));
+    final bookmark = find.byKey(const ValueKey('reader-bookmark-action'));
+    List<BookReaderBookmark> bookmarks() =>
+        controller.activeProject!.readerAnnotations.bookmarks;
+
+    await tester.tap(bookmark);
+    await tester.pumpAndSettle();
+    expect(bookmarks(), hasLength(1));
+
+    await tester.fling(
+      find.byKey(const ValueKey('reader-page-swipe-area')),
+      const Offset(-360, 0),
+      1200,
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('reader-page-2')), findsOneWidget);
+    if (bookmark.evaluate().isEmpty) await toggleReaderPanels(tester);
+    // The next page has no bookmark yet, so the button adds one.
+    expect(
+      find.descendant(of: bookmark, matching: find.byIcon(Icons.bookmark)),
+      findsNothing,
+    );
+    await tester.tap(bookmark);
+    await tester.pumpAndSettle();
+
+    expect(bookmarks(), hasLength(2));
+    expect(
+      find.descendant(of: bookmark, matching: find.byIcon(Icons.bookmark)),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a page on a phone stands between the floating panels', (
@@ -450,14 +499,15 @@ void main() {
 }
 
 Future<AuthorWorkspaceController> _controllerWithLongChapter(
-  BookReaderSettings settings,
-) async {
+  BookReaderSettings settings, {
+  int paragraphs = 45,
+}) async {
   final controller = AuthorWorkspaceController(
     MemoryAuthorWorkspaceRepository(),
   );
   await controller.load(preferredLanguage: 'ru');
   controller.updateSectionContent([
-    for (var index = 1; index <= 45; index++)
+    for (var index = 1; index <= paragraphs; index++)
       {
         'insert':
             '$index. Это длинный проверочный абзац главы, который нужен для точной пагинации текста в режиме чтения на нескольких последовательных страницах.\n',

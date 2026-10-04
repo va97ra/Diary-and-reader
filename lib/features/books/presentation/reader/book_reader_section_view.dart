@@ -31,6 +31,10 @@ class BookReaderSectionController {
 
   Future<void> moveBackward() async => _state?._moveByNavigation(-1);
 
+  /// Where the part of the chapter in sight ends, as a share of the chapter
+  /// like the reading progress; null while it is not known yet.
+  double? get visibleEnd => _state?._visibleEndProgress();
+
   void _attach(_BookReaderSectionViewState state) => _state = state;
 
   void _detach(_BookReaderSectionViewState state) {
@@ -266,6 +270,29 @@ class _BookReaderSectionViewState extends State<BookReaderSectionView> {
       );
     },
   );
+
+  /// The start of the next page, or the text at the bottom of the screen,
+  /// as a share of the chapter; 1 once the end of the chapter is in sight.
+  double? _visibleEndProgress() {
+    final total = _displayDocument.originalLength;
+    if (total <= 0) return 1;
+    final int? end;
+    if (_effectiveMode == BookReaderViewMode.continuous) {
+      end = _continuousController.bottomOffset;
+    } else {
+      if (_pages.isEmpty) return null;
+      final pagesInSight = _effectiveMode == BookReaderViewMode.spread ? 2 : 1;
+      final next = _activePage + pagesInSight;
+      if (next >= _pages.length) {
+        return (_pagination?.isComplete ?? false) ? 1 : null;
+      }
+      end = _pages[next].sourceStart;
+    }
+    if (end == null) return null;
+    return (_displayDocument.displayToOriginal(end) / total)
+        .clamp(0.0, 1.0)
+        .toDouble();
+  }
 
   BookReaderViewMode _modeForWidth(double width) {
     if (widget.settings.viewMode == BookReaderViewMode.spread && width < 700) {

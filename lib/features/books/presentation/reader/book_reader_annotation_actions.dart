@@ -4,27 +4,51 @@ import 'package:dnevnik/features/books/domain/rich_document.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_text_selection.dart';
 
 abstract final class BookReaderAnnotationActions {
+  /// The bookmark on the part of the chapter in sight: from
+  /// [sectionProgress], the start of the page or screen, up to [visibleEnd],
+  /// where the next page starts. Without the end only a bookmark right at
+  /// the start counts.
+  ///
+  /// A fixed share of the chapter used to count instead, which in a long
+  /// chapter spans several pages: a bookmark on the next page then took the
+  /// previous one away instead of adding a second.
   static BookReaderBookmark? bookmarkAt({
     required BookReaderAnnotations annotations,
     required String sectionId,
     required double sectionProgress,
-  }) => annotations.bookmarks
-      .where(
-        (bookmark) =>
-            bookmark.sectionId == sectionId &&
-            (bookmark.sectionProgress - sectionProgress).abs() < 0.02,
-      )
-      .firstOrNull;
+    double? visibleEnd,
+  }) {
+    const tolerance = 1e-6;
+    bool inSight(double at) {
+      final end = visibleEnd;
+      if (end == null || end <= sectionProgress + tolerance) {
+        return (at - sectionProgress).abs() < tolerance;
+      }
+      return at >= sectionProgress - tolerance &&
+          (at < end - tolerance || end >= 1);
+    }
 
+    return annotations.bookmarks
+        .where(
+          (bookmark) =>
+              bookmark.sectionId == sectionId &&
+              inSight(bookmark.sectionProgress),
+        )
+        .firstOrNull;
+  }
+
+  /// Takes away the bookmark in sight, or puts one at [sectionProgress].
   static BookReaderAnnotations toggleBookmark({
     required BookReaderAnnotations annotations,
     required BookSection section,
     required double sectionProgress,
+    double? visibleEnd,
   }) {
     final current = bookmarkAt(
       annotations: annotations,
       sectionId: section.id,
       sectionProgress: sectionProgress,
+      visibleEnd: visibleEnd,
     );
     if (current != null) return annotations.removeBookmark(current.id);
     return annotations.addBookmark(

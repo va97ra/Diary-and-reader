@@ -403,7 +403,11 @@ lib/main.dart ─► lib/app (экраны верхнего уровня, нав
 - Поиск: `reader/book_reader_search_sheet.dart` +
   `application/book_reader_search.dart`.
 - Закладки и заметки: `domain/book_reader_annotations.dart`,
-  `reader/book_reader_annotation_actions.dart`,
+  `reader/book_reader_annotation_actions.dart` (`bookmarkAt` — закладка
+  «здесь», если стоит в видимом куске: от начала страницы/экрана до
+  `visibleEnd`, начала следующей страницы или низа экрана; его даёт
+  `BookReaderSectionController.visibleEnd` → `_visibleEndProgress`, в «Ленте»
+  — `BookReaderContinuousController.bottomOffset`),
   `reader/book_reader_annotations_panel.dart`,
   `reader/book_reader_note_dialog.dart`; выгрузка —
   `application/book_reader_annotation_exporter.dart`.
@@ -529,6 +533,12 @@ lib/main.dart ─► lib/app (экраны верхнего уровня, нав
   интервала для одного абзаца в «Оформлении».
 - 2026-10-04 — карта расписана подробно по сценариям; добавлены генератор
   `tool/code_map.dart` и указатель `docs/CODE_SYMBOLS.md` с номерами строк.
+- 2026-10-04 — закладки: «здесь» = видимый кусок (`visibleEnd`), а не ±2 %
+  главы (в длинной главе вторая закладка снимала первую);
+  `BookReaderSectionController.visibleEnd`,
+  `BookReaderContinuousController.bottomOffset`; тесты в
+  `test/book_reader_annotation_actions_test.dart` и
+  `test/book_reader_paged_view_test.dart`.
 - 2026-10-04 — «Оформление» без Ж/К/Ч/З/цвета/очистить (они в панели
   под словами), подсказка `selectionBarHint`; «очистить» в панели;
   `BookSelectionBarTrigger` для компьютера; `BookTextColorIcon`;

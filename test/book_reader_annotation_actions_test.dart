@@ -12,11 +12,12 @@ void main() {
   );
   final section = project.activeSection!;
 
-  test('adds and removes a bookmark at the current location', () {
+  test('adds and removes a bookmark on the page in sight', () {
     final added = BookReaderAnnotationActions.toggleBookmark(
       annotations: BookReaderAnnotations(),
       section: section,
       sectionProgress: 0.4,
+      visibleEnd: 0.41,
     );
 
     expect(added.bookmarks, hasLength(1));
@@ -25,10 +26,46 @@ void main() {
     final removed = BookReaderAnnotationActions.toggleBookmark(
       annotations: added,
       section: section,
-      sectionProgress: 0.41,
+      sectionProgress: 0.4,
+      visibleEnd: 0.41,
     );
 
     expect(removed.bookmarks, isEmpty);
+  });
+
+  test('the next page takes a bookmark of its own', () {
+    // Pages of a long chapter, each about one percent of it.
+    var annotations = BookReaderAnnotations();
+    for (final (start, end) in [(0.40, 0.41), (0.41, 0.42), (0.42, 0.43)]) {
+      annotations = BookReaderAnnotationActions.toggleBookmark(
+        annotations: annotations,
+        section: section,
+        sectionProgress: start,
+        visibleEnd: end,
+      );
+    }
+
+    expect(annotations.bookmarks, hasLength(3));
+    // Back on the middle page, its bookmark is the one in sight.
+    expect(
+      BookReaderAnnotationActions.bookmarkAt(
+        annotations: annotations,
+        sectionId: section.id,
+        sectionProgress: 0.41,
+        visibleEnd: 0.42,
+      )?.sectionProgress,
+      0.41,
+    );
+    // After the text reflowed, a page that holds a bookmark shows it.
+    expect(
+      BookReaderAnnotationActions.bookmarkAt(
+        annotations: annotations,
+        sectionId: section.id,
+        sectionProgress: 0.405,
+        visibleEnd: 0.425,
+      ),
+      isNotNull,
+    );
   });
 
   test('creates a highlight and quote from the same selection', () {

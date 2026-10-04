@@ -20,6 +20,9 @@ class BookReaderContinuousController {
   /// Display offset of the text at the top of the viewport.
   int? get topOffset => _state?._topOffset();
 
+  /// Display offset of the text at the bottom of the viewport.
+  int? get bottomOffset => _state?._bottomOffset();
+
   /// Scrolls [displayOffset] to the top unless it is already on screen.
   void reveal(int displayOffset) => _state?._reveal(displayOffset);
 }
@@ -227,6 +230,25 @@ class _BookReaderContinuousViewState extends State<BookReaderContinuousView> {
         ? 0.0
         : (-topSpan.top / topSpan.height).clamp(0.0, 1.0);
     return block.sourceStart + (length * scrolledPast).round();
+  }
+
+  int? _bottomOffset() {
+    final viewport = _viewport;
+    if (viewport == null || _blocks.isEmpty) return null;
+    final bottom = viewport.size.height;
+    int? offset;
+    for (final index in _items.keys) {
+      final span = _blockSpan(index, viewport);
+      if (span == null || span.top >= bottom) continue;
+      final block = _blocks[index];
+      final length = block.isText ? block.text.length : 0;
+      final shown = span.height <= 0
+          ? 1.0
+          : ((bottom - span.top) / span.height).clamp(0.0, 1.0);
+      final end = block.sourceStart + (length * shown).round();
+      if (offset == null || end > offset) offset = end;
+    }
+    return offset;
   }
 
   void _reveal(int displayOffset) {

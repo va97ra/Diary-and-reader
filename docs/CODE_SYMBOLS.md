@@ -1963,13 +1963,13 @@
 - 176 class **_Progress** — Words written so far and, when there is a goal, the way to it.
 - 214 class **_Metric**
 
-### lib/features/books/presentation/reader/book_reader_annotation_actions.dart (85)
+### lib/features/books/presentation/reader/book_reader_annotation_actions.dart (109)
 - 6 class **BookReaderAnnotationActions**
-  - 7 bookmarkAt
-  - 19 toggleBookmark
-  - 39 addHighlight
-  - 55 addQuote
-  - 69 excerpt
+  - 15 bookmarkAt — The bookmark on the part of the chapter in sight: from [sectionProgress], the start of the page or screen, up to [visibleEnd], where the ...
+  - 41 toggleBookmark — Takes away the bookmark in sight, or puts one at [sectionProgress].
+  - 63 addHighlight
+  - 79 addQuote
+  - 93 excerpt
 
 ### lib/features/books/presentation/reader/book_reader_annotation_export_sheet.dart (47)
 - 6 class **BookReaderAnnotationExportSheet**
@@ -1990,27 +1990,29 @@
 - 5 class **BookReaderContextBar**
 - 88 class **_ReaderAction**
 
-### lib/features/books/presentation/reader/book_reader_continuous_view.dart (437)
+### lib/features/books/presentation/reader/book_reader_continuous_view.dart (459)
 - 17 class **BookReaderContinuousController** — Reports and changes the reading position of a [BookReaderContinuousView] in display text offsets, independent of how much of the chapter ...
   - 21 get topOffset — Display offset of the text at the top of the viewport.
-  - 24 reveal — Scrolls [displayOffset] to the top unless it is already on screen.
-- 33 class **BookReaderContinuousView** — Scrolling chapter view that builds and paints only the visible blocks, so opening and scrolling cost the same for short and very long cha...
-- 91 class **_BookReaderContinuousViewState**
-  - 102 get _blocks
-  - 134 _blockIndexFor
-  - 148 _fractionInBlock
-  - 155 _anchorAt
-  - 166 _jumpToAnchor
-  - 171 _scheduleAnchorCorrection
-  - 195 get _viewport
-  - 210 _topOffset
-  - 232 _reveal
-  - 314 _buildItem
-  - 351 _fragmentFor
-  - 385 _imageHeight
-- 393 class **_ContinuousBlockItem** — Registers a built block so the view can find which one is on screen.
-- 409 class **_ContinuousBlockItemState**
-  - 431 _unregister
+  - 24 get bottomOffset — Display offset of the text at the bottom of the viewport.
+  - 27 reveal — Scrolls [displayOffset] to the top unless it is already on screen.
+- 36 class **BookReaderContinuousView** — Scrolling chapter view that builds and paints only the visible blocks, so opening and scrolling cost the same for short and very long cha...
+- 94 class **_BookReaderContinuousViewState**
+  - 105 get _blocks
+  - 137 _blockIndexFor
+  - 151 _fractionInBlock
+  - 158 _anchorAt
+  - 169 _jumpToAnchor
+  - 174 _scheduleAnchorCorrection
+  - 198 get _viewport
+  - 213 _topOffset
+  - 235 _bottomOffset
+  - 254 _reveal
+  - 336 _buildItem
+  - 373 _fragmentFor
+  - 407 _imageHeight
+- 415 class **_ContinuousBlockItem** — Registers a built block so the view can find which one is on screen.
+- 431 class **_ContinuousBlockItemState**
+  - 453 _unregister
 
 ### lib/features/books/presentation/reader/book_reader_document_model.dart (348)
 - 4 enum **BookReaderBlockType**
@@ -2091,7 +2093,7 @@
 - 5 class **BookReaderNoteDialog**
 - 14 class **_BookReaderNoteDialogState**
 
-### lib/features/books/presentation/reader/book_reader_page.dart (1340)
+### lib/features/books/presentation/reader/book_reader_page.dart (1342)
 - 36 const _compactTopPanelHeight
 - 37 const _compactBottomPanelHeight
 - 39 class **BookReaderPage**
@@ -2141,30 +2143,30 @@
   - 1026 _resetSurfaceTap
   - 1032 _handleReadingSurfaceTap
   - 1039 get _currentBookmark
-  - 1046 _navigationPanel
-  - 1073 _goToNextSection
-  - 1080 _goToPreviousSectionEnd
-  - 1085 _showContents
-  - 1096 _showSearch
-  - 1113 _showSettings
-  - 1124 _goToSearchResult
-  - 1127 _toggleBookmark
-  - 1137 _updateAnnotations
-  - 1142 _handleTextSelection
-  - 1147 _clearTextSelection
-  - 1155 _saveHighlight
-  - 1170 _saveQuote
-  - 1184 _copySelection
-  - 1193 _openSelectionLookup
-  - 1211 _addNoteForSelection
-  - 1229 _showAnnotationExport
-  - 1242 _exportAnnotations
-  - 1264 _showMessage
-  - 1277 _currentExcerpt
-  - 1282 _addNote
-  - 1297 _editNote
-  - 1310 _showNoteEditor
-- 1320 class **_TypefaceIcon** — "Aa" drawn in an icon's box, so its label lines up with the other actions.
+  - 1047 _navigationPanel
+  - 1074 _goToNextSection
+  - 1081 _goToPreviousSectionEnd
+  - 1086 _showContents
+  - 1097 _showSearch
+  - 1114 _showSettings
+  - 1125 _goToSearchResult
+  - 1128 _toggleBookmark
+  - 1139 _updateAnnotations
+  - 1144 _handleTextSelection
+  - 1149 _clearTextSelection
+  - 1157 _saveHighlight
+  - 1172 _saveQuote
+  - 1186 _copySelection
+  - 1195 _openSelectionLookup
+  - 1213 _addNoteForSelection
+  - 1231 _showAnnotationExport
+  - 1244 _exportAnnotations
+  - 1266 _showMessage
+  - 1279 _currentExcerpt
+  - 1284 _addNote
+  - 1299 _editNote
+  - 1312 _showNoteEditor
+- 1322 class **_TypefaceIcon** — "Aa" drawn in an icon's box, so its label lines up with the other actions.
 
 ### lib/features/books/presentation/reader/book_reader_page_card.dart (100)
 - 10 class **BookReaderPageCard**
@@ -2230,24 +2232,26 @@
   - 191 _clearVisiblePages
 - 197 class **_ReaderPageGeometry**
 
-### lib/features/books/presentation/reader/book_reader_section_view.dart (350)
+### lib/features/books/presentation/reader/book_reader_section_view.dart (377)
 - 27 class **BookReaderSectionController**
   - 30 moveForward
   - 32 moveBackward
-  - 34 _attach
-  - 36 _detach
-- 41 class **BookReaderSectionView**
-- 91 class **_BookReaderSectionViewState**
-  - 108 get _pages
-  - 138 _readDisplayDocument
-  - 145 _displayOffsetFor — Display offset of [progress], the measure both view modes report.
-  - 191 _scheduleHyphenation
-  - 224 _layoutSettingsChanged
-  - 270 _modeForWidth
-  - 277 _restoreCurrentPosition
-  - 288 _moveByNavigation
-  - 328 _requestSectionNavigation
-  - 339 _mutate
+  - 36 get visibleEnd — Where the part of the chapter in sight ends, as a share of the chapter like the reading progress; null while it is not known yet.
+  - 38 _attach
+  - 40 _detach
+- 45 class **BookReaderSectionView**
+- 95 class **_BookReaderSectionViewState**
+  - 112 get _pages
+  - 142 _readDisplayDocument
+  - 149 _displayOffsetFor — Display offset of [progress], the measure both view modes report.
+  - 195 _scheduleHyphenation
+  - 228 _layoutSettingsChanged
+  - 276 _visibleEndProgress — The start of the next page, or the text at the bottom of the screen, as a share of the chapter; 1 once the end of the chapter is in sight.
+  - 297 _modeForWidth
+  - 304 _restoreCurrentPosition
+  - 315 _moveByNavigation
+  - 355 _requestSectionNavigation
+  - 366 _mutate
 
 ### lib/features/books/presentation/reader/book_reader_selection_bar.dart (119)
 - 7 class **BookReaderSelectionBar**
@@ -2794,8 +2798,9 @@
 - 174 migrates automatic line height only for old document versions
 
 ### test/book_reader_annotation_actions_test.dart
-- 15 adds and removes a bookmark at the current location
-- 34 creates a highlight and quote from the same selection
+- 15 adds and removes a bookmark on the page in sight
+- 36 the next page takes a bookmark of its own
+- 71 creates a highlight and quote from the same selection
 
 ### test/book_reader_annotation_exporter_test.dart
 - 9 exports portable Markdown and structured JSON annotations
@@ -2820,17 +2825,18 @@
 - 218 reader uses compact contents action on a phone
 
 ### test/book_reader_paged_view_test.dart
-- 15 single page mode paginates a long chapter and keeps progress
-- 71 a page slot holds every line its paragraph renders
-- 115 spread shows two consecutive pages on a wide screen
-- 144 spread automatically becomes one page on a phone
-- 166 a page on a phone stands between the floating panels
-- 196 paged reader stays usable in compact landscape constraints
-- 221 next chapter appears without a pagination placeholder
-- 271 last reader page continues with the next chapter
-- 314 continuous reader advances after scrolling to chapter end
-- 353 continuous reader swipes between short chapters
-- 403 desktop keyboard crosses chapter boundaries
+- 16 single page mode paginates a long chapter and keeps progress
+- 72 a page slot holds every line its paragraph renders
+- 116 spread shows two consecutive pages on a wide screen
+- 145 spread automatically becomes one page on a phone
+- 167 each page of a long chapter keeps a bookmark of its own
+- 215 a page on a phone stands between the floating panels
+- 245 paged reader stays usable in compact landscape constraints
+- 270 next chapter appears without a pagination placeholder
+- 320 last reader page continues with the next chapter
+- 363 continuous reader advances after scrolling to chapter end
+- 402 continuous reader swipes between short chapters
+- 452 desktop keyboard crosses chapter boundaries
 
 ### test/book_reader_search_test.dart
 - 6 search finds all case-insensitive matches across book sections
