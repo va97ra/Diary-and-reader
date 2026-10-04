@@ -40,7 +40,9 @@ abstract final class BookReaderTypography {
   ) {
     final baseWeight = _fontWeight(settings.fontWeight);
     var size = settings.fontSize;
-    var height = block.lineHeight ?? settings.lineHeight;
+    // The reader's spacing applies to all of the text, as its font and size
+    // do, also to a paragraph an older manuscript spaced on its own.
+    var height = settings.lineHeight;
     var weight = baseWeight;
     var style = FontStyle.normal;
     var color = palette.ink;

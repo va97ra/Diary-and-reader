@@ -20,7 +20,6 @@ class BookFormattingSheet extends StatelessWidget {
   const BookFormattingSheet({
     required this.workspaceController,
     required this.controller,
-    required this.paragraphSettings,
     required this.onInsertImage,
     required this.onInsertPageBreak,
     required this.onApplied,
@@ -29,7 +28,6 @@ class BookFormattingSheet extends StatelessWidget {
 
   final AuthorWorkspaceController workspaceController;
   final QuillController controller;
-  final BookParagraphSettings paragraphSettings;
   final VoidCallback onInsertImage;
   final VoidCallback onInsertPageBreak;
   final VoidCallback onApplied;
@@ -49,6 +47,9 @@ class BookFormattingSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
+    // Words without their own font or size show the book's.
+    final paragraphSettings =
+        workspaceController.activeProject!.paragraphSettings;
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
@@ -172,6 +173,12 @@ class BookFormattingSheet extends StatelessWidget {
                         QuillToolbarToggleStyleButton(
                           controller: controller,
                           attribute: attribute,
+                          // Quill calls it justifying to the window width.
+                          options: QuillToolbarToggleStyleButtonOptions(
+                            tooltip: attribute == Attribute.justifyAlignment
+                                ? strings.alignJustify
+                                : null,
+                          ),
                           baseOptions: _buttons,
                         ),
                       for (final increase in const [false, true])

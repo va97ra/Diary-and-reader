@@ -98,4 +98,23 @@ void main() {
     expect(style(small, 0).fontFamily, 'Verdana');
     expect(style(large, 0).fontFamily, 'Arial');
   });
+
+  test('the reader line spacing applies to an older spaced paragraph', () {
+    final block = BookReaderDocumentParser.parse(const [
+      {'insert': 'Двойной интервал'},
+      {
+        'insert': '\n',
+        'attributes': {'line-height': 2.0},
+      },
+    ]).blocks.single;
+    const settings = BookReaderSettings(lineHeight: 1.4);
+
+    final typography = BookReaderTypography.block(
+      block,
+      settings,
+      BookReaderPalette.forTheme(settings.theme),
+    );
+
+    expect(typography.textStyle.height, 1.4);
+  });
 }

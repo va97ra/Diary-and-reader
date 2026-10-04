@@ -315,6 +315,7 @@ class AppStrings {
   String get alignLeft => _text('alignLeft');
   String get alignCenter => _text('alignCenter');
   String get alignRight => _text('alignRight');
+  String get alignJustify => _text('alignJustify');
   String get imageSize => _text('imageSize');
   String get imageCaption => _text('imageCaption');
   String get imageCaptionHint => _text('imageCaptionHint');

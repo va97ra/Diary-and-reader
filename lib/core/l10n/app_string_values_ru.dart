@@ -315,6 +315,7 @@ const appStringValuesRu = <String, String>{
   'alignLeft': 'Слева',
   'alignCenter': 'По центру',
   'alignRight': 'Справа',
+  'alignJustify': 'Выровнять по ширине',
   'imageSize': 'Размер',
   'imageCaption': 'Подпись',
   'imageCaptionHint': 'Необязательно',

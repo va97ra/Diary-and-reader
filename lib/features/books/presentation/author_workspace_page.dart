@@ -892,8 +892,6 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
           child: BookFormattingSheet(
             workspaceController: widget.controller,
             controller: controller,
-            paragraphSettings:
-                widget.controller.activeProject!.paragraphSettings,
             // The same choice of gallery or clipboard as the Picture button.
             onInsertImage: () {
               Navigator.pop(sheetContext);

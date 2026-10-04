@@ -62,7 +62,6 @@ class BookReaderBlock {
     required this.sourceEnd,
     this.alignment = BookReaderTextAlignment.left,
     this.indent = 0,
-    this.lineHeight,
     this.rightToLeft = false,
     this.assetId,
     this.imageAlignment = BookImageAlignment.center,
@@ -79,7 +78,6 @@ class BookReaderBlock {
   final int sourceEnd;
   final BookReaderTextAlignment alignment;
   final int indent;
-  final double? lineHeight;
   final bool rightToLeft;
   final String? assetId;
   final BookImageAlignment imageAlignment;
@@ -103,7 +101,6 @@ class BookReaderBlock {
         sourceEnd: sourceEnd,
         alignment: alignment,
         indent: indent,
-        lineHeight: lineHeight,
         rightToLeft: rightToLeft,
         assetId: assetId,
         imageAlignment: imageAlignment,
@@ -160,7 +157,6 @@ abstract final class BookReaderDocumentParser {
           sourceEnd: sourceOffset,
           alignment: _alignment(attributes),
           indent: (_integer(attributes['indent']) ?? 0).clamp(0, 8),
-          lineHeight: _lineHeight(attributes['line-height']),
           rightToLeft: attributes['direction'] == 'rtl',
           listOrdinal: type == BookReaderBlockType.orderedListItem
               ? orderedListOrdinal
@@ -322,11 +318,6 @@ abstract final class BookReaderDocumentParser {
         'justify' => BookReaderTextAlignment.justify,
         _ => BookReaderTextAlignment.left,
       };
-
-  static double? _lineHeight(Object? value) {
-    final parsed = double.tryParse(value?.toString() ?? '');
-    return parsed != null && parsed >= 1 && parsed <= 3 ? parsed : null;
-  }
 
   static double? _fontSize(Object? value) {
     final parsed = double.tryParse(value?.toString() ?? '');

@@ -316,6 +316,7 @@ const appStringValuesEn = <String, String>{
   'alignLeft': 'Left',
   'alignCenter': 'Center',
   'alignRight': 'Right',
+  'alignJustify': 'Justify',
   'imageSize': 'Size',
   'imageCaption': 'Caption',
   'imageCaptionHint': 'Optional',
