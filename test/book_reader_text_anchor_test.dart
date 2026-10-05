@@ -10,7 +10,7 @@ void main() {
       endOffset: 23,
       excerpt: 'Важный фрагмент',
       sectionProgress: 0.25,
-    );
+    )!;
     const edited = 'Новое вступление. Начало. Важный фрагмент. Конец.';
     final shifted = BookReaderTextAnchor.resolve(
       text: edited,
@@ -18,7 +18,7 @@ void main() {
       endOffset: 23,
       excerpt: 'Важный фрагмент',
       sectionProgress: 0.5,
-    );
+    )!;
 
     expect(original.substring(valid.start, valid.end), 'Важный фрагмент');
     expect(edited.substring(shifted.start, shifted.end), 'Важный фрагмент');
@@ -33,8 +33,22 @@ void main() {
       endOffset: 1,
       excerpt: 'Повтор',
       sectionProgress: 0.9,
-    );
+    )!;
 
     expect(range.start, text.lastIndexOf('Повтор'));
+  });
+
+  test('marks nothing once the author has rewritten the words', () {
+    // The highlight was on "chapter" at 5..12; those offsets now fall in
+    // the middle of other words.
+    final range = BookReaderTextAnchor.resolve(
+      text: 'вечером на лавочке парочка сидит',
+      startOffset: 5,
+      endOffset: 12,
+      excerpt: 'chapter',
+      sectionProgress: 0.1,
+    );
+
+    expect(range, isNull);
   });
 }

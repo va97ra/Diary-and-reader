@@ -978,54 +978,55 @@ class _BookReaderPageState extends State<BookReaderPage> {
             ),
           ),
         ),
-        if (_textSelection case final selection?)
+        // Speech controls and the selection actions stand at the bottom.
+        // At the top they covered the first words to tap and the line
+        // being read, which the text scrolls to just below the top panel.
+        if (_isChoosingSpeechStart || _isSpeaking || _textSelection != null)
           Positioned(
             left: 12,
             right: 12,
             bottom: 12 + panelInsets.bottom,
-            child: Center(
-              child: BookReaderSelectionBar(
-                selection: selection,
-                onHighlight: _saveHighlight,
-                onSaveQuote: _saveQuote,
-                onAddNote: () => _addNoteForSelection(context),
-                onCopy: _copySelection,
-                onDictionary: () =>
-                    _openSelectionLookup(BookReaderLookupAction.dictionary),
-                onTranslate: () =>
-                    _openSelectionLookup(BookReaderLookupAction.translate),
-                onWebSearch: () =>
-                    _openSelectionLookup(BookReaderLookupAction.webSearch),
-                onClose: _clearTextSelection,
-              ),
-            ),
-          ),
-        if (_isChoosingSpeechStart || _isSpeaking)
-          Positioned(
-            left: 12,
-            right: 12,
-            top: 12 + panelInsets.top,
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 560),
-                child: BookReaderSpeechControls(
-                  isChoosingStart: _isChoosingSpeechStart,
-                  isPaused: _isSpeechPaused,
-                  rate: _settings.speechRate,
-                  onCancelChoosing: _cancelSpeechTargetSelection,
-                  onPauseOrResume: () => unawaited(_pauseOrResumeSpeech()),
-                  onStop: () => unawaited(_stopSpeech()),
-                  onSlower: _settings.speechRate > 0.25
-                      ? () => _changeSpeechRate(-0.05)
-                      : null,
-                  onFaster: _settings.speechRate < 0.75
-                      ? () => _changeSpeechRate(0.05)
-                      : null,
-                  onSettings: () => _showSettings(context),
-                  backgroundColor: palette.surface,
-                  foregroundColor: palette.ink,
-                ),
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 8,
+              children: [
+                if (_isChoosingSpeechStart || _isSpeaking)
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 560),
+                    child: BookReaderSpeechControls(
+                      isChoosingStart: _isChoosingSpeechStart,
+                      isPaused: _isSpeechPaused,
+                      rate: _settings.speechRate,
+                      onCancelChoosing: _cancelSpeechTargetSelection,
+                      onPauseOrResume: () => unawaited(_pauseOrResumeSpeech()),
+                      onStop: () => unawaited(_stopSpeech()),
+                      onSlower: _settings.speechRate > 0.25
+                          ? () => _changeSpeechRate(-0.05)
+                          : null,
+                      onFaster: _settings.speechRate < 0.75
+                          ? () => _changeSpeechRate(0.05)
+                          : null,
+                      onSettings: () => _showSettings(context),
+                      backgroundColor: palette.surface,
+                      foregroundColor: palette.ink,
+                    ),
+                  ),
+                if (_textSelection case final selection?)
+                  BookReaderSelectionBar(
+                    selection: selection,
+                    onHighlight: _saveHighlight,
+                    onSaveQuote: _saveQuote,
+                    onAddNote: () => _addNoteForSelection(context),
+                    onCopy: _copySelection,
+                    onDictionary: () =>
+                        _openSelectionLookup(BookReaderLookupAction.dictionary),
+                    onTranslate: () =>
+                        _openSelectionLookup(BookReaderLookupAction.translate),
+                    onWebSearch: () =>
+                        _openSelectionLookup(BookReaderLookupAction.webSearch),
+                    onClose: _clearTextSelection,
+                  ),
+              ],
             ),
           ),
       ],

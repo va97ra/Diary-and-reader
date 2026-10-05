@@ -8,7 +8,11 @@ class BookReaderTextRange {
 }
 
 abstract final class BookReaderTextAnchor {
-  static BookReaderTextRange resolve({
+  /// Where [excerpt] stands in [text]: at its saved offsets, or at the
+  /// occurrence nearest [sectionProgress] once the text around it moved.
+  /// Null when the words are gone, as an author's edit can take them: the
+  /// saved offsets then fall on other words.
+  static BookReaderTextRange? resolve({
     required String text,
     required int startOffset,
     required int endOffset,
@@ -38,7 +42,7 @@ abstract final class BookReaderTextAnchor {
       searchFrom = found + math.max(1, target.length);
     }
     return bestStart < 0
-        ? BookReaderTextRange(start, end)
+        ? null
         : BookReaderTextRange(bestStart, bestStart + target.length);
   }
 }

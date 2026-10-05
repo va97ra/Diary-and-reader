@@ -13,20 +13,19 @@ extension _BookReaderDocumentFlow on _BookReaderSectionViewState {
     return _highlightCache = [
       for (final highlight in widget.highlights)
         if (highlight.sectionId == widget.section.id)
-          (() {
-            final resolved = BookReaderTextAnchor.resolve(
-              text: _plainText,
-              startOffset: highlight.startOffset,
-              endOffset: highlight.endOffset,
-              excerpt: highlight.excerpt,
-              sectionProgress: highlight.sectionProgress,
-            );
-            return BookReaderRenderHighlight(
+          if (BookReaderTextAnchor.resolve(
+                text: _plainText,
+                startOffset: highlight.startOffset,
+                endOffset: highlight.endOffset,
+                excerpt: highlight.excerpt,
+                sectionProgress: highlight.sectionProgress,
+              )
+              case final resolved?)
+            BookReaderRenderHighlight(
               start: _displayDocument.originalToDisplay(resolved.start),
               end: _displayDocument.originalToDisplay(resolved.end),
               color: highlight.color,
-            );
-          })(),
+            ),
     ];
   }
 

@@ -1141,10 +1141,10 @@
   - 21 find
   - 67 _excerpt
 
-### lib/features/books/application/book_reader_text_anchor.dart (44)
+### lib/features/books/application/book_reader_text_anchor.dart (48)
 - 3 class **BookReaderTextRange**
 - 10 class **BookReaderTextAnchor**
-  - 11 resolve
+  - 15 resolve — Where [excerpt] stands in [text]: at its saved offsets, or at the occurrence nearest [sectionProgress] once the text around it moved.
 
 ### lib/features/books/application/book_reading_session_loader.dart (53)
 - 8 class **BookReadingSessionLoader**
@@ -2105,7 +2105,7 @@
 - 5 class **BookReaderNoteDialog**
 - 14 class **_BookReaderNoteDialogState**
 
-### lib/features/books/presentation/reader/book_reader_page.dart (1351)
+### lib/features/books/presentation/reader/book_reader_page.dart (1352)
 - 36 const _compactTopPanelHeight
 - 37 const _compactBottomPanelHeight
 - 39 class **BookReaderPage**
@@ -2152,33 +2152,33 @@
   - 841 _applyReaderSettings
   - 852 _refreshSpeechAfterSettingsChange
   - 892 _buildReadingSurface
-  - 1035 _resetSurfaceTap
-  - 1041 _handleReadingSurfaceTap
-  - 1048 get _currentBookmark
-  - 1056 _navigationPanel
-  - 1083 _goToNextSection
-  - 1090 _goToPreviousSectionEnd
-  - 1095 _showContents
-  - 1106 _showSearch
-  - 1123 _showSettings
-  - 1134 _goToSearchResult
-  - 1137 _toggleBookmark
-  - 1148 _updateAnnotations
-  - 1153 _handleTextSelection
-  - 1158 _clearTextSelection
-  - 1166 _saveHighlight
-  - 1181 _saveQuote
-  - 1195 _copySelection
-  - 1204 _openSelectionLookup
-  - 1222 _addNoteForSelection
-  - 1240 _showAnnotationExport
-  - 1253 _exportAnnotations
-  - 1275 _showMessage
-  - 1288 _currentExcerpt
-  - 1293 _addNote
-  - 1308 _editNote
-  - 1321 _showNoteEditor
-- 1331 class **_TypefaceIcon** — "Aa" drawn in an icon's box, so its label lines up with the other actions.
+  - 1036 _resetSurfaceTap
+  - 1042 _handleReadingSurfaceTap
+  - 1049 get _currentBookmark
+  - 1057 _navigationPanel
+  - 1084 _goToNextSection
+  - 1091 _goToPreviousSectionEnd
+  - 1096 _showContents
+  - 1107 _showSearch
+  - 1124 _showSettings
+  - 1135 _goToSearchResult
+  - 1138 _toggleBookmark
+  - 1149 _updateAnnotations
+  - 1154 _handleTextSelection
+  - 1159 _clearTextSelection
+  - 1167 _saveHighlight
+  - 1182 _saveQuote
+  - 1196 _copySelection
+  - 1205 _openSelectionLookup
+  - 1223 _addNoteForSelection
+  - 1241 _showAnnotationExport
+  - 1254 _exportAnnotations
+  - 1276 _showMessage
+  - 1289 _currentExcerpt
+  - 1294 _addNote
+  - 1309 _editNote
+  - 1322 _showNoteEditor
+- 1332 class **_TypefaceIcon** — "Aa" drawn in an icon's box, so its label lines up with the other actions.
 
 ### lib/features/books/presentation/reader/book_reader_page_card.dart (128)
 - 11 class **BookReaderPageCard**
@@ -2221,13 +2221,13 @@
   - 136 _resetContinuousPointer
   - 145 _restoreContinuousPosition
 
-### lib/features/books/presentation/reader/book_reader_section_document.dart (72)
+### lib/features/books/presentation/reader/book_reader_section_document.dart (71)
 - 3 extension **_BookReaderDocumentFlow**
   - 6 get _renderHighlights — Resolving an anchor scans the chapter text, so the result is kept until the highlights or the displayed text change.
-  - 33 get _renderSpeechRange
-  - 42 _selectSpeechTarget
-  - 49 _handleDisplaySelection
-  - 68 _clearSelection
+  - 32 get _renderSpeechRange
+  - 41 _selectSpeechTarget
+  - 48 _handleDisplaySelection
+  - 67 _clearSelection
 
 ### lib/features/books/presentation/reader/book_reader_section_pagination.dart (240)
 - 4 const _foregroundPaginationBudget — Layout time allowed inside a frame when a page must appear right away.
@@ -2886,9 +2886,11 @@
 ### test/book_reader_text_anchor_test.dart
 - 5 keeps a valid range and relocates a shifted excerpt
 - 28 chooses the occurrence closest to saved progress
+- 41 marks nothing once the author has rewritten the words
 
 ### test/book_reader_tts_test.dart
-- 13 TTS continues with the next chapter
+- 13 on a phone the speech hint leaves the first words to tap
+- 62 TTS continues with the next chapter
 
 ### test/book_reader_verse_and_color_test.dart
 - 15 lines of a poem stand together and the poem is spaced apart

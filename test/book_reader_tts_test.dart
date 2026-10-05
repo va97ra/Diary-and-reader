@@ -10,6 +10,55 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('on a phone the speech hint leaves the first words to tap', (
+    tester,
+  ) async {
+    final chapter =
+        BookSection.create(
+          id: 'chapter',
+          title: 'Глава',
+          type: BookSectionType.chapter,
+        ).copyWith(
+          content: const [
+            {'insert': 'Первые слова главы, с которых начинают слушать.\n'},
+          ],
+        );
+    final seed = BookProject.create(title: 'Книга', chapterTitle: 'Черновик');
+    final project = seed.copyWith(
+      sections: [chapter],
+      activeSectionId: chapter.id,
+      readerProgress: BookReaderProgress(sectionId: chapter.id),
+    );
+    tester.view
+      ..physicalSize = const Size(390, 844)
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('ru'),
+        supportedLocales: const [Locale('ru'), Locale('en')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        home: BookReaderPage(
+          project: project,
+          readerSettings: const BookReaderSettings(),
+          onSettingsChanged: (_) {},
+          onProgressChanged: (_) {},
+          onAnnotationsChanged: (_) {},
+          speechEngine: _FakeSpeechEngine(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('reader-tts-action')));
+    await tester.pump();
+
+    final hint = tester.getRect(
+      find.byKey(const ValueKey('reader-speech-controls')),
+    );
+    final text = tester.getRect(find.byType(BookReaderTextFragment).first);
+    expect(hint.top, greaterThan(text.bottom));
+  });
+
   testWidgets('TTS continues with the next chapter', (tester) async {
     final first =
         BookSection.create(
