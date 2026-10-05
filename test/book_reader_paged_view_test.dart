@@ -1,6 +1,7 @@
 import 'package:dnevnik/app/author_studio_app.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/domain/book_reader_annotations.dart';
+import 'package:dnevnik/features/books/domain/book_reader_progress.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_bookmark_flag.dart';
@@ -288,6 +289,48 @@ void main() {
     );
     expect(page.top, greaterThanOrEqualTo(top.bottom));
     expect(page.bottom, lessThanOrEqualTo(bottom.top));
+  });
+
+  testWidgets('the continuous text opens at its place below the top panel', (
+    tester,
+  ) async {
+    final controller = await _controllerWithLongChapter(
+      const BookReaderSettings(viewMode: BookReaderViewMode.continuous),
+    );
+    final section = controller.activeSection!;
+    final paragraphs = [
+      for (final operation in section.content) operation['insert'] as String,
+    ];
+    final total = paragraphs.join().length;
+    final thirtieth = paragraphs.take(29).join().length;
+    controller.updateReaderProgress(
+      BookReaderProgress(
+        sectionId: section.id,
+        sectionProgress: (thirtieth + 2) / total,
+      ),
+    );
+    tester.view
+      ..physicalSize = const Size(390, 844)
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(AuthorStudioApp(controller: controller));
+    await tester.pumpAndSettle();
+    await openReaderPreview(tester, controller);
+    await tester.pumpAndSettle();
+
+    // The paragraph read last stands right under the top panel, not
+    // behind it: in a short chapter that left the screen looking empty.
+    final paragraph = tester.getRect(
+      find.byKey(const ValueKey('reader-block-29')),
+    );
+    final top = tester.getRect(
+      find.byKey(const ValueKey('book-compact-top-panel')),
+    );
+    final bottom = tester.getRect(
+      find.byKey(const ValueKey('book-compact-bottom-panel')),
+    );
+    expect(paragraph.top, greaterThanOrEqualTo(top.bottom - 4));
+    expect(paragraph.top, lessThan(bottom.top));
   });
 
   testWidgets('paged reader stays usable in compact landscape constraints', (

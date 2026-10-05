@@ -35,7 +35,7 @@
 | Ширина «телефон / планшет» | `widgets/book_adaptive_control_shell.dart` `bookControlBreakpoint` = 700 |
 | Кирпичики шторок настроек | `widgets/book_settings_controls.dart`: `BookSettingsCard`, `BookSettingsRow(flex:)`, `BookCompactChoice`, `BookSettingSwitch`, `BookCompactDropdown`, `bookNumberChoices`, `bookNamedChoices`, `bookSettingNumber` |
 | Кнопки и подписи боковых панелей | `widgets/book_adaptive_control_shell.dart`: `BookPanelAction`, `BookPanelSectionLabel`, `BookWholeWordsText` (слово не рвётся — текст уменьшается), ширина панелей — `_sidePanelWidths` (+ вырез камеры) |
-| Открыть шторку / диалог | `widgets/book_leather_modal.dart`: `showBookLeatherBottomSheet`, `BookLeatherModalHeader`, `BookLeatherDialog`, `bookLeatherModalTheme` |
+| Открыть шторку / диалог | `widgets/book_leather_modal.dart`: `showBookLeatherBottomSheet`, `BookLeatherModalHeader`, `BookLeatherDialog` (содержимое строит `_buildContent` уже под кожаной темой), `bookLeatherModalTheme` |
 | Меню выделенных слов в писалке | `widgets/book_editor_context_menu.dart`: `BookEditorContextMenu` (копировать/вставить сверху, «Вставить картинку») + `BookSelectionFormattingBar` под словами (Ж, К, Ч, З, цвет с палитрой в самой панели, очистить); на компьютере — `BookSelectionBarTrigger` (панель сразу после выделения мышью); подключается через `BookImageEditingScope.contextMenuBuilder` |
 | Состояние всей программы | `application/author_workspace_controller.dart` `AuthorWorkspaceController` |
 | Модель книги | `domain/book_project.dart` `BookProject`; глава — `domain/book_section.dart` `BookSection` |
@@ -361,7 +361,8 @@ lib/main.dart ─► lib/app (экраны верхнего уровня, нав
 - переходы: `_goToLocation`, `_goToNextSection`, `_goToPreviousSectionEnd`,
   прогресс — `_handleSectionProgress` → `_saveProgress`;
 - выделение: `_handleTextSelection` → панель
-  `reader/book_reader_selection_bar.dart`: цвет (`_saveHighlight`), цитата,
+  `reader/book_reader_selection_bar.dart` (кнопки в `Wrap`: на узком
+  телефоне — в два ряда, ничего не уходит за край): цвет (`_saveHighlight`), цитата,
   копия, словарь/перевод (`_openSelectionLookup`), заметка;
 - экспорт заметок: `_showAnnotationExport`.
 
@@ -598,3 +599,12 @@ lib/main.dart ─► lib/app (экраны верхнего уровня, нав
   обложки: `_transientHydratedProjectIds` заменён на `_catalogsBeingRead`,
   у `BookCatalogProject.compact` параметр `cover`; тест в
   `test/author_workspace_controller_test.dart`.
+- 2026-10-04 — версия 1.0.6+7 (1.0.5+6 загружена в RuStore). «Лента»:
+  место чтения встаёт под верхнюю панель (`_readingTop`,
+  `_readingBottom`, `_readingEndPadding`, `_blockSpan` без полей главы,
+  `_scheduleAnchorCorrection` для любого якоря), прогресс и «закладка
+  здесь» считаются от того же края — короткая глава больше не выглядит
+  пустой; `BookLeatherDialog._buildContent` — заголовок окна под кожаной
+  темой (в читалке со светлой темой был тёмным); панель выделения читалки
+  в `Wrap`. Тесты в `test/book_reader_paged_view_test.dart` и
+  `test/book_reader_page_test.dart`.

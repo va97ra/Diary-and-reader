@@ -1997,30 +1997,33 @@
 - 5 class **BookReaderContextBar**
 - 88 class **_ReaderAction**
 
-### lib/features/books/presentation/reader/book_reader_continuous_view.dart (495)
+### lib/features/books/presentation/reader/book_reader_continuous_view.dart (511)
 - 18 class **BookReaderContinuousController** — Reports and changes the reading position of a [BookReaderContinuousView] in display text offsets, independent of how much of the chapter ...
-  - 22 get topOffset — Display offset of the text at the top of the viewport.
-  - 25 get bottomOffset — Display offset of the text at the bottom of the viewport.
-  - 28 reveal — Scrolls [displayOffset] to the top unless it is already on screen.
-- 37 class **BookReaderContinuousView** — Scrolling chapter view that builds and paints only the visible blocks, so opening and scrolling cost the same for short and very long cha...
-- 99 class **_BookReaderContinuousViewState**
-  - 110 get _blocks
-  - 142 _blockIndexFor
-  - 156 _fractionInBlock
-  - 163 _anchorAt
-  - 174 _jumpToAnchor
-  - 179 _scheduleAnchorCorrection
-  - 203 get _viewport
-  - 218 _topOffset
-  - 240 _bottomOffset
-  - 259 _reveal
-  - 341 _buildItem
-  - 377 _buildBlockContent
-  - 409 _fragmentFor
-  - 443 _imageHeight
-- 451 class **_ContinuousBlockItem** — Registers a built block so the view can find which one is on screen.
-- 467 class **_ContinuousBlockItemState**
-  - 489 _unregister
+  - 22 get topOffset — Display offset of the first line read: below the top panel.
+  - 25 get bottomOffset — Display offset of the last line read: above the bottom panel.
+  - 29 reveal — Scrolls [displayOffset] to where reading starts, below the top panel, unless it is already in sight.
+- 38 class **BookReaderContinuousView** — Scrolling chapter view that builds and paints only the visible blocks, so opening and scrolling cost the same for short and very long cha...
+- 100 class **_BookReaderContinuousViewState**
+  - 111 get _blocks
+  - 143 _blockIndexFor
+  - 157 _fractionInBlock
+  - 164 _anchorAt
+  - 175 _jumpToAnchor
+  - 183 _scheduleAnchorCorrection — Puts the anchored place where reading starts.
+  - 204 get _viewport
+  - 211 get _readingTop — Where reading starts on screen: below the top panel and the margin, where the first line of the chapter stands.
+  - 215 get _readingEndPadding — Room after the last line of the chapter.
+  - 219 _readingBottom — Where reading ends on screen: above the bottom panel.
+  - 235 _topOffset
+  - 258 _bottomOffset
+  - 277 _reveal
+  - 361 _buildItem
+  - 395 _buildBlockContent
+  - 425 _fragmentFor
+  - 459 _imageHeight
+- 467 class **_ContinuousBlockItem** — Registers a built block so the view can find which one is on screen.
+- 483 class **_ContinuousBlockItemState**
+  - 505 _unregister
 
 ### lib/features/books/presentation/reader/book_reader_document_model.dart (348)
 - 4 enum **BookReaderBlockType**
@@ -2263,9 +2266,9 @@
   - 365 _requestSectionNavigation
   - 376 _mutate
 
-### lib/features/books/presentation/reader/book_reader_selection_bar.dart (119)
+### lib/features/books/presentation/reader/book_reader_selection_bar.dart (126)
 - 7 class **BookReaderSelectionBar**
-- 111 fn _highlightColorName
+- 118 fn _highlightColorName
 
 ### lib/features/books/presentation/reader/book_reader_selection_resolver.dart (41)
 - 6 class **BookReaderSelectionResolver**
@@ -2442,14 +2445,15 @@
   - 50 _releaseCaptionFocus
   - 54 _replace
 
-### lib/features/books/presentation/widgets/book_leather_modal.dart (288)
+### lib/features/books/presentation/widgets/book_leather_modal.dart (292)
 - 4 const bookModalGrid
 - 5 const bookModalRadius
 - 7 fn showBookLeatherBottomSheet
 - 30 class **BookLeatherModalSurface**
 - 54 class **BookLeatherModalHeader**
 - 119 class **BookLeatherDialog**
-- 174 fn bookLeatherModalTheme
+  - 150 _buildContent
+- 178 fn bookLeatherModalTheme
 
 ### lib/features/books/presentation/widgets/book_metadata_editor_dialog.dart (113)
 - 6 class **BookMetadataEditorDialog**
@@ -2623,7 +2627,6 @@
 - 368 a restored backup brings its pictures and cover
 - 399 persists imported books but blocks authoring changes
 - 448 a bookmark made while reading is written soon
-- 474 a book read with its text keeps the small cover of the catalog
 
 ### test/book_additional_exporters_test.dart
 - 16 **additional book exporters**
@@ -2832,24 +2835,27 @@
 - 75 background hyphenation preserves the synchronous result
 
 ### test/book_reader_page_test.dart
-- 20 contents distinguishes repeated legacy chapter titles
-- 55 reader opens with contents and keeps independent settings
-- 218 reader uses compact contents action on a phone
+- 23 a leather dialog over a light reader keeps a light title
+- 55 every action of the selection bar fits on a phone
+- 117 contents distinguishes repeated legacy chapter titles
+- 152 reader opens with contents and keeps independent settings
+- 315 reader uses compact contents action on a phone
 
 ### test/book_reader_paged_view_test.dart
-- 17 single page mode paginates a long chapter and keeps progress
-- 73 a page slot holds every line its paragraph renders
-- 117 spread shows two consecutive pages on a wide screen
-- 146 spread automatically becomes one page on a phone
-- 168 each page of a long chapter keeps a bookmark of its own
-- 230 the continuous text shows a bookmark as a numbered ribbon
-- 263 a page on a phone stands between the floating panels
-- 293 paged reader stays usable in compact landscape constraints
-- 318 next chapter appears without a pagination placeholder
-- 368 last reader page continues with the next chapter
-- 411 continuous reader advances after scrolling to chapter end
-- 450 continuous reader swipes between short chapters
-- 500 desktop keyboard crosses chapter boundaries
+- 18 single page mode paginates a long chapter and keeps progress
+- 74 a page slot holds every line its paragraph renders
+- 118 spread shows two consecutive pages on a wide screen
+- 147 spread automatically becomes one page on a phone
+- 169 each page of a long chapter keeps a bookmark of its own
+- 231 the continuous text shows a bookmark as a numbered ribbon
+- 264 a page on a phone stands between the floating panels
+- 294 the continuous text opens at its place below the top panel
+- 336 paged reader stays usable in compact landscape constraints
+- 361 next chapter appears without a pagination placeholder
+- 411 last reader page continues with the next chapter
+- 454 continuous reader advances after scrolling to chapter end
+- 493 continuous reader swipes between short chapters
+- 543 desktop keyboard crosses chapter boundaries
 
 ### test/book_reader_search_test.dart
 - 6 search finds all case-insensitive matches across book sections

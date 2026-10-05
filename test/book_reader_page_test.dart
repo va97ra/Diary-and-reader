@@ -1,10 +1,13 @@
 import 'package:dnevnik/app/author_studio_app.dart';
+import 'package:dnevnik/core/l10n/app_strings.dart';
 import 'package:dnevnik/features/books/application/author_workspace_controller.dart';
 import 'package:dnevnik/features/books/domain/book_reader_settings.dart';
 import 'package:dnevnik/features/books/domain/book_section.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_contents.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_document_view.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_progress_rail.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_selection_bar.dart';
+import 'package:dnevnik/features/books/presentation/reader/book_reader_text_selection.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_adaptive_control_shell.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:flutter/material.dart';
@@ -17,6 +20,100 @@ import 'support/literia_test_navigation.dart';
 import 'support/memory_author_workspace_repository.dart';
 
 void main() {
+  testWidgets('a leather dialog over a light reader keeps a light title', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.light(),
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (_) => const BookLeatherDialog(
+                title: Text('Новая заметка'),
+                content: SizedBox.shrink(),
+              ),
+            ),
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    final title = tester.widget<RichText>(
+      find.descendant(
+        of: find.text('Новая заметка'),
+        matching: find.byType(RichText),
+      ),
+    );
+    expect(title.text.style?.color, BookLeatherColors.foreground);
+  });
+
+  testWidgets('every action of the selection bar fits on a phone', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(360, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    void ignore() {}
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+        ],
+        supportedLocales: AppStrings.supportedLocales,
+        locale: const Locale('ru'),
+        home: Scaffold(
+          body: Stack(
+            children: [
+              Positioned(
+                left: 12,
+                right: 12,
+                bottom: 12,
+                child: Center(
+                  child: BookReaderSelectionBar(
+                    selection: const BookReaderTextSelection(
+                      startOffset: 0,
+                      endOffset: 5,
+                      text: 'Слово',
+                      sectionProgress: 0,
+                    ),
+                    onHighlight: (_) {},
+                    onSaveQuote: ignore,
+                    onAddNote: ignore,
+                    onCopy: ignore,
+                    onDictionary: ignore,
+                    onTranslate: ignore,
+                    onWebSearch: ignore,
+                    onClose: ignore,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // Nothing hides past the edge of the screen to be found by scrolling.
+    for (final key in [
+      'reader-highlight-yellow',
+      'reader-save-quote',
+      'reader-copy-selection',
+      'reader-dictionary-selection',
+      'reader-translate-selection',
+      'reader-web-search-selection',
+    ]) {
+      final rect = tester.getRect(find.byKey(ValueKey(key)));
+      expect(rect.left, greaterThanOrEqualTo(0), reason: key);
+      expect(rect.right, lessThanOrEqualTo(360), reason: key);
+    }
+  });
+
   testWidgets('contents distinguishes repeated legacy chapter titles', (
     tester,
   ) async {

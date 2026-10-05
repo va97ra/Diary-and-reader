@@ -38,27 +38,34 @@ class BookReaderSelectionBar extends StatelessWidget {
         elevation: 8,
         borderRadius: BorderRadius.circular(16),
         clipBehavior: Clip.antiAlias,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
+        // A narrow phone takes the actions in two rows: scrolled sideways,
+        // copy, dictionary and translation hid past the edge.
+        child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              for (final color in BookReaderHighlightColor.values)
-                IconButton(
-                  key: ValueKey('reader-highlight-${color.name}'),
-                  tooltip: _highlightColorName(strings, color),
-                  onPressed: () => onHighlight(color),
-                  icon: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: BookReaderHighlightStyle.displayColor(color),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.black26),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final color in BookReaderHighlightColor.values)
+                    IconButton(
+                      key: ValueKey('reader-highlight-${color.name}'),
+                      tooltip: _highlightColorName(strings, color),
+                      onPressed: () => onHighlight(color),
+                      icon: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: BookReaderHighlightStyle.displayColor(color),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.black26),
+                        ),
+                        child: const SizedBox(width: 22, height: 22),
+                      ),
                     ),
-                    child: const SizedBox(width: 22, height: 22),
-                  ),
-                ),
-              const SizedBox(width: 4),
+                  const SizedBox(width: 4),
+                ],
+              ),
               FilledButton.tonalIcon(
                 key: const ValueKey('reader-save-quote'),
                 onPressed: onSaveQuote,

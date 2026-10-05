@@ -140,33 +140,37 @@ class BookLeatherDialog extends StatelessWidget {
       child: BookLeatherModalSurface(
         borderRadius: BorderRadius.circular(16),
         safeArea: EdgeInsets.zero,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              DefaultTextStyle.merge(
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                child: title,
-              ),
-              const SizedBox(height: 12),
-              Flexible(child: SingleChildScrollView(child: content)),
-              if (actions.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Wrap(
-                  alignment: WrapAlignment.end,
-                  spacing: bookModalGrid,
-                  runSpacing: bookModalGrid,
-                  children: actions,
-                ),
-              ],
-            ],
-          ),
-        ),
+        // The title takes the leather theme, not the one around the dialog:
+        // over a light reader theme it came out dark on the dark leather.
+        child: Builder(builder: _buildContent),
       ),
+    ),
+  );
+
+  Widget _buildContent(BuildContext context) => Padding(
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DefaultTextStyle.merge(
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          child: title,
+        ),
+        const SizedBox(height: 12),
+        Flexible(child: SingleChildScrollView(child: content)),
+        if (actions.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: bookModalGrid,
+            runSpacing: bookModalGrid,
+            children: actions,
+          ),
+        ],
+      ],
     ),
   );
 }

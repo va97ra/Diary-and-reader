@@ -18,13 +18,14 @@ import 'package:flutter/rendering.dart';
 class BookReaderContinuousController {
   _BookReaderContinuousViewState? _state;
 
-  /// Display offset of the text at the top of the viewport.
+  /// Display offset of the first line read: below the top panel.
   int? get topOffset => _state?._topOffset();
 
-  /// Display offset of the text at the bottom of the viewport.
+  /// Display offset of the last line read: above the bottom panel.
   int? get bottomOffset => _state?._bottomOffset();
 
-  /// Scrolls [displayOffset] to the top unless it is already on screen.
+  /// Scrolls [displayOffset] to where reading starts, below the top panel,
+  /// unless it is already in sight.
   void reveal(int displayOffset) => _state?._reveal(displayOffset);
 }
 
@@ -176,25 +177,25 @@ class _BookReaderContinuousViewState extends State<BookReaderContinuousView> {
     if (controller.hasClients) controller.jumpTo(0);
   }
 
+  /// Puts the anchored place where reading starts. The anchor block itself
+  /// is laid out at the very top, under the floating top panel, which hid
+  /// the place and left a short chapter looking empty.
   void _scheduleAnchorCorrection() {
-    if (_anchorFraction <= 0) return;
     final anchor = _anchorIndex;
+    if (anchor == 0 && _anchorFraction <= 0) return;
     WidgetsBinding.instance
       ..addPostFrameCallback((_) {
         final fraction = _anchorFraction;
         _anchorFraction = 0;
         if (!mounted || anchor != _anchorIndex) return;
-        final box = _items[anchor]?.context.findRenderObject();
+        final viewport = _viewport;
+        final span = viewport == null ? null : _blockSpan(anchor, viewport);
         final controller = widget.scrollController;
-        if (box is! RenderBox || !box.hasSize || !controller.hasClients) {
-          return;
-        }
+        if (span == null || !controller.hasClients) return;
         final position = controller.position;
         position.jumpTo(
-          (box.size.height * fraction).clamp(
-            position.minScrollExtent,
-            position.maxScrollExtent,
-          ),
+          (position.pixels + span.top + span.height * fraction - _readingTop)
+              .clamp(position.minScrollExtent, position.maxScrollExtent),
         );
       })
       ..scheduleFrame();
@@ -205,24 +206,41 @@ class _BookReaderContinuousViewState extends State<BookReaderContinuousView> {
     return viewport is RenderBox && viewport.hasSize ? viewport : null;
   }
 
-  /// Vertical span of a built block relative to the viewport.
+  /// Where reading starts on screen: below the top panel and the margin,
+  /// where the first line of the chapter stands.
+  double get _readingTop =>
+      widget.settings.verticalPadding + widget.edgeInsets.top;
+
+  /// Room after the last line of the chapter.
+  double get _readingEndPadding =>
+      widget.settings.verticalPadding + widget.edgeInsets.bottom;
+
+  /// Where reading ends on screen: above the bottom panel.
+  double _readingBottom(RenderBox viewport) =>
+      viewport.size.height - widget.edgeInsets.bottom;
+
+  /// Vertical span of a built block's text relative to the viewport, without
+  /// the room left at the start and the end of the chapter.
   ({double top, double height})? _blockSpan(int index, RenderBox viewport) {
     final box = _items[index]?.context.findRenderObject();
     if (box is! RenderBox || !box.attached || !box.hasSize) return null;
+    final lead = index == 0 ? _readingTop : 0.0;
+    final trail = index == _blocks.length - 1 ? _readingEndPadding : 0.0;
     return (
-      top: box.localToGlobal(Offset.zero, ancestor: viewport).dy,
-      height: box.size.height,
+      top: box.localToGlobal(Offset.zero, ancestor: viewport).dy + lead,
+      height: math.max(0, box.size.height - lead - trail),
     );
   }
 
   int? _topOffset() {
     final viewport = _viewport;
     if (viewport == null || _blocks.isEmpty) return null;
+    final top = _readingTop;
     int? topIndex;
     var topSpan = (top: 0.0, height: 0.0);
     for (final index in _items.keys) {
       final span = _blockSpan(index, viewport);
-      if (span == null || span.top + span.height <= 0.5) continue;
+      if (span == null || span.top + span.height <= top + 0.5) continue;
       if (topIndex == null || span.top < topSpan.top) {
         topIndex = index;
         topSpan = span;
@@ -233,14 +251,14 @@ class _BookReaderContinuousViewState extends State<BookReaderContinuousView> {
     final length = block.isText ? block.text.length : 0;
     final scrolledPast = topSpan.height <= 0
         ? 0.0
-        : (-topSpan.top / topSpan.height).clamp(0.0, 1.0);
+        : ((top - topSpan.top) / topSpan.height).clamp(0.0, 1.0);
     return block.sourceStart + (length * scrolledPast).round();
   }
 
   int? _bottomOffset() {
     final viewport = _viewport;
     if (viewport == null || _blocks.isEmpty) return null;
-    final bottom = viewport.size.height;
+    final bottom = _readingBottom(viewport);
     int? offset;
     for (final index in _items.keys) {
       final span = _blockSpan(index, viewport);
@@ -263,7 +281,9 @@ class _BookReaderContinuousViewState extends State<BookReaderContinuousView> {
     final span = viewport == null ? null : _blockSpan(index, viewport);
     if (viewport != null && span != null) {
       final y = span.top + span.height * _fractionInBlock(index, displayOffset);
-      if (y >= 0 && y <= viewport.size.height * 0.8) return;
+      final top = _readingTop;
+      final bottom = _readingBottom(viewport);
+      if (y >= top && y <= top + (bottom - top) * 0.8) return;
     }
     setState(() => _anchorAt(displayOffset));
     _jumpToAnchor();
@@ -350,9 +370,7 @@ class _BookReaderContinuousViewState extends State<BookReaderContinuousView> {
             (end == null || mark.offset < end))
           mark.number,
     ];
-    final top = index == 0
-        ? settings.verticalPadding + widget.edgeInsets.top
-        : 0.0;
+    final top = index == 0 ? _readingTop : 0.0;
     final content = _buildBlockContent(index, block, settings);
     return _ContinuousBlockItem(
       key: ValueKey('reader-block-$index'),
@@ -381,11 +399,9 @@ class _BookReaderContinuousViewState extends State<BookReaderContinuousView> {
   ) => Padding(
     padding: EdgeInsets.fromLTRB(
       settings.horizontalPadding,
-      index == 0 ? settings.verticalPadding + widget.edgeInsets.top : 0,
+      index == 0 ? _readingTop : 0,
       settings.horizontalPadding,
-      index == _blocks.length - 1
-          ? settings.verticalPadding + widget.edgeInsets.bottom
-          : 0,
+      index == _blocks.length - 1 ? _readingEndPadding : 0,
     ),
     child: BookReaderFragmentView(
       key: ValueKey(
