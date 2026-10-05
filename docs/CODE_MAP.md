@@ -627,3 +627,8 @@ lib/main.dart ─► lib/app (экраны верхнего уровня, нав
   внизу экрана (раньше дочитанная глава открывалась пустым экраном, текст
   уходил под верхнюю панель); тест «a chapter read to its end…» в
   `test/book_reader_paged_view_test.dart`.
+- 2026-10-05 — импорт EPUB пропускает титульный лист
+  (`EpubBookFormatParser._isTitlePage`: `epub:type="titlepage"` или
+  `role="doc-titlepage"` у `body` или у всех его детей): EPUB самой
+  Литерии открывался с лишней первой главой «Раздел 1»; тест в
+  `test/book_import_parser_test.dart`.

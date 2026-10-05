@@ -1246,16 +1246,17 @@
 - 9 class **BookTxtExporter**
   - 10 create
 
-### lib/features/books/application/epub_book_format_parser.dart (588)
+### lib/features/books/application/epub_book_format_parser.dart (605)
 - 15 class **EpubBookFormatParser**
   - 19 get formats
   - 22 parse
   - 104 parseCatalog
   - 165 _parseXml
   - 171 _readSections
-  - 342 _readNavigationTitles
-  - 433 _readMedia
-  - 518 _readCatalogCover
+  - 292 _isTitlePage — A title page repeats the title and author the book takes from its metadata; read as text it became a first chapter called "Раздел 1", in ...
+  - 359 _readNavigationTitles
+  - 450 _readMedia
+  - 535 _readCatalogCover
 
 ### lib/features/books/application/epub_rich_text_renderer.dart (157)
 - 5 class **EpubRichTextRenderer**
@@ -2709,19 +2710,20 @@
 - 95 decodes legacy Windows-1251 FB2 files
 - 111 splits a flat FB2 by visible chapter-heading paragraphs
 - 159 imports EPUB metadata and spine content in reading order
-- 180 reopens every readable format exported by Literia
-- 208 uses EPUB navigation labels when page titles are repeated
-- 220 splits chapters stored in one flat EPUB document
-- 241 imports an EPUB cover and relative inline images
-- 259 keeps a supported image-only FB2 section
-- 276 rejects unsupported and textless book files with clear reasons
-- 313 persists imported-book identity through project serialization
-- 332 ignores scripts and unsafe links in imported markup
-- 350 keeps a link inside the paragraph around it
-- 364 adds no empty paragraphs for whitespace between blocks
-- 374 keeps a heading with a line break in one styled block
-- 392 reads a link wrapped around blocks as those blocks
-- 403 keeps imported verse lines compact inside one paragraph
+- 180 a Literia EPUB reopens without its title page as a chapter
+- 198 reopens every readable format exported by Literia
+- 226 uses EPUB navigation labels when page titles are repeated
+- 238 splits chapters stored in one flat EPUB document
+- 259 imports an EPUB cover and relative inline images
+- 277 keeps a supported image-only FB2 section
+- 294 rejects unsupported and textless book files with clear reasons
+- 331 persists imported-book identity through project serialization
+- 350 ignores scripts and unsafe links in imported markup
+- 368 keeps a link inside the paragraph around it
+- 382 adds no empty paragraphs for whitespace between blocks
+- 392 keeps a heading with a line break in one styled block
+- 410 reads a link wrapped around blocks as those blocks
+- 421 keeps imported verse lines compact inside one paragraph
 
 ### test/book_import_storage_test.dart
 - 27 imports a private source copy and skips a content duplicate

@@ -216,7 +216,7 @@ class EpubBookFormatParser implements BookFormatParser {
         content,
         'body',
       ).firstOrNull;
-      if (body == null) continue;
+      if (body == null || _isTitlePage(body)) continue;
       final richContent = XmlBookContentConverter.convert(
         body.children,
         imageResolver: (source) {
@@ -284,6 +284,23 @@ class EpubBookFormatParser implements BookFormatParser {
               )
             : sections[index],
     ];
+  }
+
+  /// A title page repeats the title and author the book takes from its
+  /// metadata; read as text it became a first chapter called "Раздел 1",
+  /// in every EPUB Literia writes too.
+  static bool _isTitlePage(XmlElement body) {
+    bool marked(XmlElement element) => element.attributes.any(
+      (attribute) =>
+          (attribute.name.local == 'type' && attribute.name.prefix == 'epub' ||
+              attribute.name.local == 'role') &&
+          attribute.value
+              .split(RegExp(r'\s+'))
+              .any((value) => value == 'titlepage' || value == 'doc-titlepage'),
+    );
+    if (marked(body)) return true;
+    final children = body.childElements.toList();
+    return children.isNotEmpty && children.every(marked);
   }
 
   List<({String? title, RichDocument content})> _splitFlatChapterContent(

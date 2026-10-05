@@ -177,6 +177,24 @@ void main() {
       );
     });
 
+    test('a Literia EPUB reopens without its title page as a chapter', () {
+      final source = _sourceProject();
+
+      final reopened = BookImportParser.parse(
+        BookImportFile(
+          name: 'round-trip.epub',
+          bytes: BookEpubExporter.create(source).bytes,
+        ),
+        now: _importTime,
+      );
+
+      // The title page repeats the title and the author the book already
+      // has; it came back as a first chapter called "Раздел 1".
+      expect(reopened.sections.map((section) => section.title), [
+        for (final section in source.sections) section.title,
+      ]);
+    });
+
     test('reopens every readable format exported by Literia', () {
       final project = _sourceProject();
       final artifacts = [
