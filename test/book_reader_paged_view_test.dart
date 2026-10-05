@@ -333,6 +333,55 @@ void main() {
     expect(paragraph.top, lessThan(bottom.top));
   });
 
+  testWidgets('turning the phone keeps the place in the continuous text', (
+    tester,
+  ) async {
+    final controller = await _controllerWithLongChapter(
+      const BookReaderSettings(viewMode: BookReaderViewMode.continuous),
+    );
+    final section = controller.activeSection!;
+    final paragraphs = [
+      for (final operation in section.content) operation['insert'] as String,
+    ];
+    final total = paragraphs.join().length;
+    final thirtieth = paragraphs.take(29).join().length;
+    final place = (thirtieth + 2) / total;
+    controller.updateReaderProgress(
+      BookReaderProgress(sectionId: section.id, sectionProgress: place),
+    );
+    tester.view
+      ..physicalSize = const Size(390, 844)
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(AuthorStudioApp(controller: controller));
+    await tester.pumpAndSettle();
+    await openReaderPreview(tester, controller);
+    await tester.pumpAndSettle();
+
+    // On its side every line wraps anew and the panels move to the sides:
+    // the paragraph read stays at the top, where the next touch would save
+    // whatever text stood there. Then back upright.
+    final continuous = find.byKey(const ValueKey('reader-continuous-view'));
+    Rect paragraph() =>
+        tester.getRect(find.byKey(const ValueKey('reader-block-29')));
+    tester.view.physicalSize = const Size(844, 390);
+    await tester.pumpAndSettle();
+    expect(
+      paragraph().top - tester.getRect(continuous).top,
+      lessThan(const BookReaderSettings().verticalPadding + 8),
+    );
+    tester.view.physicalSize = const Size(390, 844);
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
+
+    final saved = controller.activeProject!.readerProgress.sectionProgress;
+    expect(saved, closeTo(place, 0.003));
+    final top = tester.getRect(
+      find.byKey(const ValueKey('book-compact-top-panel')),
+    );
+    expect(paragraph().top, closeTo(top.bottom, 24));
+  });
+
   testWidgets('paged reader stays usable in compact landscape constraints', (
     tester,
   ) async {

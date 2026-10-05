@@ -608,3 +608,9 @@ lib/main.dart ─► lib/app (экраны верхнего уровня, нав
   темой (в читалке со светлой темой был тёмным); панель выделения читалки
   в `Wrap`. Тесты в `test/book_reader_paged_view_test.dart` и
   `test/book_reader_page_test.dart`.
+- 2026-10-05 — «Лента» держит место при повороте телефона:
+  `BookReaderContinuousView._keepPlaceAfterRelayout` (новая ширина текста
+  или отступы панелей → якорь на месте чтения; раньше смещение прокрутки
+  оставалось прежним, вверху вставал другой текст, и следующее касание
+  записывало его — место уезжало назад), поле `_laidOutWidth`; тест
+  «turning the phone keeps the place…» в `test/book_reader_paged_view_test.dart`.

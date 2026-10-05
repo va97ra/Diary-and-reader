@@ -1997,33 +1997,34 @@
 - 5 class **BookReaderContextBar**
 - 88 class **_ReaderAction**
 
-### lib/features/books/presentation/reader/book_reader_continuous_view.dart (511)
+### lib/features/books/presentation/reader/book_reader_continuous_view.dart (537)
 - 18 class **BookReaderContinuousController** — Reports and changes the reading position of a [BookReaderContinuousView] in display text offsets, independent of how much of the chapter ...
   - 22 get topOffset — Display offset of the first line read: below the top panel.
   - 25 get bottomOffset — Display offset of the last line read: above the bottom panel.
   - 29 reveal — Scrolls [displayOffset] to where reading starts, below the top panel, unless it is already in sight.
 - 38 class **BookReaderContinuousView** — Scrolling chapter view that builds and paints only the visible blocks, so opening and scrolling cost the same for short and very long cha...
 - 100 class **_BookReaderContinuousViewState**
-  - 111 get _blocks
-  - 143 _blockIndexFor
-  - 157 _fractionInBlock
-  - 164 _anchorAt
-  - 175 _jumpToAnchor
-  - 183 _scheduleAnchorCorrection — Puts the anchored place where reading starts.
-  - 204 get _viewport
-  - 211 get _readingTop — Where reading starts on screen: below the top panel and the margin, where the first line of the chapter stands.
-  - 215 get _readingEndPadding — Room after the last line of the chapter.
-  - 219 _readingBottom — Where reading ends on screen: above the bottom panel.
-  - 235 _topOffset
-  - 258 _bottomOffset
-  - 277 _reveal
-  - 361 _buildItem
-  - 395 _buildBlockContent
-  - 425 _fragmentFor
-  - 459 _imageHeight
-- 467 class **_ContinuousBlockItem** — Registers a built block so the view can find which one is on screen.
-- 483 class **_ContinuousBlockItemState**
-  - 505 _unregister
+  - 115 get _blocks
+  - 145 _keepPlaceAfterRelayout — Puts the place read back where reading starts once the text is laid out anew.
+  - 164 _blockIndexFor
+  - 178 _fractionInBlock
+  - 185 _anchorAt
+  - 196 _jumpToAnchor
+  - 204 _scheduleAnchorCorrection — Puts the anchored place where reading starts.
+  - 225 get _viewport
+  - 232 get _readingTop — Where reading starts on screen: below the top panel and the margin, where the first line of the chapter stands.
+  - 236 get _readingEndPadding — Room after the last line of the chapter.
+  - 240 _readingBottom — Where reading ends on screen: above the bottom panel.
+  - 256 _topOffset
+  - 279 _bottomOffset
+  - 298 _reveal
+  - 387 _buildItem
+  - 421 _buildBlockContent
+  - 451 _fragmentFor
+  - 485 _imageHeight
+- 493 class **_ContinuousBlockItem** — Registers a built block so the view can find which one is on screen.
+- 509 class **_ContinuousBlockItemState**
+  - 531 _unregister
 
 ### lib/features/books/presentation/reader/book_reader_document_model.dart (348)
 - 4 enum **BookReaderBlockType**
@@ -2850,12 +2851,13 @@
 - 231 the continuous text shows a bookmark as a numbered ribbon
 - 264 a page on a phone stands between the floating panels
 - 294 the continuous text opens at its place below the top panel
-- 336 paged reader stays usable in compact landscape constraints
-- 361 next chapter appears without a pagination placeholder
-- 411 last reader page continues with the next chapter
-- 454 continuous reader advances after scrolling to chapter end
-- 493 continuous reader swipes between short chapters
-- 543 desktop keyboard crosses chapter boundaries
+- 336 turning the phone keeps the place in the continuous text
+- 385 paged reader stays usable in compact landscape constraints
+- 410 next chapter appears without a pagination placeholder
+- 460 last reader page continues with the next chapter
+- 503 continuous reader advances after scrolling to chapter end
+- 542 continuous reader swipes between short chapters
+- 592 desktop keyboard crosses chapter boundaries
 
 ### test/book_reader_search_test.dart
 - 6 search finds all case-insensitive matches across book sections

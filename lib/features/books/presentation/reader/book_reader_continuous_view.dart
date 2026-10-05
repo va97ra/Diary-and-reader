@@ -108,6 +108,10 @@ class _BookReaderContinuousViewState extends State<BookReaderContinuousView> {
   /// Part of the anchor block scrolled past; applied once it is laid out.
   double _anchorFraction = 0;
 
+  /// Width the text was last laid out for.
+  double? _laidOutWidth;
+  bool _placeKeepingScheduled = false;
+
   List<BookReaderBlock> get _blocks => widget.document.blocks;
 
   @override
@@ -129,7 +133,24 @@ class _BookReaderContinuousViewState extends State<BookReaderContinuousView> {
     if (!identical(oldWidget.document, widget.document)) {
       _anchorAt(widget.initialDisplayOffset);
       _jumpToAnchor();
+    } else if (oldWidget.edgeInsets != widget.edgeInsets) {
+      _keepPlaceAfterRelayout();
     }
+  }
+
+  /// Puts the place read back where reading starts once the text is laid
+  /// out anew. Turning the phone rewraps every line and moves the panels;
+  /// the scroll offset kept from before showed other text at the top, and
+  /// the next touch saved it as the place, a few lines back each time.
+  void _keepPlaceAfterRelayout() {
+    if (_placeKeepingScheduled) return;
+    _placeKeepingScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _placeKeepingScheduled = false;
+      if (!mounted) return;
+      setState(() => _anchorAt(widget.initialDisplayOffset));
+      _jumpToAnchor();
+    });
   }
 
   @override
@@ -317,6 +338,11 @@ class _BookReaderContinuousViewState extends State<BookReaderContinuousView> {
                   1,
                   constraints.maxWidth - widget.settings.horizontalPadding * 2,
                 );
+                if (_laidOutWidth case final width?
+                    when width != constraints.maxWidth) {
+                  _keepPlaceAfterRelayout();
+                }
+                _laidOutWidth = constraints.maxWidth;
                 return NotificationListener<UserScrollNotification>(
                   onNotification: (notification) {
                     if (notification.direction != ScrollDirection.idle) {
