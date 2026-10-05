@@ -212,11 +212,25 @@ class _BookReaderContinuousViewState extends State<BookReaderContinuousView> {
         final viewport = _viewport;
         final span = viewport == null ? null : _blockSpan(anchor, viewport);
         final controller = widget.scrollController;
-        if (span == null || !controller.hasClients) return;
+        if (viewport == null || span == null || !controller.hasClients) return;
         final position = controller.position;
+        var target =
+            position.pixels + span.top + span.height * fraction - _readingTop;
+        // Near the end of the chapter the text runs out before the bottom
+        // of the screen: its last line stays at the bottom instead of
+        // leaving the screen empty below the top panel.
+        final last = _items[_blocks.length - 1]?.context.findRenderObject();
+        if (last is RenderBox && last.attached && last.hasSize) {
+          final end = last
+              .localToGlobal(Offset(0, last.size.height), ancestor: viewport)
+              .dy;
+          target = math.min(
+            target,
+            position.pixels + end - viewport.size.height,
+          );
+        }
         position.jumpTo(
-          (position.pixels + span.top + span.height * fraction - _readingTop)
-              .clamp(position.minScrollExtent, position.maxScrollExtent),
+          target.clamp(position.minScrollExtent, position.maxScrollExtent),
         );
       })
       ..scheduleFrame();

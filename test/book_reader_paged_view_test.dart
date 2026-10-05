@@ -333,6 +333,40 @@ void main() {
     expect(paragraph.top, lessThan(bottom.top));
   });
 
+  testWidgets('a chapter read to its end opens with its last lines in view', (
+    tester,
+  ) async {
+    final controller = await _controllerWithLongChapter(
+      const BookReaderSettings(viewMode: BookReaderViewMode.continuous),
+    );
+    controller.updateReaderProgress(
+      BookReaderProgress(
+        sectionId: controller.activeSection!.id,
+        sectionProgress: 1,
+      ),
+    );
+    tester.view
+      ..physicalSize = const Size(390, 844)
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(AuthorStudioApp(controller: controller));
+    await tester.pumpAndSettle();
+    await openReaderPreview(tester, controller);
+    await tester.pumpAndSettle();
+
+    // The last paragraph ends at the bottom, above the bottom panel; the
+    // screen is not left empty with the text gone under the top panel.
+    final view = tester.getRect(
+      find.byKey(const ValueKey('reader-continuous-view')),
+    );
+    final last = tester.getRect(find.byKey(const ValueKey('reader-block-44')));
+    expect(last.bottom, closeTo(view.bottom, 1.5));
+    expect(
+      find.byKey(const ValueKey('reader-block-42')).hitTestable(),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('turning the phone keeps the place in the continuous text', (
     tester,
   ) async {

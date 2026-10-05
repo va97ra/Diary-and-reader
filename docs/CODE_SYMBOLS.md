@@ -1997,7 +1997,7 @@
 - 5 class **BookReaderContextBar**
 - 88 class **_ReaderAction**
 
-### lib/features/books/presentation/reader/book_reader_continuous_view.dart (537)
+### lib/features/books/presentation/reader/book_reader_continuous_view.dart (551)
 - 18 class **BookReaderContinuousController** — Reports and changes the reading position of a [BookReaderContinuousView] in display text offsets, independent of how much of the chapter ...
   - 22 get topOffset — Display offset of the first line read: below the top panel.
   - 25 get bottomOffset — Display offset of the last line read: above the bottom panel.
@@ -2011,20 +2011,20 @@
   - 185 _anchorAt
   - 196 _jumpToAnchor
   - 204 _scheduleAnchorCorrection — Puts the anchored place where reading starts.
-  - 225 get _viewport
-  - 232 get _readingTop — Where reading starts on screen: below the top panel and the margin, where the first line of the chapter stands.
-  - 236 get _readingEndPadding — Room after the last line of the chapter.
-  - 240 _readingBottom — Where reading ends on screen: above the bottom panel.
-  - 256 _topOffset
-  - 279 _bottomOffset
-  - 298 _reveal
-  - 387 _buildItem
-  - 421 _buildBlockContent
-  - 451 _fragmentFor
-  - 485 _imageHeight
-- 493 class **_ContinuousBlockItem** — Registers a built block so the view can find which one is on screen.
-- 509 class **_ContinuousBlockItemState**
-  - 531 _unregister
+  - 239 get _viewport
+  - 246 get _readingTop — Where reading starts on screen: below the top panel and the margin, where the first line of the chapter stands.
+  - 250 get _readingEndPadding — Room after the last line of the chapter.
+  - 254 _readingBottom — Where reading ends on screen: above the bottom panel.
+  - 270 _topOffset
+  - 293 _bottomOffset
+  - 312 _reveal
+  - 401 _buildItem
+  - 435 _buildBlockContent
+  - 465 _fragmentFor
+  - 499 _imageHeight
+- 507 class **_ContinuousBlockItem** — Registers a built block so the view can find which one is on screen.
+- 523 class **_ContinuousBlockItemState**
+  - 545 _unregister
 
 ### lib/features/books/presentation/reader/book_reader_document_model.dart (348)
 - 4 enum **BookReaderBlockType**
@@ -2851,13 +2851,14 @@
 - 231 the continuous text shows a bookmark as a numbered ribbon
 - 264 a page on a phone stands between the floating panels
 - 294 the continuous text opens at its place below the top panel
-- 336 turning the phone keeps the place in the continuous text
-- 385 paged reader stays usable in compact landscape constraints
-- 410 next chapter appears without a pagination placeholder
-- 460 last reader page continues with the next chapter
-- 503 continuous reader advances after scrolling to chapter end
-- 542 continuous reader swipes between short chapters
-- 592 desktop keyboard crosses chapter boundaries
+- 336 a chapter read to its end opens with its last lines in view
+- 370 turning the phone keeps the place in the continuous text
+- 419 paged reader stays usable in compact landscape constraints
+- 444 next chapter appears without a pagination placeholder
+- 494 last reader page continues with the next chapter
+- 537 continuous reader advances after scrolling to chapter end
+- 576 continuous reader swipes between short chapters
+- 626 desktop keyboard crosses chapter boundaries
 
 ### test/book_reader_search_test.dart
 - 6 search finds all case-insensitive matches across book sections
