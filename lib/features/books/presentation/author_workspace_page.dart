@@ -40,6 +40,7 @@ import 'package:dnevnik/features/books/presentation/widgets/book_navigator.dart'
 import 'package:dnevnik/features/books/presentation/widgets/book_properties_panel.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_rename_title_dialog.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_save_status.dart';
+import 'package:dnevnik/features/books/presentation/widgets/book_scroll_toolbar.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_section_editor.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_sheet_keyboard_dismiss.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_workspace_action.dart';
@@ -196,9 +197,9 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
     required BookEditorMetrics metrics,
   }) {
     final strings = AppStrings.of(context);
-    return SizedBox(
+    return ConstrainedBox(
       key: const ValueKey('writer-top-panel'),
-      height: 72,
+      constraints: const BoxConstraints(minHeight: 72),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(6, 5, 6, 5),
         child: Row(
@@ -211,6 +212,7 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
             ),
             Expanded(
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -270,70 +272,101 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
 
   Widget _buildCompactWriterBottom() {
     final strings = AppStrings.of(context);
-    return SizedBox(
+    BookScrollAction tool(BookWorkspaceAction action) {
+      final (icon, label) = _workspaceActionPresentation(action);
+      return BookScrollAction(
+        key: ValueKey('writer-panel-${action.name}'),
+        icon: icon,
+        label: label,
+        hint: _workspaceActionHint(action),
+        onPressed: () => _handleWorkspaceAction(action),
+      );
+    }
+
+    return BookScrollToolbar(
       key: const ValueKey('writer-context-bar'),
-      height: 64,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(6, 5, 6, 5),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _compactWriterAction(
+      closeLabel: MaterialLocalizations.of(context).closeButtonTooltip,
+      groups: [
+        BookScrollGroup(
+          id: 'pages',
+          label: strings.writerPages,
+          icon: Icons.auto_stories_outlined,
+          actions: [
+            BookScrollAction(
+              key: const ValueKey('writer-new-page-action'),
+              icon: Icons.note_add_outlined,
+              label: strings.newPage,
+              hint: strings.newPageHint,
+              onPressed: _insertPageBreak,
+            ),
+            BookScrollAction(
+              key: const ValueKey('writer-new-chapter-action'),
+              icon: Icons.post_add,
+              label: strings.newChapter,
+              onPressed: () =>
+                  widget.controller.addSection(BookSectionType.chapter),
+            ),
+            BookScrollAction(
               key: const ValueKey('writer-structure-action'),
               icon: Icons.account_tree_outlined,
               label: strings.structure,
               onPressed: _showManuscript,
             ),
-            _compactWriterAction(
+          ],
+        ),
+        BookScrollGroup(
+          id: 'text',
+          label: strings.writerText,
+          icon: Icons.text_format,
+          actions: [
+            BookScrollAction(
               key: const ValueKey('writer-formatting-action'),
               icon: Icons.text_format,
               label: strings.writerFormatting,
               onPressed: _showFormatting,
             ),
-            _compactWriterAction(
+            tool(BookWorkspaceAction.search),
+          ],
+        ),
+        BookScrollGroup(
+          id: 'insert',
+          label: strings.writerInsert,
+          icon: Icons.add_photo_alternate_outlined,
+          actions: [
+            BookScrollAction(
               key: const ValueKey('writer-picture-action'),
               icon: Icons.add_photo_alternate_outlined,
-              label: strings.picture,
+              label: strings.addPicture,
+              hint: strings.addPictureHint,
               onPressed: _showAddPicture,
-            ),
-            _compactWriterAction(
-              key: const ValueKey('writer-settings-action'),
-              icon: Icons.tune,
-              label: strings.settings,
-              onPressed: _showWriterSettings,
-            ),
-            _compactWriterAction(
-              key: const ValueKey('writer-more-menu'),
-              icon: Icons.more_horiz,
-              label: strings.more,
-              semanticLabel: strings.moreActions,
-              onPressed: _showWorkspaceTools,
             ),
           ],
         ),
-      ),
+        BookScrollGroup(
+          id: 'settings',
+          label: strings.settings,
+          icon: Icons.tune,
+          actions: [
+            BookScrollAction(
+              key: const ValueKey('writer-settings-action'),
+              icon: Icons.tune,
+              label: strings.writerSettings,
+              onPressed: _showWriterSettings,
+            ),
+          ],
+        ),
+        BookScrollGroup(
+          id: 'book',
+          label: strings.writerBook,
+          icon: Icons.menu_book_outlined,
+          actions: [
+            for (final action in BookWorkspaceAction.values)
+              if (action != BookWorkspaceAction.search) tool(action),
+          ],
+        ),
+      ],
     );
   }
-
-  Widget _compactWriterAction({
-    required Key key,
-    required IconData icon,
-    required String label,
-    required VoidCallback? onPressed,
-    String? semanticLabel,
-  }) => Expanded(
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2),
-      child: BookPanelAction(
-        key: key,
-        icon: Icon(icon),
-        label: label,
-        semanticLabel: semanticLabel,
-        onPressed: onPressed,
-        compact: true,
-      ),
-    ),
-  );
 
   Widget _buildWideWriterStart({
     required BookProject project,
@@ -441,6 +474,12 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
       key: const ValueKey('writer-right-panel'),
       padding: const EdgeInsets.fromLTRB(8, 9, 8, 9),
       children: [
+        _wideWriterAction(
+          key: const ValueKey('writer-new-page-action'),
+          icon: Icons.note_add_outlined,
+          label: strings.newPage,
+          onPressed: _insertPageBreak,
+        ),
         BookPanelSectionLabel(strings.writerFormatting),
         _wideWriterAction(
           key: const ValueKey('writer-formatting-action'),
@@ -542,60 +581,6 @@ class _AuthorWorkspacePageState extends State<AuthorWorkspacePage>
       BookWorkspaceAction.backup => strings.backupProjectHint,
       BookWorkspaceAction.restore => strings.restoreProjectBackupHint,
     };
-  }
-
-  Future<void> _showWorkspaceTools() async {
-    final strings = AppStrings.of(context);
-    Widget tile(BuildContext sheetContext, BookWorkspaceAction action) {
-      final (icon, label) = _workspaceActionPresentation(action);
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: LiteriaCompactActionTile(
-          key: ValueKey('writer-panel-${action.name}'),
-          icon: icon,
-          title: label,
-          subtitle: _workspaceActionHint(action),
-          trailing: null,
-          onTap: () => Navigator.of(sheetContext).pop(action),
-        ),
-      );
-    }
-
-    final action = await showBookLeatherBottomSheet<BookWorkspaceAction>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) => ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.82,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            BookLeatherModalHeader(
-              title: strings.moreActions,
-              onClose: () => Navigator.of(sheetContext).pop(),
-            ),
-            Flexible(
-              child: ListView(
-                shrinkWrap: true,
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-                children: [
-                  BookPanelSectionLabel(strings.bookTools),
-                  for (final action in BookWorkspaceAction.values)
-                    if (!action.keepsTextSafe) tile(sheetContext, action),
-                  BookPanelSectionLabel(strings.keepingTextSafe),
-                  for (final action in BookWorkspaceAction.values)
-                    if (action.keepsTextSafe) tile(sheetContext, action),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (action == null || !mounted) return;
-    await _handleWorkspaceAction(action);
   }
 
   void _handleEditorMetrics(String sectionId, BookEditorMetrics metrics) {

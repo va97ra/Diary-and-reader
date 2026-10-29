@@ -18,7 +18,6 @@ import 'package:dnevnik/features/books/domain/book_metadata.dart';
 import 'package:dnevnik/features/books/domain/book_project.dart';
 import 'package:dnevnik/features/books/domain/rich_document.dart';
 import 'package:dnevnik/features/books/presentation/reader/book_reader_page.dart';
-import 'package:dnevnik/features/books/presentation/widgets/book_adaptive_control_shell.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_leather_modal.dart';
 import 'package:dnevnik/features/books/presentation/widgets/book_properties_panel.dart';
 import 'package:flutter/material.dart';
@@ -39,10 +38,10 @@ void main() {
 Future<void> _openExportSheet(WidgetTester tester) async {
   final directExport = find.byKey(const ValueKey('writer-panel-export'));
   if (directExport.evaluate().isEmpty) {
-    await tester.tap(find.byKey(const ValueKey('writer-more-menu')));
+    await tester.tap(find.byKey(const ValueKey('writer-scroll-book')));
     await tester.pumpAndSettle();
   }
-  await tester.tap(find.byKey(const ValueKey('writer-panel-export')));
+  await tapWriterAction(tester, 'writer-panel-export');
   await tester.pumpAndSettle();
 }
 

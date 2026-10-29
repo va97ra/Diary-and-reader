@@ -18,7 +18,7 @@ Future<AuthorWorkspaceController> _openFormatting(WidgetTester tester) async {
   await tester.pumpWidget(AuthorStudioApp(controller: controller));
   await tester.pumpAndSettle();
   await openLastManuscript(tester, controller);
-  await tester.tap(find.byKey(const ValueKey('writer-formatting-action')));
+  await tapWriterAction(tester, 'writer-formatting-action');
   await tester.pumpAndSettle();
   return controller;
 }
@@ -155,7 +155,7 @@ void main() {
     );
     // Each paragraph takes the book's line spacing, so there is no second
     // spacing for one paragraph.
-    await tester.tap(find.byKey(const ValueKey('writer-formatting-action')));
+    await tapWriterAction(tester, 'writer-formatting-action');
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('formatting-line-height')), findsNothing);
     expect(tester.takeException(), isNull);

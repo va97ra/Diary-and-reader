@@ -160,13 +160,13 @@
 ### lib/app/literia_version.dart (3)
 - 3 const literiaVersion — The version shown to people, as `version` in pubspec.yaml has it before the build number.
 
-### lib/core/l10n/app_string_values_en.dart (554)
+### lib/core/l10n/app_string_values_en.dart (560)
 - 1 const appStringValuesEn
 
-### lib/core/l10n/app_string_values_ru.dart (555)
+### lib/core/l10n/app_string_values_ru.dart (561)
 - 1 const appStringValuesRu
 
-### lib/core/l10n/app_strings.dart (546)
+### lib/core/l10n/app_strings.dart (552)
 - 5 class **AppStrings**
   - 16 of
   - 19 _text
@@ -484,203 +484,209 @@
   - 335 get imageLarger
   - 336 get imageMoreSettings
   - 337 get imageDragHint
-  - 338 get insertPageBreak
-  - 339 get pageBreak
-  - 340 get pageBreakInserted
-  - 341 get reader
-  - 342 get tableOfContents
-  - 343 get readingSettings
-  - 344 get readerLook
-  - 345 get readerText
-  - 346 get readerControls
-  - 347 get readerSettingsHint
-  - 348 get weightLight
-  - 349 get weightRegular
-  - 350 get weightMedium
-  - 351 get weightSemiBold
-  - 352 get weightBold
-  - 353 get extraWide
-  - 354 get widthNarrow
-  - 355 get widthMedium
-  - 356 get widthWide
-  - 357 get widthFull
-  - 358 get speechSlow
-  - 359 get speechNormal
-  - 360 get speechFast
-  - 361 get speechFastest
-  - 362 get pitchLow
-  - 363 get pitchNormal
-  - 364 get pitchHigh
-  - 365 get focusReading
-  - 366 get exitFocusReading
-  - 367 get readerTheme
-  - 368 get lightTheme
-  - 369 get sepiaTheme
-  - 370 get darkTheme
-  - 371 get readerFont
-  - 372 get readerFontSize
-  - 373 get fontWeight
-  - 374 get justifyText
-  - 375 get hyphenateWords
-  - 376 get centerTapControls
-  - 377 get swipeChapterNavigation
-  - 378 get textToSpeech
-  - 379 get voiceSettings
-  - 380 get speechRate
-  - 381 get speechPitch
-  - 382 get speechShort
-  - 383 get startReadingAloud
-  - 384 get stopReadingAloud
-  - 385 get chooseSpeechStart
-  - 386 get cancelSpeechStart
-  - 387 get pauseReadingAloud
-  - 388 get resumeReadingAloud
-  - 389 get resumeShort
-  - 390 get slowerSpeech
-  - 391 get fasterSpeech
-  - 392 get speechError
-  - 393 get textWidth
-  - 394 get previousSection
-  - 395 get nextSection
-  - 396 get previousShort
-  - 397 get nextShort
-  - 398 get readingProgress
-  - 399 get contentsShort
-  - 400 get readerNavigation
-  - 401 get bookmarks
-  - 402 get notes
-  - 403 get noBookmarks
-  - 404 get noNotes
-  - 405 get bookmark
-  - 406 get addBookmark
-  - 407 get removeBookmark
-  - 408 get deleteBookmark
-  - 409 get addNoteHere
-  - 410 get newNote
-  - 411 get editNote
-  - 412 get deleteNote
-  - 413 get noteText
-  - 414 get save
-  - 415 get searchShort
-  - 416 get searchInBook
-  - 417 get clearSearch
-  - 418 get searchHint
-  - 419 get nothingFound
-  - 420 get findAndReplace
-  - 421 get manuscriptSearchHint
-  - 422 get replaceWith
-  - 423 get replaceAll
-  - 424 get caseSensitive
-  - 425 matchesFound
-  - 426 replacementsMade
-  - 427 get readerViewMode
-  - 428 get continuousReading
-  - 429 get singlePageReading
-  - 430 get spreadReading
-  - 431 get spreadPhoneHint
-  - 432 get horizontalMargins
-  - 433 get verticalMargins
-  - 434 get previousReaderPage
-  - 435 get nextReaderPage
-  - 436 get highlights
-  - 437 get quotes
-  - 438 get noHighlights
-  - 439 get highlightActions
-  - 440 get yellowHighlight
-  - 441 get greenHighlight
-  - 442 get blueHighlight
-  - 443 get pinkHighlight
-  - 444 get saveQuote
-  - 445 get addNoteToSelection
-  - 446 get copySelection
-  - 447 get dictionary
-  - 448 get translate
-  - 449 get webSearch
-  - 450 get externalActionFailed
-  - 451 get closeSelectionActions
-  - 452 get deleteHighlight
-  - 453 get deleteQuote
-  - 454 get exportAnnotations
-  - 455 get exportMarkdown
-  - 456 get exportMarkdownHint
-  - 457 get exportJson
-  - 458 get exportJsonHint
-  - 459 get annotationsExported
-  - 460 get annotationsExportFailed
-  - 461 get quoteSaved
-  - 462 get highlightSaved
-  - 463 get selectionCopied
-  - 464 get exportBook
-  - 465 get exportEpub
-  - 466 get exportEpubHint
-  - 467 get exportFb2
-  - 468 get exportFb2Hint
-  - 469 get exportFb2Zip
-  - 470 get exportFb2ZipHint
-  - 471 get exportPdf
-  - 472 get exportPdfHint
-  - 473 get exportDocx
-  - 474 get exportDocxHint
-  - 475 get exportHtml
-  - 476 get exportHtmlHint
-  - 477 get exportTxt
-  - 478 get exportTxtHint
-  - 479 get readerExportFormats
-  - 480 get printExportFormats
-  - 481 get textExportFormats
-  - 482 get bookExported
-  - 483 get bookExportFailed
-  - 484 get pdfPreview
-  - 485 get savePdf
-  - 486 get preparingPdf
-  - 487 get pdfPreviewFailed
-  - 488 get pdfSaved
-  - 489 get retry
-  - 490 get projectData
-  - 491 get versionHistory
-  - 492 get createVersion
-  - 493 get versionLabel
-  - 494 get versionLabelHint
-  - 495 get unnamedVersion
-  - 496 get noVersions
-  - 497 get noVersionsHint
-  - 498 get restoreVersion
-  - 499 get restoreVersionQuestion
-  - 500 get versionCreated
-  - 501 get versionRestored
-  - 502 get versionOperationFailed
-  - 503 get deleteVersion
-  - 504 get deleteVersionQuestion
-  - 505 get safetyVersionLabel
-  - 506 get backupProject
-  - 507 get restoreProjectBackup
-  - 508 get projectBackupSaved
-  - 509 get projectBackupFailed
-  - 510 get projectRestored
-  - 511 get projectRestoreFailed
-  - 512 get confirmProjectRestore
-  - 513 get webVersionLimit
-  - 516 readerPageOf — A null [count] means the rest of the chapter is still being laid out.
-  - 518 sectionOf
-  - 520 sectionTitle
-  - 522 get restoreDeletedText
-  - 523 get textRestored
-  - 524 get deletedPicture
-  - 525 get verse
-  - 526 get textColor
-  - 527 get boldText
-  - 528 get italicText
-  - 529 get underlineText
-  - 530 get strikeText
-  - 531 get clearFormatting
-  - 532 get selectionBarHint
-  - 533 get noTextColor
-  - 534 textColorName
-  - 536 get trayPanel
-  - 537 get trayWindow
-  - 538 get trayQuit
-  - 539 get expandToWindow
-  - 540 get hideToTray
+  - 338 get writerPages
+  - 339 get writerText
+  - 340 get writerInsert
+  - 341 get writerBook
+  - 342 get newPage
+  - 343 get newPageHint
+  - 344 get insertPageBreak
+  - 345 get pageBreak
+  - 346 get pageBreakInserted
+  - 347 get reader
+  - 348 get tableOfContents
+  - 349 get readingSettings
+  - 350 get readerLook
+  - 351 get readerText
+  - 352 get readerControls
+  - 353 get readerSettingsHint
+  - 354 get weightLight
+  - 355 get weightRegular
+  - 356 get weightMedium
+  - 357 get weightSemiBold
+  - 358 get weightBold
+  - 359 get extraWide
+  - 360 get widthNarrow
+  - 361 get widthMedium
+  - 362 get widthWide
+  - 363 get widthFull
+  - 364 get speechSlow
+  - 365 get speechNormal
+  - 366 get speechFast
+  - 367 get speechFastest
+  - 368 get pitchLow
+  - 369 get pitchNormal
+  - 370 get pitchHigh
+  - 371 get focusReading
+  - 372 get exitFocusReading
+  - 373 get readerTheme
+  - 374 get lightTheme
+  - 375 get sepiaTheme
+  - 376 get darkTheme
+  - 377 get readerFont
+  - 378 get readerFontSize
+  - 379 get fontWeight
+  - 380 get justifyText
+  - 381 get hyphenateWords
+  - 382 get centerTapControls
+  - 383 get swipeChapterNavigation
+  - 384 get textToSpeech
+  - 385 get voiceSettings
+  - 386 get speechRate
+  - 387 get speechPitch
+  - 388 get speechShort
+  - 389 get startReadingAloud
+  - 390 get stopReadingAloud
+  - 391 get chooseSpeechStart
+  - 392 get cancelSpeechStart
+  - 393 get pauseReadingAloud
+  - 394 get resumeReadingAloud
+  - 395 get resumeShort
+  - 396 get slowerSpeech
+  - 397 get fasterSpeech
+  - 398 get speechError
+  - 399 get textWidth
+  - 400 get previousSection
+  - 401 get nextSection
+  - 402 get previousShort
+  - 403 get nextShort
+  - 404 get readingProgress
+  - 405 get contentsShort
+  - 406 get readerNavigation
+  - 407 get bookmarks
+  - 408 get notes
+  - 409 get noBookmarks
+  - 410 get noNotes
+  - 411 get bookmark
+  - 412 get addBookmark
+  - 413 get removeBookmark
+  - 414 get deleteBookmark
+  - 415 get addNoteHere
+  - 416 get newNote
+  - 417 get editNote
+  - 418 get deleteNote
+  - 419 get noteText
+  - 420 get save
+  - 421 get searchShort
+  - 422 get searchInBook
+  - 423 get clearSearch
+  - 424 get searchHint
+  - 425 get nothingFound
+  - 426 get findAndReplace
+  - 427 get manuscriptSearchHint
+  - 428 get replaceWith
+  - 429 get replaceAll
+  - 430 get caseSensitive
+  - 431 matchesFound
+  - 432 replacementsMade
+  - 433 get readerViewMode
+  - 434 get continuousReading
+  - 435 get singlePageReading
+  - 436 get spreadReading
+  - 437 get spreadPhoneHint
+  - 438 get horizontalMargins
+  - 439 get verticalMargins
+  - 440 get previousReaderPage
+  - 441 get nextReaderPage
+  - 442 get highlights
+  - 443 get quotes
+  - 444 get noHighlights
+  - 445 get highlightActions
+  - 446 get yellowHighlight
+  - 447 get greenHighlight
+  - 448 get blueHighlight
+  - 449 get pinkHighlight
+  - 450 get saveQuote
+  - 451 get addNoteToSelection
+  - 452 get copySelection
+  - 453 get dictionary
+  - 454 get translate
+  - 455 get webSearch
+  - 456 get externalActionFailed
+  - 457 get closeSelectionActions
+  - 458 get deleteHighlight
+  - 459 get deleteQuote
+  - 460 get exportAnnotations
+  - 461 get exportMarkdown
+  - 462 get exportMarkdownHint
+  - 463 get exportJson
+  - 464 get exportJsonHint
+  - 465 get annotationsExported
+  - 466 get annotationsExportFailed
+  - 467 get quoteSaved
+  - 468 get highlightSaved
+  - 469 get selectionCopied
+  - 470 get exportBook
+  - 471 get exportEpub
+  - 472 get exportEpubHint
+  - 473 get exportFb2
+  - 474 get exportFb2Hint
+  - 475 get exportFb2Zip
+  - 476 get exportFb2ZipHint
+  - 477 get exportPdf
+  - 478 get exportPdfHint
+  - 479 get exportDocx
+  - 480 get exportDocxHint
+  - 481 get exportHtml
+  - 482 get exportHtmlHint
+  - 483 get exportTxt
+  - 484 get exportTxtHint
+  - 485 get readerExportFormats
+  - 486 get printExportFormats
+  - 487 get textExportFormats
+  - 488 get bookExported
+  - 489 get bookExportFailed
+  - 490 get pdfPreview
+  - 491 get savePdf
+  - 492 get preparingPdf
+  - 493 get pdfPreviewFailed
+  - 494 get pdfSaved
+  - 495 get retry
+  - 496 get projectData
+  - 497 get versionHistory
+  - 498 get createVersion
+  - 499 get versionLabel
+  - 500 get versionLabelHint
+  - 501 get unnamedVersion
+  - 502 get noVersions
+  - 503 get noVersionsHint
+  - 504 get restoreVersion
+  - 505 get restoreVersionQuestion
+  - 506 get versionCreated
+  - 507 get versionRestored
+  - 508 get versionOperationFailed
+  - 509 get deleteVersion
+  - 510 get deleteVersionQuestion
+  - 511 get safetyVersionLabel
+  - 512 get backupProject
+  - 513 get restoreProjectBackup
+  - 514 get projectBackupSaved
+  - 515 get projectBackupFailed
+  - 516 get projectRestored
+  - 517 get projectRestoreFailed
+  - 518 get confirmProjectRestore
+  - 519 get webVersionLimit
+  - 522 readerPageOf — A null [count] means the rest of the chapter is still being laid out.
+  - 524 sectionOf
+  - 526 sectionTitle
+  - 528 get restoreDeletedText
+  - 529 get textRestored
+  - 530 get deletedPicture
+  - 531 get verse
+  - 532 get textColor
+  - 533 get boldText
+  - 534 get italicText
+  - 535 get underlineText
+  - 536 get strikeText
+  - 537 get clearFormatting
+  - 538 get selectionBarHint
+  - 539 get noTextColor
+  - 540 textColorName
+  - 542 get trayPanel
+  - 543 get trayWindow
+  - 544 get trayQuit
+  - 545 get expandToWindow
+  - 546 get hideToTray
 
 ### lib/core/theme/app_theme.dart (137)
 - 3 class **AppTheme**
@@ -1828,62 +1834,60 @@
   - 42 _pageFromJson
 - 52 class **LegacyDiarySnapshot**
 
-### lib/features/books/presentation/author_workspace_page.dart (1424)
-- 51 class **AuthorWorkspacePage**
-- 73 class **_AuthorWorkspacePageState**
-  - 94 didChangeAppLifecycleState
-  - 193 _buildCompactWriterTop
-  - 271 _buildCompactWriterBottom
-  - 318 _compactWriterAction
-  - 338 _buildWideWriterStart
-  - 438 _buildWideWriterEnd
-  - 470 _wideWriterAction
-  - 487 _workspaceActionButton
-  - 533 _workspaceActionHint — What a tool does, in a few words for someone new to the app.
-  - 547 _showWorkspaceTools
-  - 601 _handleEditorMetrics
-  - 607 _handleWorkspaceAction
-  - 628 _handleContentChanged
-  - 643 _projectWordCount
-  - 679 _showWritingStatistics
-  - 694 _toggleFocusMode
-  - 704 get _usesPagedLayout — Whether the editor shows sheets: always on a wide screen, and on a phone in the A4 preview.
-  - 707 _toggleA4Preview
-  - 722 _renameBook
-  - 747 _renameSection
-  - 773 _showManuscriptSearch
-  - 806 _openSearchMatch
-  - 813 _handleEditorControllerReady
-  - 820 _revealSearchMatch
-  - 831 _showManuscript
-  - 847 _showWriterSettings
-  - 882 _showFormatting
-  - 911 get _picksFromGallery
-  - 916 _showAddPicture
-  - 969 _insertImage
-  - 977 _pasteClipboardImage
-  - 983 _pasteClipboardImageInto
-  - 1007 _insertImageFile
-  - 1022 _insertImageAsset
-  - 1038 _pickImageAsset
-  - 1050 _chooseCover
-  - 1059 _showImageSettings
-  - 1116 _updateImageInProject
-  - 1134 _deleteImageFromProject
-  - 1148 _moveImageToCursor
-  - 1174 _editActiveSection
-  - 1195 _resolveImageOffset
-  - 1222 _insertPageBreak
-  - 1240 _showExportSheet
-  - 1274 _showVersionHistory
-  - 1286 _showSectionTrash
-  - 1298 _backupProject
-  - 1314 _restoreProjectBackup
-  - 1353 _exportArtifact
-  - 1372 _openPdfPreview
-  - 1386 _showMessage
-  - 1399 _openReader
-- 1424 enum **_PictureSource**
+### lib/features/books/presentation/author_workspace_page.dart (1409)
+- 52 class **AuthorWorkspacePage**
+- 74 class **_AuthorWorkspacePageState**
+  - 95 didChangeAppLifecycleState
+  - 194 _buildCompactWriterTop
+  - 273 _buildCompactWriterBottom
+  - 371 _buildWideWriterStart
+  - 471 _buildWideWriterEnd
+  - 509 _wideWriterAction
+  - 526 _workspaceActionButton
+  - 572 _workspaceActionHint — What a tool does, in a few words for someone new to the app.
+  - 586 _handleEditorMetrics
+  - 592 _handleWorkspaceAction
+  - 613 _handleContentChanged
+  - 628 _projectWordCount
+  - 664 _showWritingStatistics
+  - 679 _toggleFocusMode
+  - 689 get _usesPagedLayout — Whether the editor shows sheets: always on a wide screen, and on a phone in the A4 preview.
+  - 692 _toggleA4Preview
+  - 707 _renameBook
+  - 732 _renameSection
+  - 758 _showManuscriptSearch
+  - 791 _openSearchMatch
+  - 798 _handleEditorControllerReady
+  - 805 _revealSearchMatch
+  - 816 _showManuscript
+  - 832 _showWriterSettings
+  - 867 _showFormatting
+  - 896 get _picksFromGallery
+  - 901 _showAddPicture
+  - 954 _insertImage
+  - 962 _pasteClipboardImage
+  - 968 _pasteClipboardImageInto
+  - 992 _insertImageFile
+  - 1007 _insertImageAsset
+  - 1023 _pickImageAsset
+  - 1035 _chooseCover
+  - 1044 _showImageSettings
+  - 1101 _updateImageInProject
+  - 1119 _deleteImageFromProject
+  - 1133 _moveImageToCursor
+  - 1159 _editActiveSection
+  - 1180 _resolveImageOffset
+  - 1207 _insertPageBreak
+  - 1225 _showExportSheet
+  - 1259 _showVersionHistory
+  - 1271 _showSectionTrash
+  - 1283 _backupProject
+  - 1299 _restoreProjectBackup
+  - 1338 _exportArtifact
+  - 1357 _openPdfPreview
+  - 1371 _showMessage
+  - 1384 _openReader
+- 1409 enum **_PictureSource**
 
 ### lib/features/books/presentation/book_export_sheet.dart (137)
 - 6 class **BookExportSheet**
@@ -2306,31 +2310,31 @@
   - 208 _fontWeight
   - 216 _color
 
-### lib/features/books/presentation/widgets/book_adaptive_control_shell.dart (820)
+### lib/features/books/presentation/widgets/book_adaptive_control_shell.dart (826)
 - 6 const bookControlBreakpoint
 - 8 class **BookLeatherColors**
 - 21 fn bookStatusBarStyle — Status bar icons that stay readable over a [background] of this brightness.
 - 31 class **BookAdaptiveControlShell**
   - 67 _buildInline
-  - 119 _buildOverlay
-- 228 class **_RevealedPanel** — Slides a panel in and out and leaves the tree once it is hidden, so a hidden panel neither takes taps nor reaches screen readers.
-- 245 class **_RevealedPanelState**
-- 286 class **BookLeatherPanel**
-- 353 class **LiteriaLeatherAppBar**
-  - 369 get preferredSize
-- 387 class **LiteriaParchmentBackground**
-- 411 class **LiteriaLeatherCard**
-- 452 class **LiteriaCompactActionTile**
-- 542 class **BookPanelAction**
-  - 560 _buildLabel
-- 631 class **BookPanelIconAction**
-- 652 class **BookPanelSectionLabel**
-- 676 class **BookWholeWordsText** — A short label that never breaks a word in the middle, as «Оформлен-ие»: when its longest word is wider than the room, the whole label get...
-  - 707 _fitted
-- 733 class **BookPanelTitleAction**
-- 796 class **_LeatherStitchPainter**
-  - 800 paint
-  - 819 shouldRepaint
+  - 125 _buildOverlay
+- 234 class **_RevealedPanel** — Slides a panel in and out and leaves the tree once it is hidden, so a hidden panel neither takes taps nor reaches screen readers.
+- 251 class **_RevealedPanelState**
+- 292 class **BookLeatherPanel**
+- 359 class **LiteriaLeatherAppBar**
+  - 375 get preferredSize
+- 393 class **LiteriaParchmentBackground**
+- 417 class **LiteriaLeatherCard**
+- 458 class **LiteriaCompactActionTile**
+- 548 class **BookPanelAction**
+  - 566 _buildLabel
+- 637 class **BookPanelIconAction**
+- 658 class **BookPanelSectionLabel**
+- 682 class **BookWholeWordsText** — A short label that never breaks a word in the middle, as «Оформлен-ие»: when its longest word is wider than the room, the whole label get...
+  - 713 _fitted
+- 739 class **BookPanelTitleAction**
+- 802 class **_LeatherStitchPainter**
+  - 806 paint
+  - 825 shouldRepaint
 
 ### lib/features/books/presentation/widgets/book_cover_view.dart (73)
 - 5 class **BookCoverView**
@@ -2515,6 +2519,18 @@
 ### lib/features/books/presentation/widgets/book_save_status.dart (82)
 - 5 class **BookSaveStatus**
 
+### lib/features/books/presentation/widgets/book_scroll_toolbar.dart (325)
+- 6 class **BookScrollAction** — A writer tool on the unfurled parchment, with an optional explanation.
+- 23 class **BookScrollGroup** — Related tools sharing one small rolled-up handle.
+- 40 class **BookScrollToolbar** — Unfurls a handle-width icon strip above the text using a linked overlay.
+- 54 class **_BookScrollToolbarState**
+  - 61 _close
+  - 69 _toggle
+  - 182 _buildStrip
+- 245 const _ink
+- 247 class **_ScrollHandle**
+- 310 class **_ScrollRod** — The lit cylindrical edge makes the parchment read as a roll, not a card.
+
 ### lib/features/books/presentation/widgets/book_section_editor.dart (748)
 - 23 class **BookSectionEditor**
 - 69 class **BookSectionEditorState**
@@ -2592,8 +2608,8 @@
 - 4 shows manuscript and properties on desktop
 - 63 shows chapter title only in explicit A4 preview
 - 110 shows compact bottom navigation on mobile
-- 314 groups writer formatting into a compact mobile grid
-- 374 groups manuscript settings into compact mobile cards
+- 288 groups writer formatting into a compact mobile grid
+- 348 groups manuscript settings into compact mobile cards
 
 ### test/author_workspace_adaptive_workflow_scenarios.dart
 - 4 renames a manuscript by tapping its title
@@ -2904,6 +2920,10 @@
 ### test/book_reading_progress_test.dart
 - 8 weights reading progress by readable section length
 - 46 falls back to section order when every section is empty
+
+### test/book_scroll_toolbar_test.dart
+- 31 switching scrolls and Back keep the manuscript open
+- 113 new page inserts at the cursor and preserves surrounding text
 
 ### test/book_selection_formatting_test.dart
 - 69 formatting appears right below the selected words

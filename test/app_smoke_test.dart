@@ -52,7 +52,7 @@ void main() {
       findsNothing,
     );
 
-    await tester.tap(find.byKey(const ValueKey('writer-panel-preview')));
+    await tapWriterAction(tester, 'writer-panel-preview');
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('reader-context-bar')), findsNothing);

@@ -20,9 +20,9 @@ void main() {
     await tester.pumpAndSettle();
     await openLastManuscript(tester, controller);
 
-    await tester.tap(find.byKey(const ValueKey('writer-more-menu')));
+    await tester.tap(find.byKey(const ValueKey('writer-scroll-book')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Статистика писателя'));
+    await tapWriterAction(tester, 'writer-panel-statistics');
     await tester.pumpAndSettle();
 
     expect(
@@ -62,7 +62,7 @@ void main() {
     await tester.pumpWidget(AuthorStudioApp(controller: controller));
     await tester.pumpAndSettle();
     await openLastManuscript(tester, controller);
-    await tester.tap(find.byKey(const ValueKey('writer-panel-trash')));
+    await tapWriterAction(tester, 'writer-panel-trash');
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('trash-sheet')), findsOneWidget);

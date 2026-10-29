@@ -54,7 +54,7 @@ void registerAdaptiveWorkflowScenarios() {
     expect(controller.activeSection!.title, 'Встреча');
 
     final sectionCount = controller.activeProject!.sections.length;
-    await tester.tap(find.byKey(const ValueKey('writer-structure-action')));
+    await tapWriterAction(tester, 'writer-structure-action');
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('navigator-new-chapter')), findsOneWidget);
     expect(find.byKey(const ValueKey('navigator-close')), findsOneWidget);
@@ -62,7 +62,7 @@ void registerAdaptiveWorkflowScenarios() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('navigator-new-chapter')), findsNothing);
 
-    await tester.tap(find.byKey(const ValueKey('writer-structure-action')));
+    await tapWriterAction(tester, 'writer-structure-action');
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('navigator-new-chapter')));
     await tester.pumpAndSettle();
@@ -89,9 +89,9 @@ void registerAdaptiveWorkflowScenarios() {
     await tester.pumpWidget(AuthorStudioApp(controller: controller));
     await tester.pumpAndSettle();
     await openLastManuscript(tester, controller);
-    await tester.tap(find.byKey(const ValueKey('writer-more-menu')));
+    await tester.tap(find.byKey(const ValueKey('writer-scroll-text')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Поиск и замена в рукописи'));
+    await tapWriterAction(tester, 'writer-panel-search');
     await tester.pumpAndSettle();
 
     await tester.enterText(
@@ -146,7 +146,7 @@ void registerAdaptiveWorkflowScenarios() {
       TextSelection.collapsed(offset: firstParagraphEnd),
       ChangeSource.local,
     );
-    await tester.tap(find.byKey(const ValueKey('writer-formatting-action')));
+    await tapWriterAction(tester, 'writer-formatting-action');
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     await tester.tap(find.byKey(const ValueKey('insert-book-image-button')));
@@ -306,7 +306,7 @@ void registerAdaptiveWorkflowScenarios() {
     );
 
     for (var index = 0; index < 2; index++) {
-      await tester.tap(find.byKey(const ValueKey('writer-formatting-action')));
+      await tapWriterAction(tester, 'writer-formatting-action');
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('insert-book-image-button')));
       await tester.pumpAndSettle();
@@ -355,7 +355,7 @@ void registerAdaptiveWorkflowScenarios() {
     );
     await tester.pumpAndSettle();
     await openLastManuscript(tester, controller);
-    await tester.tap(find.byKey(const ValueKey('writer-settings-action')));
+    await tapWriterAction(tester, 'writer-settings-action');
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('choose-book-cover')),
@@ -397,7 +397,7 @@ void registerAdaptiveWorkflowScenarios() {
       const TextSelection(baseOffset: 0, extentOffset: 5),
       ChangeSource.local,
     );
-    await tester.tap(find.byKey(const ValueKey('writer-formatting-action')));
+    await tapWriterAction(tester, 'writer-formatting-action');
     await tester.pumpAndSettle();
     await tester.tap(
       find.byKey(const ValueKey('insert-book-page-break-button')),
@@ -626,7 +626,7 @@ void registerAdaptiveWorkflowScenarios() {
     await tester.pumpAndSettle();
     await openLastManuscript(tester, controller);
 
-    await tester.tap(find.byKey(const ValueKey('writer-panel-history')));
+    await tapWriterAction(tester, 'writer-panel-history');
     await tester.pumpAndSettle();
     expect(find.textContaining('Снимков пока нет'), findsOneWidget);
 
@@ -660,7 +660,7 @@ void registerAdaptiveWorkflowScenarios() {
     await tester.pumpAndSettle();
     await openLastManuscript(tester, controller);
 
-    await tester.tap(find.byKey(const ValueKey('writer-panel-backup')));
+    await tapWriterAction(tester, 'writer-panel-backup');
     await tester.pumpAndSettle();
     expect(backupGateway.savedArchive, isNotNull);
     expect(
@@ -674,7 +674,7 @@ void registerAdaptiveWorkflowScenarios() {
       metadata: const BookMetadata(title: 'Восстановленная книга'),
     );
     backupGateway.archiveToOpen = BookProjectArchiveCodec.encode(imported);
-    await tester.tap(find.byKey(const ValueKey('writer-panel-restore')));
+    await tapWriterAction(tester, 'writer-panel-restore');
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('confirm-project-restore')));
     await tester.pumpAndSettle();
