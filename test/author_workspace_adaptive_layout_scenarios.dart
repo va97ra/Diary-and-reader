@@ -40,7 +40,7 @@ void registerAdaptiveLayoutScenarios() {
     final editor = tester.widget<QuillEditor>(find.byType(QuillEditor));
     expect(editor.config.textSelectionThemeData?.cursorColor, AppTheme.ink);
 
-    await tester.tap(find.byKey(const ValueKey('writer-settings-action')));
+    await tapWriterAction(tester, 'writer-settings-action');
     await tester.pumpAndSettle();
     expect(find.text('Настройки рукописи'), findsOneWidget);
     expect(find.textContaining('A4 210×297 мм'), findsOneWidget);
@@ -76,7 +76,7 @@ void registerAdaptiveLayoutScenarios() {
       find.byKey(const ValueKey('writer-page-chapter-title')),
       findsNothing,
     );
-    await tester.tap(find.byKey(const ValueKey('writer-settings-action')));
+    await tapWriterAction(tester, 'writer-settings-action');
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('writer-a4-preview-action')));
     await pumpUntilFound(
@@ -87,7 +87,7 @@ void registerAdaptiveLayoutScenarios() {
       find.byKey(const ValueKey('writer-page-chapter-title')),
       findsOneWidget,
     );
-    await tester.tap(find.byKey(const ValueKey('writer-settings-action')));
+    await tapWriterAction(tester, 'writer-settings-action');
     await tester.pumpAndSettle();
     final titleSetting = find.byKey(
       ValueKey('${controller.activeProject!.id}-show-chapter-titles'),
@@ -122,8 +122,8 @@ void registerAdaptiveLayoutScenarios() {
     await tester.pumpAndSettle();
     await openLastManuscript(tester, controller);
     expect(find.byKey(const ValueKey('writer-context-bar')), findsOneWidget);
-    expect(find.text('Оформление'), findsOneWidget);
-    expect(find.text('Ещё'), findsOneWidget);
+    expect(find.text('Текст'), findsOneWidget);
+    expect(find.text('Книга'), findsOneWidget);
     expect(find.text('Другие действия'), findsNothing);
     expect(find.byKey(const ValueKey('writer-undo-action')), findsNothing);
     expect(find.byKey(const ValueKey('writer-redo-action')), findsNothing);
@@ -136,30 +136,20 @@ void registerAdaptiveLayoutScenarios() {
       findsOneWidget,
     );
     final compactActions = [
-      find.byKey(const ValueKey('writer-structure-action')),
-      find.byKey(const ValueKey('writer-formatting-action')),
-      find.byKey(const ValueKey('writer-picture-action')),
-      find.byKey(const ValueKey('writer-settings-action')),
-      find.byKey(const ValueKey('writer-more-menu')),
+      for (final id in ['pages', 'text', 'insert', 'settings', 'book'])
+        find.byKey(ValueKey('writer-scroll-$id')),
     ];
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey('writer-context-bar')),
-        matching: find.byType(BookPanelAction),
-      ),
-      findsNWidgets(compactActions.length),
-    );
-    for (var index = 1; index < compactActions.length; index++) {
-      expect(
-        tester.getCenter(compactActions[index - 1]).dx,
-        lessThan(tester.getCenter(compactActions[index]).dx),
-      );
+    for (var index = 0; index < compactActions.length; index++) {
+      final size = tester.getSize(compactActions[index]);
+      expect(size.width, greaterThanOrEqualTo(48));
+      expect(size.height, greaterThanOrEqualTo(48));
+      if (index > 0) {
+        expect(
+          tester.getCenter(compactActions[index - 1]).dx,
+          lessThan(tester.getCenter(compactActions[index]).dx),
+        );
+      }
     }
-    final moreButtonSize = tester.getSize(
-      find.byKey(const ValueKey('writer-more-menu')),
-    );
-    expect(moreButtonSize.width, greaterThanOrEqualTo(48));
-    expect(moreButtonSize.height, greaterThanOrEqualTo(48));
     expect(find.textContaining('Лист A4 1 из 1'), findsOneWidget);
     expect(find.byKey(const ValueKey('book-editor-status-bar')), findsNothing);
     final headerMetrics = tester.widget<Text>(
@@ -204,7 +194,7 @@ void registerAdaptiveLayoutScenarios() {
       findsNothing,
     );
 
-    await tester.tap(find.byKey(const ValueKey('writer-structure-action')));
+    await tapWriterAction(tester, 'writer-structure-action');
     await tester.pumpAndSettle();
     final structureSurface = tester.getRect(
       find.byType(BookLeatherModalSurface),
@@ -214,40 +204,24 @@ void registerAdaptiveLayoutScenarios() {
     await tester.tap(find.byKey(const ValueKey('navigator-close')));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('writer-more-menu')));
+    await tester.tap(find.byKey(const ValueKey('writer-scroll-book')));
     await tester.pumpAndSettle();
-    expect(find.byType(BookLeatherModalSurface), findsOneWidget);
-    final toolKeys = [
-      const ValueKey('writer-panel-search'),
-      const ValueKey('writer-panel-statistics'),
-      const ValueKey('writer-panel-preview'),
-      const ValueKey('writer-panel-export'),
-      const ValueKey('writer-panel-history'),
-      const ValueKey('writer-panel-trash'),
-      const ValueKey('writer-panel-backup'),
-      const ValueKey('writer-panel-restore'),
-    ];
-    final toolRects = [
-      for (final key in toolKeys) tester.getRect(find.byKey(key)),
-    ];
-    for (var index = 1; index < toolRects.length; index++) {
-      expect(toolRects[index].left, toolRects.first.left);
-      expect(toolRects[index].top, greaterThan(toolRects[index - 1].bottom));
-    }
-    // The book's tools and those keeping the text safe are two groups.
-    expect(find.text('КНИГА'), findsOneWidget);
-    expect(find.text('СОХРАННОСТЬ ТЕКСТА'), findsOneWidget);
     expect(
-      toolRects[4].top - toolRects[3].bottom,
-      greaterThan(toolRects[1].top - toolRects[0].bottom),
-    );
-    expect(
-      find.text('Файл со всей книгой, чтобы не потерять её'),
+      find.byKey(const ValueKey('writer-scroll-strip-book')),
       findsOneWidget,
     );
-    await tester.ensureVisible(find.byKey(toolKeys.last));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.close).last);
+    expect(find.byType(BookLeatherModalSurface), findsNothing);
+    expect(find.byKey(const ValueKey('writer-panel-preview')), findsOneWidget);
+    final restore = find.byKey(const ValueKey('writer-panel-restore'));
+    await tester.scrollUntilVisible(
+      restore,
+      100,
+      scrollable: find.descendant(
+        of: find.byKey(const ValueKey('writer-scroll-actions-book')),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    await tester.tap(find.byKey(const ValueKey('writer-scroll-close')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('writer-hide-panels-button')));
@@ -263,7 +237,7 @@ void registerAdaptiveLayoutScenarios() {
 
     await tester.tap(find.byKey(const ValueKey('editor-exit-focus-mode')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('writer-settings-action')));
+    await tapWriterAction(tester, 'writer-settings-action');
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('writer-a4-preview-action')));
     await pumpUntilFound(tester, find.byKey(const ValueKey('book-page-1')));
@@ -284,7 +258,7 @@ void registerAdaptiveLayoutScenarios() {
     expect(find.byKey(const ValueKey('mobile-writing-editor')), findsOneWidget);
     expect(find.byKey(const ValueKey('book-page-1')), findsNothing);
 
-    await tester.tap(find.byKey(const ValueKey('writer-settings-action')));
+    await tapWriterAction(tester, 'writer-settings-action');
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('writer-a4-preview-action')));
     await pumpUntilFound(tester, find.byKey(const ValueKey('book-page-1')));
@@ -323,7 +297,7 @@ void registerAdaptiveLayoutScenarios() {
     await tester.pumpWidget(AuthorStudioApp(controller: controller));
     await tester.pumpAndSettle();
     await openLastManuscript(tester, controller);
-    await tester.tap(find.byKey(const ValueKey('writer-formatting-action')));
+    await tapWriterAction(tester, 'writer-formatting-action');
     await tester.pumpAndSettle();
 
     final insertSection = find.byKey(
@@ -385,7 +359,7 @@ void registerAdaptiveLayoutScenarios() {
     await tester.pumpWidget(AuthorStudioApp(controller: controller));
     await tester.pumpAndSettle();
     await openLastManuscript(tester, controller);
-    await tester.tap(find.byKey(const ValueKey('writer-settings-action')));
+    await tapWriterAction(tester, 'writer-settings-action');
     await tester.pumpAndSettle();
 
     final propertiesSection = find.byKey(
@@ -423,7 +397,7 @@ void registerAdaptiveLayoutScenarios() {
     );
     // The sheet covered the page, so it hides to show the new orientation.
     expect(find.byType(BookPropertiesPanel), findsNothing);
-    await tester.tap(find.byKey(const ValueKey('writer-settings-action')));
+    await tapWriterAction(tester, 'writer-settings-action');
     await tester.pumpAndSettle();
     await tester.ensureVisible(pageLayoutSection);
     await tester.pumpAndSettle();

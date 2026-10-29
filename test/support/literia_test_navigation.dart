@@ -45,12 +45,7 @@ Future<void> openReaderPreview(
   AuthorWorkspaceController controller,
 ) async {
   await openLastManuscript(tester, controller);
-  final directPreview = find.byKey(const ValueKey('writer-panel-preview'));
-  if (directPreview.evaluate().isEmpty) {
-    await tester.tap(find.byKey(const ValueKey('writer-more-menu')));
-    await tester.pumpAndSettle();
-  }
-  await tester.tap(find.byKey(const ValueKey('writer-panel-preview')));
+  await tapWriterAction(tester, 'writer-panel-preview');
   await tester.pumpAndSettle();
 }
 
@@ -63,4 +58,36 @@ Future<void> toggleReaderPanels(WidgetTester tester) async {
     ),
   );
   await tester.pumpAndSettle();
+}
+
+/// Opens a mobile scroll when needed; wide screens already show the tool.
+Future<void> tapWriterAction(WidgetTester tester, String key) async {
+  final action = find.byKey(ValueKey(key));
+  if (find.byKey(const ValueKey('writer-context-bar')).evaluate().isNotEmpty) {
+    final group = switch (key) {
+      'writer-structure-action' ||
+      'writer-new-page-action' ||
+      'writer-new-chapter-action' => 'pages',
+      'writer-formatting-action' || 'writer-panel-search' => 'text',
+      'writer-picture-action' => 'insert',
+      'writer-settings-action' => 'settings',
+      _ => 'book',
+    };
+    if (find.byKey(ValueKey('writer-scroll-strip-$group')).evaluate().isEmpty) {
+      await tester.tap(find.byKey(ValueKey('writer-scroll-$group')));
+      await tester.pumpAndSettle();
+    }
+    await tester.scrollUntilVisible(
+      action,
+      100,
+      scrollable: find.descendant(
+        of: find.byKey(ValueKey('writer-scroll-actions-$group')),
+        matching: find.byType(Scrollable),
+      ),
+    );
+  } else {
+    await tester.ensureVisible(action);
+  }
+  await tester.pumpAndSettle();
+  await tester.tap(action);
 }

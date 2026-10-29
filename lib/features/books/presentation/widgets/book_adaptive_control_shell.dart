@@ -81,10 +81,16 @@ class BookAdaptiveControlShell extends StatelessWidget {
                 Expanded(child: content),
               ],
             ),
-            bottomNavigationBar: BookLeatherPanel(
-              key: const ValueKey('book-compact-bottom-panel'),
-              safeArea: const EdgeInsets.only(bottom: 1, left: 1, right: 1),
-              child: compactBottomPanel,
+            bottomNavigationBar: Padding(
+              // Writer controls stay reachable above the phone keyboard.
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.viewInsetsOf(context).bottom,
+              ),
+              child: BookLeatherPanel(
+                key: const ValueKey('book-compact-bottom-panel'),
+                safeArea: const EdgeInsets.only(bottom: 1, left: 1, right: 1),
+                child: compactBottomPanel,
+              ),
             ),
           );
         }

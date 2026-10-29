@@ -335,6 +335,12 @@ class AppStrings {
   String get imageLarger => _text('imageLarger');
   String get imageMoreSettings => _text('imageMoreSettings');
   String get imageDragHint => _text('imageDragHint');
+  String get writerPages => _text('writerPages');
+  String get writerText => _text('writerText');
+  String get writerInsert => _text('writerInsert');
+  String get writerBook => _text('writerBook');
+  String get newPage => _text('newPage');
+  String get newPageHint => _text('newPageHint');
   String get insertPageBreak => _text('insertPageBreak');
   String get pageBreak => _text('pageBreak');
   String get pageBreakInserted => _text('pageBreakInserted');

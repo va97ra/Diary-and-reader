@@ -244,7 +244,7 @@ void main() {
       ChangeSource.local,
     );
 
-    await tester.tap(find.byKey(const ValueKey('writer-picture-action')));
+    await tapWriterAction(tester, 'writer-picture-action');
     await tester.pumpAndSettle();
     expect(find.text('Из галереи'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('add-picture-from-clipboard')));
@@ -263,7 +263,7 @@ void main() {
     final controller = await _projectWithImage();
     await _open(tester, controller);
 
-    await tester.tap(find.byKey(const ValueKey('writer-picture-action')));
+    await tapWriterAction(tester, 'writer-picture-action');
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('add-picture-from-clipboard')));
     await tester.pumpAndSettle();

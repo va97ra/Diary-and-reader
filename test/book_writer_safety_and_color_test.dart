@@ -43,9 +43,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(SnackBar), findsNothing);
 
-    await tester.tap(find.byKey(const ValueKey('writer-more-menu')));
+    await tester.tap(find.byKey(const ValueKey('writer-scroll-book')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('writer-panel-trash')));
+    await tapWriterAction(tester, 'writer-panel-trash');
     await tester.pumpAndSettle();
     expect(find.text('«, день чудесный»'), findsOneWidget);
 
